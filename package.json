@@ -1,6 +1,6 @@
 {
   "name": "multichamber-monorepo",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "description": "Shared web, desktop and mobile workspace for OpenCode, Claude Code and Codex",
   "private": true,
   "type": "module",

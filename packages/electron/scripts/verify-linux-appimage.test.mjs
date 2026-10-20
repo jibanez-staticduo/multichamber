@@ -148,3 +148,10 @@ test('fails when .DirIcon is dangling', () => {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('the configured Linux source icon fits a declared hicolor theme size', async () => {
+  const { default: sharp } = await import('sharp');
+  const metadata = await sharp(new URL('../resources/icons/app-icon.png', import.meta.url).pathname).metadata();
+  assert.equal(metadata.width, 512);
+  assert.equal(metadata.height, 512);
+});

@@ -1,8 +1,11 @@
 # Release Multichamber
 
-This guide describes the release workflow in this fork. Version 2.6.0 targets
+This guide describes the release workflow in this fork. Version 2.6.1 targets
 web/server, Windows and Linux. macOS, iOS, Android and npm publication are not
 part of that release.
+
+The 2.6.0 draft failed Linux packaging and is not published. Version 2.6.1
+contains the corrected 512-pixel Linux icon and is the stable candidate.
 
 ## Prepare the source locally
 
@@ -18,7 +21,7 @@ promotes the notes, runs `release:prepare`, bumps the release manifests and
 prints the suggested commit/tag/push commands. It does not commit or push them.
 Do not manually edit the generated changelog index or legacy changelog.
 
-For 2.6.0, the version bump and promotion to `changelog/2.6.0.md` are already
+For 2.6.1, the version bump and promotion to `changelog/2.6.1.md` are already
 prepared. Do not promote the now-empty unreleased template again. Review the
 source and final validation evidence before committing it.
 
@@ -29,11 +32,11 @@ requires its manifests and release notes to match the supplied version.
 
 ## Select the release inputs
 
-For the 2.6.0 publication, use these manual workflow inputs:
+For the 2.6.1 publication, use these manual workflow inputs:
 
 | Input | Value | Effect |
 | --- | --- | --- |
-| `version` | `2.6.0` | Release tag `v2.6.0` and matching notes |
+| `version` | `2.6.1` | Release tag `v2.6.1` and matching notes |
 | `dry_run` | `false` | Create a draft and upload release assets |
 | `build_web` | `true` | Package web/server with the matching SDK |
 | `build_windows` | `true` | Build x64 and ARM64 installers |
@@ -85,7 +88,7 @@ maintainer accepts the draft and platform evidence, publish that existing draft
 and mark it as latest:
 
 ```bash
-gh release edit v2.6.0 --repo jibanez-staticduo/multichamber --draft=false --latest
+gh release edit v2.6.1 --repo jibanez-staticduo/multichamber --draft=false --latest
 ```
 
 This command changes the external release. Run it only as the explicit

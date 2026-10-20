@@ -10,7 +10,9 @@ const image = await sharp(source).trim().resize(1024, 1024, { fit: 'contain', ba
 const png = (size) => sharp(image).resize(size, size).png().toBuffer();
 const writePng = async (relative, size) => fs.writeFile(path.join(root, relative), await png(size));
 const iconRoot = 'packages/electron/resources/icons';
-for (const name of ['icon.png', 'app-icon.png', 'dev-icon.png']) await writePng(`${iconRoot}/${name}`, 1024);
+for (const name of ['icon.png', 'dev-icon.png']) await writePng(`${iconRoot}/${name}`, 1024);
+// AppImage uses the input size as its hicolor directory; 1024 is not a theme size.
+await writePng(`${iconRoot}/app-icon.png`, 512);
 const embedded = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><image width="1024" height="1024" href="data:image/png;base64,${image.toString('base64')}"/></svg>\n`;
 for (const name of ['app-icon.svg', 'icon-win.svg', 'dev-icon-win.svg']) await fs.writeFile(path.join(root, iconRoot, name), embedded);
 // PNG entries are supported by modern Windows ICO and macOS ICNS containers.
