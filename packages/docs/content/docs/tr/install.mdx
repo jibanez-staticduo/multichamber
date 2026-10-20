@@ -1,38 +1,36 @@
 ---
 title: Kurulum
-description: OpenChamber'ı masaüstüne, web'e, VS Code'a ya da telefonunuza kurun.
+description: Multichamber’ı masaüstü, web veya mobil için kurun.
 ---
 
 # Kurulum
 
-Çalışma biçiminize uyan uygulamayı seçin:
+## Uygulamanızı seçin
 
-- macOS, Windows ve Linux için masaüstü uygulaması
-- CLI tarafından çalıştırılan web uygulaması, bunu telefon uygulaması gibi yükleyebilirsiniz, yani PWA
-- VS Code eklentisi, Cursor, Windsurf ve Trae için de
-- iPhone ve Android için mobil uygulamalar, açık betada
+macOS, Windows veya Linux masaüstü uygulamasını kullanın ya da web/PWA sunucusunu çalıştırın. iOS ve Android derlemeleri mevcut bir sunucuya bağlanır. Bu çatallanma VS Code uzantısı sunmaz.
 
-## Masaüstü
+Masaüstü OpenCode içerir. Web sunucusu OpenCode ve Node.js 24.14 veya yenisini gerektirir. Claude Code veya Codex için her yerel CLI aracını sunucuya kurup kimlik doğrulayın; bunlar OpenCode ile gelmez.
 
-En son sürümü [indirme sayfasından](https://openchamber.dev/download/) ya da [GitHub Releases](https://github.com/openchamber/openchamber/releases/latest) üzerinden indirip açın. Linux için `.deb`, `.rpm` ve AppImage paketleri var.
+[Multichamber](https://github.com/jibanez-staticduo/multichamber/releases)
 
-Masaüstü uygulaması kendi [OpenCode](https://opencode.ai) kopyasıyla gelir (OpenChamber'ın üzerinde çalıştığı yapay zekâ kodlama agent'ı), bu yüzden başka bir şey kurmanız gerekmez.
-
-## Web + PWA
-
-Web uygulaması, çalıştığı makinede [OpenCode](https://opencode.ai) ve Node.js 24.14 ya da daha yenisini gerektirir.
+## Web / PWA
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/openchamber/openchamber/main/scripts/install.sh | bash
-openchamber --ui-password be-creative-here
+curl -fsSL https://raw.githubusercontent.com/jibanez-staticduo/multichamber/main/scripts/install.sh | bash
+multichamber --ui-password be-creative-here
 ```
 
-CLI'ın yazdırdığı URL'yi açın (genellikle `http://localhost:3000`). OpenChamber oturum listesini görmelisiniz. Elinizin altında olması için tarayıcının adres çubuğundaki "Yükle" seçeneğiyle uygulama olarak ekleyin.
+## iOS / Android
 
-## VS Code
+Yalnızca bu çatallanma için yayımlanan dosya veya dağıtım bağlantılarını kullanın. iOS imzalama ve yetkili TestFlight veya App Store dağıtımı gerektirir; herkese açık beta sözü verilmez. Android uyumlu imzalı APK gerektirir. Yerel derleme olmadan mobil web kullanılabilir.
 
-OpenChamber'ı [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=fedaykindev.openchamber) üzerinden kurun. Cursor, Windsurf ve Trae onu [Open VSX](https://open-vsx.org/extension/FedaykinDev/openchamber) üzerinden kurar. Eklenti için [OpenCode](https://opencode.ai) kurulu olmalıdır; ardından OpenChamber görünümü kenar çubuğunda açılır.
+## Nix
 
-## Mobil
+```bash
+nix run github:jibanez-staticduo/multichamber
+nix run github:jibanez-staticduo/multichamber#gui
+```
 
-iPhone uygulamasını TestFlight ile ya da Android uygulamasını en son sürümden kurun, ardından bilgisayarınızla eşleştirin. [Mobil Uygulamalar ve PWA](/tr/mobile/) her iki adımı da anlatır.
+`packages.multichamber` · `packages.multichamber-desktop` · `nixosModules.multichamber`
+
+Nix deposundaki uygulamaların güncellemelerini Nix yönetir. Güncel flake ile yeniden derleyin; OpenCode güncelleyicisi Nix deposunu değiştiremez.

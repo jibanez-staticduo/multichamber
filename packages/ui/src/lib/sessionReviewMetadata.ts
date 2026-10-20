@@ -2,7 +2,7 @@ import type { Metadata, Session } from '@/lib/opencode/model';
 
 export type SessionMetadataRecord = Metadata;
 
-type OpenChamberMetadata = {
+type MultichamberMetadata = {
   kind?: 'review';
   originalSessionID?: string;
   reviewSessionID?: string;
@@ -15,29 +15,29 @@ export const getSessionMetadata = (session: Session | null | undefined): Session
   session?.metadata ?? {}
 );
 
-const getOpenChamberMetadata = (metadata: SessionMetadataRecord): OpenChamberMetadata => {
+const getMultichamberMetadata = (metadata: SessionMetadataRecord): MultichamberMetadata => {
   const value = metadata.openchamber;
-  return isRecord(value) ? value as OpenChamberMetadata : {};
+  return isRecord(value) ? value as MultichamberMetadata : {};
 };
 
 export const getReviewSessionID = (session: Session | null | undefined): string | null => {
-  const value = getOpenChamberMetadata(getSessionMetadata(session)).reviewSessionID;
+  const value = getMultichamberMetadata(getSessionMetadata(session)).reviewSessionID;
   return typeof value === 'string' && value.trim().length > 0 ? value : null;
 };
 
 export const getOriginalSessionID = (session: Session | null | undefined): string | null => {
-  const value = getOpenChamberMetadata(getSessionMetadata(session)).originalSessionID;
+  const value = getMultichamberMetadata(getSessionMetadata(session)).originalSessionID;
   return typeof value === 'string' && value.trim().length > 0 ? value : null;
 };
 
 export const isReviewSession = (session: Session | null | undefined): boolean =>
-  getOpenChamberMetadata(getSessionMetadata(session)).kind === 'review' && Boolean(getOriginalSessionID(session));
+  getMultichamberMetadata(getSessionMetadata(session)).kind === 'review' && Boolean(getOriginalSessionID(session));
 
 export const withReviewSessionLink = (
   metadata: SessionMetadataRecord,
   reviewSessionID: string,
 ): SessionMetadataRecord => {
-  const current = getOpenChamberMetadata(metadata);
+  const current = getMultichamberMetadata(metadata);
   return {
     ...metadata,
     openchamber: {
@@ -51,7 +51,7 @@ export const withReviewSessionMarker = (
   metadata: SessionMetadataRecord,
   originalSessionID: string,
 ): SessionMetadataRecord => {
-  const current = getOpenChamberMetadata(metadata);
+  const current = getMultichamberMetadata(metadata);
   return {
     ...metadata,
     openchamber: {
@@ -66,14 +66,14 @@ export const withoutReviewSessionLink = (
   metadata: SessionMetadataRecord,
   reviewSessionID: string,
 ): SessionMetadataRecord => {
-  const current = getOpenChamberMetadata(metadata);
+  const current = getMultichamberMetadata(metadata);
   if (current.reviewSessionID !== reviewSessionID) return metadata;
 
-  const restOpenChamber = { ...current };
-  delete restOpenChamber.reviewSessionID;
+  const restMultichamber = { ...current };
+  delete restMultichamber.reviewSessionID;
   const next: SessionMetadataRecord = { ...metadata };
-  if (Object.keys(restOpenChamber).length > 0) {
-    next.openchamber = restOpenChamber;
+  if (Object.keys(restMultichamber).length > 0) {
+    next.openchamber = restMultichamber;
   } else {
     delete next.openchamber;
   }

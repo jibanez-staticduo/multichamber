@@ -308,6 +308,7 @@ export const applyGlobalSessionStatusSnapshot = (
   rawDirectory: string,
   raw: Record<string, SessionStatus>,
   knownSessionIds?: Iterable<string>,
+  ownsSession?: (sessionId: string) => boolean,
 ): void => {
   const directory = normalizeDirectory(rawDirectory);
   const known = new Set(knownSessionIds ?? []);
@@ -346,7 +347,7 @@ export const applyGlobalSessionStatusSnapshot = (
     };
 
     for (const [sessionId, entry] of state.statusById) {
-      if ((entry.directory === directory || known.has(sessionId)) && !(sessionId in raw)) {
+      if ((!ownsSession || ownsSession(sessionId)) && (entry.directory === directory || known.has(sessionId)) && !(sessionId in raw)) {
         next.delete(sessionId);
         removeActiveSession(sessionId);
         changed = true;

@@ -23,7 +23,7 @@ const writeGuest = async (root, id) => {
   await fs.mkdir(path.join(root, 'panel'), { recursive: true });
   await fs.writeFile(path.join(root, 'panel', 'index.html'), '<html></html>');
   await fs.writeFile(path.join(root, 'package.json'), JSON.stringify({
-    name: `@openchamber/${id}`,
+    name: `@multichamber/${id}`,
     version: '1.0.0',
     openchamber: {
       apiVersion: 1,
@@ -124,7 +124,7 @@ describe('installGuestFromPath', () => {
     await fs.writeFile(path.join(guestRoot, 'panel', 'index.html'), '<script src="./main.js"></script>');
     await fs.writeFile(path.join(guestRoot, 'panel', 'main.ts'), 'console.log(1)');
     await fs.writeFile(path.join(guestRoot, 'package.json'), JSON.stringify({
-      name: '@openchamber/source-only',
+      name: '@multichamber/source-only',
       version: '1.0.0',
       openchamber: {
         apiVersion: 1,
@@ -145,7 +145,7 @@ describe('installGuestFromPath', () => {
     await fs.mkdir(path.join(guestRoot, 'panel'), { recursive: true });
     await fs.writeFile(path.join(guestRoot, 'panel', 'index.html'), '<html></html>');
     await fs.writeFile(path.join(guestRoot, 'package.json'), JSON.stringify({
-      name: '@openchamber/future',
+      name: '@multichamber/future',
       version: '1.0.0',
       openchamber: {
         apiVersion: 1,
@@ -186,7 +186,7 @@ describe('installGuestFromPath', () => {
     const zipPath = path.join(dir, 'panel.zip');
     await fs.writeFile(zipPath, buildStoreZip([
       { name: 'package.json', data: JSON.stringify({
-        name: '@openchamber/zip-hello',
+        name: '@multichamber/zip-hello',
         version: '1.0.0',
         openchamber: {
           apiVersion: 1,

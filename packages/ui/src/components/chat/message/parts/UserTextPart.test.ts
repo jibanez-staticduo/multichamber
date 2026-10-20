@@ -79,12 +79,12 @@ describe('prepareUserMarkdownContent', () => {
 
     test('turns citations of the message attachments into attachment links', () => {
         const content = prepareUserMarkdownContent({
-            textContent: 'Look at [OpenChamber_2026@2x.png] and [notes], see [docs](https://example.com)',
+            textContent: 'Look at [Multichamber_2026@2x.png] and [notes], see [docs](https://example.com)',
             skillNames: new Set(),
-            attachments: [{ filename: 'OpenChamber_2026@2x.png', iconId: 'png' }],
+            attachments: [{ filename: 'Multichamber_2026@2x.png', iconId: 'png' }],
         });
 
-        expect(content).toContain('[OpenChamber\\_2026@2x.png](#openchamber-attachment:png:OpenChamber_2026%402x.png)');
+        expect(content).toContain('[Multichamber\\_2026@2x.png](#openchamber-attachment:png:Multichamber_2026%402x.png)');
         expect(content).toContain('[notes]');
         expect(content).toContain('[docs](https://example.com)');
     });

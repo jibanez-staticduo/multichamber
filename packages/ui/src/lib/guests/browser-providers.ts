@@ -1,4 +1,4 @@
-import { serviceProvides } from '@openchamber/sdk';
+import { serviceProvides } from '@multichamber/sdk';
 
 import { isGuestActive } from './capabilities.ts';
 import type { InstalledGuest } from './types.ts';

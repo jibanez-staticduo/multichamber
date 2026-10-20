@@ -59,7 +59,7 @@ before its entry exists. The tick then asks OpenCode, and unknown is never
    run ends. The dispatch route reads the newest one before the prompt goes
    out (`afterIdleId`, null when the session has none); a newer idle record
    ends the dispatched turn, and the answer is the newest assistant reply
-   between the two. Matching by record order keeps OpenChamber's clock out of
+   between the two. Matching by record order keeps Multichamber's clock out of
    it, so a remote OpenCode whose clock lags still matches; only an entry
    stored without the baseline compares `time.created` with `dispatchedAt`.
    No newer record yet → not over; three 2 s rechecks cover a record trailing

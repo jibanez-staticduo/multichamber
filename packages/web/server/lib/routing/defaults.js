@@ -14,7 +14,7 @@ import { z } from 'zod';
 const AUTO_PROVIDER_ID = 'openchamber';
 const AUTO_MODEL_ID = 'auto';
 
-// v2 names a model `{ providerID, id }` (`Model.Ref`); OpenChamber's own stored
+// v2 names a model `{ providerID, id }` (`Model.Ref`); Multichamber's own stored
 // config and the message queue's send config name it `{ providerID, modelID }`.
 const autoModelSchema = z.object({ providerID: z.literal(AUTO_PROVIDER_ID), id: z.literal(AUTO_MODEL_ID) });
 const autoStoredModelSchema = z.object({ providerID: z.literal(AUTO_PROVIDER_ID), modelID: z.literal(AUTO_MODEL_ID) });
@@ -31,10 +31,10 @@ export const JEV_MODEL = 'jev-latest';
 
 /**
  * OpenCode Zen serves the same System One endpoint and answers without any
- * credential while `jev-1.13-free` is free. Dax approved OpenChamber using it
+ * credential while `jev-1.13-free` is free. Dax approved Multichamber using it
  * (Slack, 2026-09-22) on terms this module keeps: the UI tells the user it is a
  * limited-time free model that will later need a Zen key, and every call names
- * OpenChamber so zen can see or throttle us. Zen rejects the `jev-latest`
+ * Multichamber so zen can see or throttle us. Zen rejects the `jev-latest`
  * alias, so the versioned free id is sent instead.
  */
 export const ZEN_JEV_API_URL = 'https://opencode.ai/zen/v1/systemone';

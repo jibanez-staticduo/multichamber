@@ -1,3 +1,4 @@
+import { SessionSourcePicker } from '@/components/session/SessionSourcePicker';
 import React from 'react';
 import {
   DropdownMenu,
@@ -430,6 +431,7 @@ export function SidebarHeader(props: Props): React.ReactNode {
           </div>
 
           <div ref={listControlsRef} className="flex min-w-0 items-center gap-1.5">
+      <SessionSourcePicker />
             <Tooltip>
               <TooltipTrigger asChild>
                 <button

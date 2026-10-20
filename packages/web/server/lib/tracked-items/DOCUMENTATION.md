@@ -23,4 +23,4 @@ Server-owned live state of the pull requests, merge requests and issues that con
 
 ## Runtimes
 
-Web, desktop, hosted and native mobile use it over the event stream (relayed on mobile; idle traffic is the stream's existing heartbeat). VS Code has no OpenChamber event stream, so it follows nothing, as before.
+Web, desktop, hosted and native mobile use it over the event stream (relayed on mobile; idle traffic is the stream's existing heartbeat). VS Code has no Multichamber event stream, so it follows nothing, as before.

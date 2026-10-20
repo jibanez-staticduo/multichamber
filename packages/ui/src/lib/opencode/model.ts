@@ -1,5 +1,5 @@
 /**
- * OpenChamber's session domain model.
+ * Multichamber's session domain model.
  *
  * This is the shape every store, reducer, and component works with. OpenCode
  * v2 wire types (`@opencode/client`) never leave the adapter layer: the

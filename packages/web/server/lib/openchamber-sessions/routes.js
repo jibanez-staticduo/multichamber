@@ -19,7 +19,7 @@ import { expandSnippets } from '../opencode/snippets.js';
 import { AUTO_MODEL_REF, isAutoModel } from '../routing/defaults.js';
 import { parseScheduledCommandPrompt } from '../scheduled-tasks/runtime.js';
 import { buildGoalIntroText, createSessionGoal } from '../session-goal/create.js';
-import { OpenChamberControlError, asControlError } from '../openchamber-control/error.js';
+import { MultichamberControlError, asControlError } from '../openchamber-control/error.js';
 import { readObjective, writeObjective } from '../session-goal/objectives.js';
 import { createArchiveStore } from './archive-store.js';
 import { applyForkInheritance } from './fork-inheritance.js';
@@ -403,10 +403,10 @@ const WORKTREE_BOOTSTRAP_POLL_MS = 150;
 const resolvePullRequestInput = (payload) => {
   if (payload?.pullRequest === undefined) return null;
   if (!Number.isSafeInteger(payload.pullRequest) || payload.pullRequest < 1) {
-    throw new OpenChamberControlError('pullRequest must be a pull or merge request number, such as 42', 400);
+    throw new MultichamberControlError('pullRequest must be a pull or merge request number, such as 42', 400);
   }
   if (payload.worktree?.startRef !== undefined || payload.setUpstream !== undefined) {
-    throw new OpenChamberControlError('pullRequest checks out the pull request\'s own branch; do not combine it with startRef or setUpstream', 400);
+    throw new MultichamberControlError('pullRequest checks out the pull request\'s own branch; do not combine it with startRef or setUpstream', 400);
   }
   const input = { number: payload.pullRequest };
   const name = asNonEmptyString(payload.worktree?.name);
@@ -431,7 +431,7 @@ const resolveWorktreeInput = (payload) => {
   };
 };
 
-export const createOpenChamberSessionService = (dependencies) => {
+export const createMultichamberSessionService = (dependencies) => {
   const {
     readSettingsFromDiskMigrated,
     sanitizeProjects,
@@ -482,6 +482,7 @@ export const createOpenChamberSessionService = (dependencies) => {
     // Whether routing can run Auto right now (the composer's own test). Null
     // when routing is not wired in.
     isAutoReady = null,
+    getEngineArchiveTransport = () => null,
   } = dependencies;
 
   if ((!injectedArchiveStore || !injectedSessionMetadataStore) && !dataDir) {
@@ -580,12 +581,12 @@ export const createOpenChamberSessionService = (dependencies) => {
     for (;;) {
       const status = await getWorktreeBootstrapStatus(directory, { bootstrapStore });
       if (status?.status === 'failed') {
-        throw new OpenChamberControlError(`Worktree bootstrap failed: ${status.error || 'unknown error'}`, 500);
+        throw new MultichamberControlError(`Worktree bootstrap failed: ${status.error || 'unknown error'}`, 500);
       }
       const phase = status?.phase;
       if (status?.status === 'ready' || phase === 'git-ready' || phase === 'setup-ready') return;
       if (Date.now() >= deadline) {
-        throw new OpenChamberControlError('Timed out waiting for the worktree bootstrap', 500);
+        throw new MultichamberControlError('Timed out waiting for the worktree bootstrap', 500);
       }
       await new Promise((resolve) => setTimeout(resolve, WORKTREE_BOOTSTRAP_POLL_MS));
     }
@@ -625,23 +626,23 @@ export const createOpenChamberSessionService = (dependencies) => {
     if (requestedAgent && agents.length > 0) {
       const agent = agents.find((entry) => entry?.id === requestedAgent) || null;
       if (!agent) {
-        throw new OpenChamberControlError(`Unknown agent '${requestedAgent}' for ${directory}`, 400);
+        throw new MultichamberControlError(`Unknown agent '${requestedAgent}' for ${directory}`, 400);
       }
       if (!isPrimaryAgentMode(agent.mode)) {
-        throw new OpenChamberControlError(`Agent '${requestedAgent}' is a subagent and cannot receive a prompt directly`, 400);
+        throw new MultichamberControlError(`Agent '${requestedAgent}' is a subagent and cannot receive a prompt directly`, 400);
       }
     }
 
     if (requestedModel && models.length > 0) {
       if (!hasCatalogModel(models, requestedModel.providerID, requestedModel.modelID)) {
-        throw new OpenChamberControlError(
+        throw new MultichamberControlError(
           `Unknown model '${requestedModel.providerID}/${requestedModel.modelID}' for ${directory}`,
           400,
         );
       }
       if (requestedVariant
         && !resolveVariant(models, requestedModel.providerID, requestedModel.modelID, requestedVariant)) {
-        throw new OpenChamberControlError(
+        throw new MultichamberControlError(
           `Unknown variant '${requestedVariant}' for model '${requestedModel.providerID}/${requestedModel.modelID}'`,
           400,
         );
@@ -705,7 +706,7 @@ export const createOpenChamberSessionService = (dependencies) => {
       // The sentinel must never reach OpenCode: neither the goal record nor the
       // session switch below may carry it.
       if (!resolveAutoSelection) {
-        throw new OpenChamberControlError('Auto routing is not available on this server. Choose a model.', 400);
+        throw new MultichamberControlError('Auto routing is not available on this server. Choose a model.', 400);
       }
       const routed = await resolveAutoSelection({
         sessionId: sessionID,
@@ -742,9 +743,9 @@ export const createOpenChamberSessionService = (dependencies) => {
         tokenBudget: goalInput.tokenBudget,
         providerID: model.providerID,
         modelID: model.modelID,
-        onWarning: (message, error) => console.warn(`[OpenChamberSessions] ${message}:`, error?.message || error),
+        onWarning: (message, error) => console.warn(`[MultichamberSessions] ${message}:`, error?.message || error),
         // v2 has no session-metadata route, so the goal record goes to
-        // OpenChamber's own store — the same one the proxy overlays back.
+        // Multichamber's own store — the same one the proxy overlays back.
         persistSessionGoal: async (goalSessionID, goalDirectory, goal) => {
           await writeMetadata(goalSessionID, { openchamber: { goal } }, goalDirectory);
         },
@@ -771,7 +772,7 @@ export const createOpenChamberSessionService = (dependencies) => {
         const sessionDirectory = asNonEmptyString(session?.location?.directory);
         if (sessionDirectory) await sessionKnowledgeRuntime.sync(sessionID, sessionDirectory);
       } catch (error) {
-        console.warn('[OpenChamberSessions] Failed to read session directory for knowledge sync:', error?.message || error);
+        console.warn('[MultichamberSessions] Failed to read session directory for knowledge sync:', error?.message || error);
       }
     }
 
@@ -828,7 +829,7 @@ export const createOpenChamberSessionService = (dependencies) => {
   };
 
   /**
-   * Merge-patch a session's OpenChamber metadata on its OpenCode record: the
+   * Merge-patch a session's Multichamber metadata on its OpenCode record: the
    * per-session state of goal mode, session assist, obligatory context and
    * pinned notes. The broadcast carries the full merged object, because a
    * client that missed an earlier patch must not have to reconstruct it.
@@ -844,10 +845,10 @@ export const createOpenChamberSessionService = (dependencies) => {
 
   const setMetadata = async (sessionID, payload = {}) => {
     const id = asNonEmptyString(sessionID);
-    if (!id) throw new OpenChamberControlError('a session id is required', 400);
+    if (!id) throw new MultichamberControlError('a session id is required', 400);
     const patch = payload?.patch;
     if (!patch || typeof patch !== 'object' || Array.isArray(patch)) {
-      throw new OpenChamberControlError('patch must be an object', 400);
+      throw new MultichamberControlError('patch must be an object', 400);
     }
 
     return { metadata: await writeMetadata(id, patch, asNonEmptyString(payload?.directory) || '') };
@@ -855,7 +856,7 @@ export const createOpenChamberSessionService = (dependencies) => {
 
   const getMetadata = async (sessionID, directory = '') => {
     const id = asNonEmptyString(sessionID);
-    if (!id) throw new OpenChamberControlError('a session id is required', 400);
+    if (!id) throw new MultichamberControlError('a session id is required', 400);
     return { metadata: await sessionMetadataStore.get(id, { directory }) };
   };
 
@@ -884,11 +885,11 @@ export const createOpenChamberSessionService = (dependencies) => {
    */
   const setSessionLinks = async (sessionID, payload = {}) => {
     const id = asNonEmptyString(sessionID);
-    if (!id) throw new OpenChamberControlError('a session id is required', 400);
+    if (!id) throw new MultichamberControlError('a session id is required', 400);
     // The schema decides what a link operation is; a body of any other shape
     // is a 400, not something to pre-narrow here.
     const parsed = parseLinkOperation(payload);
-    if (!parsed.ok) throw new OpenChamberControlError(parsed.error, 400);
+    if (!parsed.ok) throw new MultichamberControlError(parsed.error, 400);
     const directory = asNonEmptyString(payload?.directory) || '';
     const { metadata } = await updateMetadata(
       id,
@@ -909,7 +910,7 @@ export const createOpenChamberSessionService = (dependencies) => {
    * Archive a batch of sessions in one request.
    *
    * OpenCode 2.x has no route that sets `time.archived`, so the state is
-   * OpenChamber's own: a JSON file beside the OpenCode instance, folded back
+   * Multichamber's own: a JSON file beside the OpenCode instance, folded back
    * onto the session records the proxy serves. Batching matters for the same
    * reason it did before — the UI archives every session linked to a worktree
    * before removing it, and doing that one request at a time is what made
@@ -920,10 +921,21 @@ export const createOpenChamberSessionService = (dependencies) => {
   const archive = async (payload = {}) => {
     const parsed = parseArchiveRequest(payload);
     if (!parsed.ok) {
-      throw new OpenChamberControlError(parsed.error, 400);
+      throw new MultichamberControlError(parsed.error, 400);
     }
 
-    const { archived, failedIds } = await archiveStore.archive(parsed.ids, parsed.archivedAt);
+    const eligible = [];
+    const engineFailures = [];
+    for (const id of parsed.ids) {
+      try {
+        await getEngineArchiveTransport(id)?.archiveSession(id, true);
+        eligible.push(id);
+      } catch {
+        engineFailures.push(id);
+      }
+    }
+    const { archived, failedIds: storeFailures } = await archiveStore.archive(eligible, parsed.archivedAt);
+    const failedIds = [...engineFailures, ...storeFailures];
     for (const entry of archived) broadcastArchived(entry.id, entry.archivedAt);
     return { archived, failedIds };
   };
@@ -932,10 +944,21 @@ export const createOpenChamberSessionService = (dependencies) => {
   const unarchive = async (payload = {}) => {
     const parsed = parseIdBatch(payload);
     if (!parsed.ok) {
-      throw new OpenChamberControlError(parsed.error, 400);
+      throw new MultichamberControlError(parsed.error, 400);
     }
 
-    const { restored, failedIds } = await archiveStore.unarchive(parsed.ids);
+    const eligible = [];
+    const engineFailures = [];
+    for (const id of parsed.ids) {
+      try {
+        await getEngineArchiveTransport(id)?.archiveSession(id, false);
+        eligible.push(id);
+      } catch {
+        engineFailures.push(id);
+      }
+    }
+    const { restored, failedIds: storeFailures } = await archiveStore.unarchive(eligible);
+    const failedIds = [...engineFailures, ...storeFailures];
     for (const entry of restored) broadcastArchived(entry.id, null);
     return { restored, failedIds };
   };
@@ -945,7 +968,7 @@ export const createOpenChamberSessionService = (dependencies) => {
     const prompt = asNonEmptyString(payload.prompt);
     const goalInput = resolveGoalInput(payload, prompt);
     if (!goalInput.ok) {
-      throw new OpenChamberControlError(goalInput.error, 400);
+      throw new MultichamberControlError(goalInput.error, 400);
     }
     const model = resolveRequestedModel(payload);
     const agent = asNonEmptyString(payload.agent);
@@ -958,7 +981,7 @@ export const createOpenChamberSessionService = (dependencies) => {
       validateDirectoryPath,
     });
     if (!resolvedDirectory.ok) {
-      throw new OpenChamberControlError(resolvedDirectory.error, resolvedDirectory.status || 400);
+      throw new MultichamberControlError(resolvedDirectory.error, resolvedDirectory.status || 400);
     }
 
     const pullRequestInput = resolvePullRequestInput(payload);
@@ -966,7 +989,7 @@ export const createOpenChamberSessionService = (dependencies) => {
     let worktree = null;
     let sessionDirectory = resolvedDirectory.directory;
     if (payload?.worktree && !worktreeInput && !pullRequestInput) {
-      throw new OpenChamberControlError('worktree.name is required when worktree is provided', 400);
+      throw new MultichamberControlError('worktree.name is required when worktree is provided', 400);
     }
 
     if (typeof waitForOpenCodeReady === 'function') await waitForOpenCodeReady(10_000, 250);
@@ -989,7 +1012,7 @@ export const createOpenChamberSessionService = (dependencies) => {
       if (!(createChangeRequestWorktree instanceof Function)
         || !(worktreeBootstrapStore?.read instanceof Function)
         || !(worktreeBootstrapStore?.write instanceof Function)) {
-        throw new OpenChamberControlError('Worktrees from pull requests are not available here', 501);
+        throw new MultichamberControlError('Worktrees from pull requests are not available here', 501);
       }
       try {
         worktree = await createChangeRequestWorktree({ directory: resolvedDirectory.directory, ...pullRequestInput });
@@ -1005,7 +1028,7 @@ export const createOpenChamberSessionService = (dependencies) => {
       if (!(hydrateWorktreeCheckout instanceof Function)
         || !(worktreeBootstrapStore?.read instanceof Function)
         || !(worktreeBootstrapStore?.write instanceof Function)) {
-        throw new OpenChamberControlError('Worktree checkout bootstrap is not available', 501);
+        throw new MultichamberControlError('Worktree checkout bootstrap is not available', 501);
       }
       const hydrateCheckout = ({ directory, parentRemoteName }) => hydrateWorktreeCheckout({
         directory,
@@ -1100,10 +1123,10 @@ export const createOpenChamberSessionService = (dependencies) => {
   const runExisting = async (action, sourceSessionId, payload = {}) => {
     const sourceSessionID = asNonEmptyString(sourceSessionId);
     const prompt = asNonEmptyString(payload.prompt);
-    if (!sourceSessionID) throw new OpenChamberControlError('sessionId is required', 400);
-    if (!prompt) throw new OpenChamberControlError('prompt is required', 400);
+    if (!sourceSessionID) throw new MultichamberControlError('sessionId is required', 400);
+    if (!prompt) throw new MultichamberControlError('prompt is required', 400);
     const goalInput = resolveGoalInput(payload, prompt);
-    if (!goalInput.ok) throw new OpenChamberControlError(goalInput.error, 400);
+    if (!goalInput.ok) throw new MultichamberControlError(goalInput.error, 400);
     const requestedModel = resolveRequestedModel(payload);
 
     let targetSessionID = sourceSessionID;
@@ -1117,7 +1140,7 @@ export const createOpenChamberSessionService = (dependencies) => {
         validateDirectoryPath,
       });
       if (!resolvedDirectory.ok) {
-        throw new OpenChamberControlError(resolvedDirectory.error, resolvedDirectory.status || 400);
+        throw new MultichamberControlError(resolvedDirectory.error, resolvedDirectory.status || 400);
       }
       directory = resolvedDirectory.directory;
       if (typeof waitForOpenCodeReady === 'function') await waitForOpenCodeReady(10_000, 250);
@@ -1212,7 +1235,7 @@ export const createOpenChamberSessionService = (dependencies) => {
       const statusCode = Number(error?.statusCode) || 500;
       const forkCreated = action === 'fork' && targetSessionID !== sourceSessionID;
       const goalConfigured = error?.goalConfigured === true;
-      throw new OpenChamberControlError(
+      throw new MultichamberControlError(
         error instanceof Error ? error.message : `Failed to ${action} session`,
         statusCode,
         {
@@ -1259,7 +1282,7 @@ export const createOpenChamberSessionService = (dependencies) => {
     if (!(hydrateWorktreeCheckout instanceof Function)
       || !(worktreeBootstrapStore?.read instanceof Function)
       || !(worktreeBootstrapStore?.write instanceof Function)) {
-      throw new OpenChamberControlError('Worktree checkout bootstrap is not available', 501);
+      throw new MultichamberControlError('Worktree checkout bootstrap is not available', 501);
     }
     await waitForOpenCodeReady?.(10_000, 250);
     return worktreeMover.move({
@@ -1283,7 +1306,7 @@ export const createOpenChamberSessionService = (dependencies) => {
       sanitizeProjects,
       validateDirectoryPath,
     });
-    if (!resolved.ok) throw new OpenChamberControlError(resolved.error, resolved.status || 400);
+    if (!resolved.ok) throw new MultichamberControlError(resolved.error, resolved.status || 400);
     return resolved.directory;
   };
 
@@ -1316,14 +1339,14 @@ const sendServiceError = (res, error, fallback) => {
   });
 };
 
-export const registerOpenChamberSessionRoutes = (app, dependencies) => {
-  const service = dependencies.sessionService || createOpenChamberSessionService(dependencies);
+export const registerMultichamberSessionRoutes = (app, dependencies) => {
+  const service = dependencies.sessionService || createMultichamberSessionService(dependencies);
 
   app.post('/api/openchamber/sessions', express.json({ limit: '1mb' }), async (req, res) => {
     try {
       return res.json(await service.create(req.body && typeof req.body === 'object' ? req.body : {}));
     } catch (error) {
-      console.error('[OpenChamberSessions] failed to create session:', error);
+      console.error('[MultichamberSessions] failed to create session:', error);
       return sendServiceError(res, error, 'Failed to create session');
     }
   });
@@ -1332,7 +1355,7 @@ export const registerOpenChamberSessionRoutes = (app, dependencies) => {
     try {
       return res.json(await service.archive(req.body && typeof req.body === 'object' ? req.body : {}));
     } catch (error) {
-      console.error('[OpenChamberSessions] failed to archive sessions:', error);
+      console.error('[MultichamberSessions] failed to archive sessions:', error);
       return sendServiceError(res, error, 'Failed to archive sessions');
     }
   });
@@ -1344,7 +1367,7 @@ export const registerOpenChamberSessionRoutes = (app, dependencies) => {
         asNonEmptyString(req.query?.directory) || '',
       ));
     } catch (error) {
-      console.error('[OpenChamberSessions] failed to read session metadata:', error);
+      console.error('[MultichamberSessions] failed to read session metadata:', error);
       return sendServiceError(res, error, 'Failed to read session metadata');
     }
   });
@@ -1356,7 +1379,7 @@ export const registerOpenChamberSessionRoutes = (app, dependencies) => {
         req.body && typeof req.body === 'object' ? req.body : {},
       ));
     } catch (error) {
-      console.error('[OpenChamberSessions] failed to store session metadata:', error);
+      console.error('[MultichamberSessions] failed to store session metadata:', error);
       return sendServiceError(res, error, 'Failed to store session metadata');
     }
   });
@@ -1365,7 +1388,7 @@ export const registerOpenChamberSessionRoutes = (app, dependencies) => {
     try {
       return res.json(await service.unarchive(req.body && typeof req.body === 'object' ? req.body : {}));
     } catch (error) {
-      console.error('[OpenChamberSessions] failed to unarchive sessions:', error);
+      console.error('[MultichamberSessions] failed to unarchive sessions:', error);
       return sendServiceError(res, error, 'Failed to unarchive sessions');
     }
   });
@@ -1374,7 +1397,7 @@ export const registerOpenChamberSessionRoutes = (app, dependencies) => {
     try {
       return res.json(await service.setSessionLinks(req.params.sessionId, req.body));
     } catch (error) {
-      console.error('[OpenChamberSessions] failed to update session links:', error);
+      console.error('[MultichamberSessions] failed to update session links:', error);
       return sendServiceError(res, error, 'Failed to update session links');
     }
   });
@@ -1386,7 +1409,7 @@ export const registerOpenChamberSessionRoutes = (app, dependencies) => {
       try {
         return res.json(await service.send(req.params.sessionId, req.body));
       } catch (error) {
-        console.error('[OpenChamberSessions] failed to send session:', error);
+        console.error('[MultichamberSessions] failed to send session:', error);
         return sendServiceError(res, error, 'Failed to send session');
       }
     },
@@ -1398,7 +1421,7 @@ export const registerOpenChamberSessionRoutes = (app, dependencies) => {
       try {
         return res.json(await service.fork(req.params.sessionId, req.body));
       } catch (error) {
-        console.error('[OpenChamberSessions] failed to fork session:', error);
+        console.error('[MultichamberSessions] failed to fork session:', error);
         return sendServiceError(res, error, 'Failed to fork session');
       }
     },

@@ -1,3 +1,4 @@
+import { useNativeContextFill, useContextWindowLimits } from '@/hooks/useContextWindowLimits';
 import React from 'react';
 import type { Message, Part } from '@/lib/opencode/model';
 import { WorkerHighlightedCode } from '@/components/code/WorkerHighlightedCode';
@@ -270,6 +271,8 @@ export const ContextPanelContent: React.FC = () => {
   const copyResetTimeoutRef = React.useRef<number | null>(null);
   const currentSessionId = useSessionUIStore((state) => state.currentSessionId);
   const currentSessionDirectory = useSessionUIStore((state) => state.currentSessionDirectory);
+  const nativeContext = useNativeContextFill(currentSessionId, currentSessionDirectory ?? undefined);
+  const nativeLimits = useContextWindowLimits(currentSessionId, currentSessionDirectory ?? undefined);
   const sessions = useSessions(currentSessionDirectory ?? undefined);
   const sessionMessages = useSessionMessageRecords(
     currentSessionId ?? '',
@@ -319,11 +322,13 @@ export const ContextPanelContent: React.FC = () => {
 
     // After a compaction the fill is unknown until a response reports tokens;
     // the compaction record itself still supplies the last-turn breakdown.
-    const contextFill = findLatestContextFill(sessionMessages.map((entry) => entry.info));
-    const contextMessage = contextFill ? sessionMessages[contextFill.index] ?? null : null;
+    const messageFill = findLatestContextFill(sessionMessages.map((entry) => entry.info));
+    const contextFill = nativeContext ? nativeContext.state === 'compacted' ? { state: 'compacted' as const, index: -1 } : { state: 'measured' as const, index: -1, totalTokens: nativeContext.tokens, native: true, contextWindow: nativeContext.window } : messageFill;
+    const contextMessage = contextFill ? sessionMessages[contextFill.index >= 0 ? contextFill.index : messageFill?.index ?? -1] ?? null : null;
     const isCompacted = contextFill?.state === 'compacted';
 
-    const tokenBreakdown = contextMessage ? extractTokenBreakdown(contextMessage) : EMPTY_BREAKDOWN;
+    const billedBreakdown = contextMessage ? extractTokenBreakdown(contextMessage) : EMPTY_BREAKDOWN;
+    const tokenBreakdown = contextFill?.state === 'measured' ? { ...billedBreakdown, total: contextFill.totalTokens } : billedBreakdown;
 
     // Cache hit rate for the last assistant message. `input` is the non-cached portion
     // (total input - cache.read - cache.write per SDK's session.ts:getUsage),
@@ -351,12 +356,12 @@ export const ContextPanelContent: React.FC = () => {
       latestAssistantInfo?.modelID || '',
     );
 
-    const contextLimit = providerModel.contextLimit;
+    const contextLimit = nativeContext ? nativeContext.window : contextFill?.state === 'measured' && contextFill.native ? contextFill.contextWindow : nativeLimits.context || providerModel.contextLimit;
     const usagePercent = isCompacted
       ? null
       : contextLimit && contextLimit > 0
-        ? Math.min(999, (tokenBreakdown.total / contextLimit) * 100)
-        : 0;
+        ? ((contextFill?.state === 'measured' ? contextFill.totalTokens : tokenBreakdown.total) / contextLimit) * 100
+        : null;
 
     // OpenCode v2 delivers instruction text as its own `system` message
     // instead of hanging a `system` string off the first user message.
@@ -392,13 +397,14 @@ export const ContextPanelContent: React.FC = () => {
       providerModel,
       tokenBreakdown,
       usagePercent,
+      isCompacted,
       cacheHitRate,
       totalAssistantCost,
       contextLimit,
       breakdown,
       breakdownTotal: breakdown.total,
     };
-  }, [currentSessionId, providers, sessionMessages, sessions, t]);
+  }, [currentSessionId, providers, sessionMessages, sessions, t, nativeContext, nativeLimits.context]);
 
   if (!currentSessionId) {
     return (
@@ -466,7 +472,7 @@ export const ContextPanelContent: React.FC = () => {
           </div>
           <div className="mt-1.5 typography-micro font-medium tabular-nums text-foreground/80">
             {viewModel.usagePercent === null
-              ? t('contextUsage.compacted.description')
+              ? viewModel.isCompacted ? t('contextUsage.compacted.description') : '—'
               : t('contextSidebar.context.percentUsed', { percent: viewModel.usagePercent.toFixed(1) })}
           </div>
         </div>

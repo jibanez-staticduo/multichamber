@@ -4,7 +4,7 @@ import { isLinkIdentifier } from '@/lib/router/messageFocus';
 // the app already understands: the web route (`?session=<id>`) and the native
 // deep link (`openchamber://session/<id>`), each with a `message` parameter.
 // A link is a place on this server, not a public share: it opens only for
-// someone who can reach the same OpenChamber instance.
+// someone who can reach the same Multichamber instance.
 //
 // Pure on purpose: the markdown sanitizer, which may run in a worker, uses it.
 

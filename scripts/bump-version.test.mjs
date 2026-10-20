@@ -19,14 +19,14 @@ test('a release bump packs workspace dependencies at the new version after a fro
   for (const file of RELEASE_PACKAGE_FILES) {
     const directory = path.dirname(file);
     await fs.mkdir(path.join(root, directory), { recursive: true });
-    const name = file === 'package.json' ? 'release-fixture' : `@openchamber/${path.basename(directory)}`;
+    const name = file === 'package.json' ? 'release-fixture' : `@multichamber/${path.basename(directory)}`;
     const manifest = { name, version: '1.23.1' };
     if (file === 'package.json') {
       manifest.private = true;
       manifest.workspaces = ['packages/*'];
     }
-    if (name === '@openchamber/web') manifest.dependencies = { '@openchamber/sdk': 'workspace:*' };
-    if (name === '@openchamber/electron') manifest.dependencies = { '@openchamber/web': 'workspace:*' };
+    if (name === '@multichamber/web') manifest.dependencies = { '@multichamber/sdk': 'workspace:*' };
+    if (name === '@multichamber/electron') manifest.dependencies = { '@multichamber/web': 'workspace:*' };
     await fs.writeFile(path.join(root, file), JSON.stringify(manifest));
   }
   const bun = process.execPath;
@@ -49,6 +49,6 @@ test('a release bump packs workspace dependencies at the new version after a fro
       encoding: 'utf8',
     }));
     expect(packed.version).toBe('1.24.0');
-    expect(packed.dependencies[`@openchamber/${dependency}`]).toBe('1.24.0');
+    expect(packed.dependencies[`@multichamber/${dependency}`]).toBe('1.24.0');
   }
 }, 30_000);

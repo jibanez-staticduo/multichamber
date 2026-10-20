@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Environment variables the user gives OpenChamber for the processes it starts:
+Environment variables the user gives Multichamber for the processes it starts:
 the managed OpenCode, Git, the terminal (and the project actions it runs),
 worktree setup commands and `/api/fs/exec`. There are two layers:
 
@@ -49,8 +49,8 @@ worktree setup commands and `/api/fs/exec`. There are two layers:
 | `/api/fs/exec` | user, command output, project | `fs/routes.js` `environmentRuntime` |
 
 One managed OpenCode serves every project, so project variables never reach
-it. An external OpenCode is not started by OpenChamber and gets nothing.
-OpenChamber's own keys for OpenCode (password, managed config, agent tool
+it. An external OpenCode is not started by Multichamber and gets nothing.
+Multichamber's own keys for OpenCode (password, managed config, agent tool
 token, PATH entries it needs) are applied after the user's variables and win.
 
 ## Invariants
@@ -85,7 +85,7 @@ token, PATH entries it needs) are applied after the user's variables and win.
   (EDITOR, PAGER, GIT_SSH_COMMAND, GIT_ASKPASS, GIT_CONFIG_*, ...) are left
   out of the Git overlay, or every Git command would fail. So are the
   repository-location variables (GIT_DIR, GIT_WORK_TREE, GIT_INDEX_FILE, ...):
-  OpenChamber names the repository each command works on.
+  Multichamber names the repository each command works on.
   `GIT_TERMINAL_PROMPT` stays `0`.
 - **Enterprise mode** (`../enterprise-mode.js`): nothing from this module
   reaches OpenCode, since a variable can carry a provider key. Git, the
@@ -97,4 +97,4 @@ token, PATH entries it needs) are applied after the user's variables and win.
 |---|---|
 | Web, hosted mobile, Capacitor | The server route; Settings sections render. |
 | Electron | Same server, in process. |
-| VS Code | No OpenChamber server: both Settings sections are hidden and nothing is applied to the processes the extension host starts. |
+| VS Code | No Multichamber server: both Settings sections are hidden and nothing is applied to the processes the extension host starts. |

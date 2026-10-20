@@ -1,3 +1,5 @@
+import { getRuntimeKey } from '@/lib/runtime-switch';
+import { requestSessionCreation } from '@/lib/sessionCreation';
 import * as React from 'react';
 
 import { useMobileAppActions } from '@/apps/mobileAppContext';
@@ -114,7 +116,8 @@ export const SourceBoardActions: React.FC<{
     const currentSession = useSession(currentSessionId, currentSessionId ? useSessionUIStore.getState().getDirectoryForSession(currentSessionId) ?? undefined : undefined);
 
     // The item lands on the composer as a chip, never as a sent message.
-    const attachToComposer = () => {
+    const attachToComposer = (targetSessionId?: string, runtimeKey = getRuntimeKey()) => {
+        if (runtimeKey !== getRuntimeKey()) return;
         void resolveComposerReferences([selectionOf(item)], {
             sourceControl,
             context,
@@ -122,7 +125,8 @@ export const SourceBoardActions: React.FC<{
                 ? readLinearIssueDetail(linear, issueId)
                 : Promise.reject(new Error('Linear is not available here'))),
         }).then(({ references, failures }) => {
-            if (references.length > 0) usePendingComposerReferences.getState().push(references);
+            if (runtimeKey !== getRuntimeKey()) return;
+            if (references.length > 0) usePendingComposerReferences.getState().push(references, targetSessionId);
             const failure = failures[0];
             if (failure) toast.error(t('sourceBoard.error.attachFailed', { item: failure.label }), { description: failure.error });
         });
@@ -130,10 +134,13 @@ export const SourceBoardActions: React.FC<{
 
     const startSession = () => {
         if (!project) return;
-        useSessionUIStore.getState().openNewSessionDraft({ selectedProjectId: project.id, directoryOverride: project.path });
-        onLeave?.();
-        // The draft opens first, so the chip lands on its composer.
-        attachToComposer();
+        const runtimeKey = getRuntimeKey();
+        let createdSessionId: string | undefined;
+        void requestSessionCreation({ selectedProjectId: project.id, directoryOverride: project.path, onCreated: (session) => { createdSessionId = session?.id; } }).then(() => {
+            if (runtimeKey !== getRuntimeKey()) return;
+            onLeave?.();
+            attachToComposer(createdSessionId, runtimeKey);
+        }).catch((error) => { if (!(error instanceof DOMException && error.name === 'AbortError')) toast.error(String(error)); });
     };
 
     // Back to the chat the board covered; its composer takes the chip.

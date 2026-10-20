@@ -16,16 +16,24 @@ export async function createMultiRunSession(
 ): Promise<Session> {
   assertCurrent();
   const membership = { ...input.identity, version: 1 as const, sessionID: null };
+  const harness = input.identity.harness ?? 'opencode';
+  const native = harness !== 'opencode';
+  const nativeSelection = native ? {
+    model: input.selection?.model?.id ?? input.identity.modelID,
+    ...(input.selection?.model?.variant ? { effort: input.selection.model.variant } : {}),
+    ...(input.identity.mode ? { mode: input.identity.mode } : {}),
+  } : null;
+  const metadata = withMultiRunMembership(nativeSelection ? { metadata: { backend: harness, [harness]: nativeSelection } } : {}, membership);
   const session = await opencodeClient.createSession({
     title: input.title,
-    model: input.selection?.model,
-    agent: input.selection?.agent,
-    metadata: withMultiRunMembership({}, membership),
+    model: native ? { ...input.selection?.model, providerID: harness, id: nativeSelection?.model ?? input.identity.modelID } : input.selection?.model,
+    agent: native ? undefined : input.selection?.agent,
+    metadata,
   }, input.directory);
   try {
     assertCurrent();
     // OpenCode 2.x takes metadata only at creation, so the ID is bound through
-    // OpenChamber's own metadata route. It applies an RFC 7386 merge patch, so
+    // Multichamber's own metadata route. It applies an RFC 7386 merge patch, so
     // only the marker travels and nothing another feature wrote under
     // `openchamber` in the meantime is replaced — no read-modify-write needed.
     const result = await requestSessionMetadataUpdate(

@@ -2,7 +2,7 @@
 
 Server-side control loop that keeps a session working toward a user-defined
 objective stored under `metadata.openchamber.goal`, with Jev (the
-classification model) or the small model as an independent progress check. Built on OpenChamber's backend-driven
+classification model) or the small model as an independent progress check. Built on Multichamber's backend-driven
 architecture (session-assist is the structural template): the loop lives in
 the web server and survives UI disconnects.
 
@@ -47,7 +47,7 @@ session and drops the write when the stored goal id no longer matches.
 ## File-backed objectives
 
 The objective TEXT lives in `<data-dir>/goals/<sessionId>.md` (data dir =
-`OPENCHAMBER_DATA_DIR` or `~/.config/openchamber`), keyed by the SESSION ID:
+`MULTICHAMBER_DATA_DIR` or `~/.config/openchamber`), keyed by the SESSION ID:
 sessions are globally unique and carry one goal at a time, so the mapping is
 deterministic and a new goal simply overwrites the file. Metadata carries
 only `objectiveFile: true` — never a path — so user-writable metadata cannot
@@ -57,7 +57,7 @@ before touching the filesystem). Rationale: metadata rides every
 
 - `objectives.js` — write/read/delete, 5000-char clamp.
 - `routes.js` — `PUT/GET/DELETE /api/goals/objective/:sessionId`
-  (OpenChamber-owned, registered before the generic proxy; JSON parsing via
+  (Multichamber-owned, registered before the generic proxy; JSON parsing via
   the `/api/goals` family in core-routes). The UI writes the file BEFORE
   patching the goal metadata and falls back to an inline objective when the
   write fails; `clearSessionGoal` deletes the file best-effort.
@@ -227,7 +227,7 @@ sees only that final turn, so the report is its evidence.
   among the composer's top rows; `SessionGoalDialog.tsx` — manage dialog
   (edit/pause/resume/complete/clear).
 - Sidebar glyph next to the date in `SessionNodeItem`.
-- `components/sections/openchamber/SessionGoalCheckerField.tsx` — Settings →
+- `components/sections/multichamber/SessionGoalCheckerField.tsx` — Settings →
   Chat → Goal: Jev or the small model checks progress
   (`sessionGoalChecker`). Without a classification provider the Jev chip is
   disabled and the small model shows as chosen, matching the server.
@@ -238,7 +238,7 @@ sees only that final turn, so the report is its evidence.
 
 Scheduled tasks can run as goals: `execution.goalEnabled` (+ optional
 `execution.goalTokenBudget`) on a task makes the scheduled-tasks runtime
-write the goal into OpenChamber's session metadata store through the
+write the goal into Multichamber's session metadata store through the
 `persistSessionGoal` seam `server/index.js` hands it (objective = the expanded
 task prompt; v2 `CommandInfo` carries no template, so a slash command's
 objective is its raw invocation) and attach the goal-mode intro part to normal
@@ -273,3 +273,16 @@ ordering used by create and scheduled goals.
 - `tokensUsed` only counts completed assistant messages seen within the
   40-message fetch window per tick; extremely long busy stretches between
   idles undercount (acceptable: budget is a guardrail, not billing).
+
+## Native harness ownership
+
+Goal session reads, transcripts and continuation prompts resolve through the
+registered native session owner before the OpenCode transport. Native activity
+reads include the parent and its children; failures remain unknown and defer
+the tick. A native goal never probes OpenCode's global active sessions.
+
+Claude and Codex wire usage is accounted as per-turn usage, once per completed
+assistant record, rather than OpenCode's context-snapshot delta. Native readers
+assign a turn's usage to its final assistant record so intermediate items are
+not charged twice. The independent checker remains the configured small model
+or Jev; the working native session cannot declare its own goal complete.

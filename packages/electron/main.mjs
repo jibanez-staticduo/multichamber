@@ -13,7 +13,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 import updaterPkg from 'electron-updater';
 import { ElectronSshManager } from './ssh-manager.mjs';
-import { collectLocalFileDiagnostics, collectSshBufferDiagnostics } from '@openchamber/web/server/lib/diagnostics/local-files.js';
+import { collectLocalFileDiagnostics, collectSshBufferDiagnostics } from '@multichamber/web/server/lib/diagnostics/local-files.js';
 import { replaceFileWithRetry } from './windows-file-replace.mjs';
 import { createTrayController } from './tray.mjs';
 import { applyDevDockIdentity, applyDockBadge } from './dev-dock-identity.mjs';
@@ -114,11 +114,11 @@ import { createRelayDevTunnelBridge } from './relay-dev-tunnel.mjs';
 import { parsePairingDeepLink } from './pairing-deep-link.mjs';
 import { attachRendererRecovery, takeSafeStart } from './renderer-recovery.mjs';
 import { createLoadFailureWarningFilter } from './load-failure-warnings.mjs';
-import { mintOutsideFileGrant } from '@openchamber/web/server/lib/fs/routes.js';
-import { fetchUpdateNotes } from '@openchamber/web/server/lib/changelog/update-notes.js';
-import { applyConnectAttemptTimeout } from '@openchamber/web/server/lib/network-defaults.js';
-import { isNetworkAccessBlocked } from '@openchamber/web/server/lib/enterprise-mode.js';
-import { assignInjectedEnv } from '@openchamber/web/server/lib/injected-env.js';
+import { mintOutsideFileGrant } from '@multichamber/web/server/lib/fs/routes.js';
+import { fetchUpdateNotes } from '@multichamber/web/server/lib/changelog/update-notes.js';
+import { applyConnectAttemptTimeout } from '@multichamber/web/server/lib/network-defaults.js';
+import { isNetworkAccessBlocked } from '@multichamber/web/server/lib/enterprise-mode.js';
+import { assignInjectedEnv } from '@multichamber/web/server/lib/injected-env.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -142,7 +142,7 @@ log.transports.console.level = isDev ? 'debug' : 'warn';
 
 // The in-process web server runs in this same Node process and uses plain
 // `console.log/warn/error`. Without piping console through electron-log,
-// that output never lands in ~/Library/Logs/OpenChamber/main.log and we
+// that output never lands in ~/Library/Logs/Multichamber/main.log and we
 // can't diagnose issues (e.g. OpenCode lifecycle, SSE disconnects) after
 // the fact. Route all console calls through electron-log so server-side
 // diagnostics are persisted.
@@ -236,13 +236,13 @@ const readAppMetadata = () => {
     try {
       const raw = fs.readFileSync(candidate, 'utf8');
       const parsed = JSON.parse(raw);
-      if (parsed?.name === '@openchamber/electron' && typeof parsed.version === 'string') {
+      if (parsed?.name === '@multichamber/electron' && typeof parsed.version === 'string') {
         return { name: parsed.name, version: parsed.version };
       }
     } catch {
     }
   }
-  return { name: '@openchamber/electron', version: app.getVersion() };
+  return { name: '@multichamber/electron', version: app.getVersion() };
 };
 
 const APP_METADATA = readAppMetadata();
@@ -264,8 +264,8 @@ const LOCAL_DESKTOP_CLIENT_DEDUPE_KEY = 'desktop-local';
 // connecting to someone else's server).
 const REMOTE_DESKTOP_CLIENT_KIND = 'desktop';
 const ENV_OVERRIDE_HOST_ID = '__env';
-const GITHUB_BUG_REPORT_URL = 'https://github.com/openchamber/openchamber/issues/new?template=bug_report.yml';
-const GITHUB_IDEAS_URL = 'https://github.com/openchamber/openchamber/discussions/categories/ideas';
+const GITHUB_BUG_REPORT_URL = 'https://github.com/jibanez-staticduo/multichamber/issues/new?template=bug_report.yml';
+const GITHUB_IDEAS_URL = 'https://github.com/jibanez-staticduo/multichamber/discussions/categories/ideas';
 const DISCORD_INVITE_URL = 'https://discord.gg/ZYRSdnwwKA';
 const INSTALLED_APPS_CACHE_TTL_SECS = 60 * 60 * 24;
 const INSTALLED_APPS_CACHE_FILE = 'discovered-apps.json';
@@ -395,7 +395,7 @@ const quitConfirmationMessage = () => {
   if (reasons.length === 0) {
     return 'Background processes (sidecar, SSH sessions) will be stopped.';
   }
-  return `OpenChamber detected ${reasons.join(', ')}. Quitting now will stop sidecar/background processes and may interrupt pending work.`;
+  return `Multichamber detected ${reasons.join(', ')}. Quitting now will stop sidecar/background processes and may interrupt pending work.`;
 };
 
 const shutdownBackgroundServices = () => {
@@ -571,8 +571,8 @@ const requestQuitWithConfirmation = async () => {
   try {
     const result = await dialog.showMessageBox({
       type: 'warning',
-      title: 'Quit OpenChamber?',
-      message: 'Quit OpenChamber?',
+      title: 'Quit Multichamber?',
+      message: 'Quit Multichamber?',
       detail: quitConfirmationMessage(),
       buttons: ['Quit', 'Cancel'],
       defaultId: 1,
@@ -687,7 +687,7 @@ const writeSettingsRoot = async (root) => writeJsonFile(settingsFilePath(), root
 
 // Stable per-install identifier for this desktop, persisted in settings. Used as
 // the client dedupe key on remote hosts so re-authenticating (e.g. after a login
-// session expires) reuses the same "OpenChamber Desktop" record instead of
+// session expires) reuses the same "Multichamber Desktop" record instead of
 // piling up a new one each time. Different desktops get different ids.
 // Display-only device metadata shown in a server's device list ("macOS",
 // app version). Never used for auth decisions.
@@ -1093,7 +1093,7 @@ const injectRuntimeConfigIntoHtml = (html) => {
 };
 
 /**
- * The browser panel's own session, kept separate from OpenChamber's.
+ * The browser panel's own session, kept separate from Multichamber's.
  *
  * Every page the user opens in the panel shares this partition, which is what
  * lets a dev-server login persist between sessions without touching the app's
@@ -1464,7 +1464,7 @@ const maybeShowNativeNotification = (rawInput) => {
 
   const title = typeof payload.title === 'string' && payload.title.trim()
     ? payload.title.trim()
-    : 'OpenChamber';
+    : 'Multichamber';
   const body = typeof payload.body === 'string' ? payload.body : '';
   const sessionId = typeof payload.sessionId === 'string' && payload.sessionId.trim()
     ? payload.sessionId.trim()
@@ -1514,8 +1514,8 @@ const mapUpdaterProgressEvent = (payload) => ({
   data: payload.data,
 });
 
-import { pathLooksUserConfigured, mergePathValues } from '@openchamber/web/server/lib/opencode/path-utils.js';
-import { provideLoginShellEnvSnapshot } from '@openchamber/web/server/lib/opencode/login-shell-env.js';
+import { pathLooksUserConfigured, mergePathValues } from '@multichamber/web/server/lib/opencode/path-utils.js';
+import { provideLoginShellEnvSnapshot } from '@multichamber/web/server/lib/opencode/login-shell-env.js';
 
 // Merge the user's login-shell env (PATH, etc.) into this process before we
 // import/start the server in-process. The server and its children (opencode
@@ -1625,7 +1625,7 @@ const spawnLocalServer = async () => {
     no_proxy: process.env.no_proxy || 'localhost,127.0.0.1',
   });
 
-  const { startWebUiServer } = await import('@openchamber/web/server/index.js');
+  const { startWebUiServer } = await import('@multichamber/web/server/index.js');
 
   const handle = await startWebUiServer({
     port: chosenPort,
@@ -1635,7 +1635,7 @@ const spawnLocalServer = async () => {
     exitOnShutdown: false,
     apiOnly: false,
     builtInExtensionsDir: app.isPackaged
-      ? path.join(app.getAppPath().endsWith('.asar') ? `${app.getAppPath()}.unpacked` : app.getAppPath(), 'node_modules/@openchamber/web/server/built-in-extensions')
+      ? path.join(app.getAppPath().endsWith('.asar') ? `${app.getAppPath()}.unpacked` : app.getAppPath(), 'node_modules/@multichamber/web/server/built-in-extensions')
       : undefined,
     // The in-process server's notifications belong to the local instance.
     onDesktopNotification: (payload) => maybeShowNativeNotification({ ...payload, runtimeKey: 'local' }),
@@ -1926,7 +1926,7 @@ const loginRemoteAndIssueClientToken = async ({ url, password, trustDevice, requ
       password: candidatePassword,
       trustDevice: trustDevice === true,
       issueClientToken: true,
-      clientLabel: 'OpenChamber Desktop',
+      clientLabel: 'Multichamber Desktop',
       ...clientIdentity,
     }),
   });
@@ -1954,7 +1954,7 @@ const loginRemoteAndIssueClientToken = async ({ url, password, trustDevice, requ
       Cookie: cookie,
     },
     body: JSON.stringify({
-      label: 'OpenChamber Desktop',
+      label: 'Multichamber Desktop',
       ...clientIdentity,
     }),
   });
@@ -2111,7 +2111,7 @@ const confirmConnectDeepLink = async (payload) => {
   }
   const options = {
     type: 'warning',
-    title: 'Connect to OpenChamber server?',
+    title: 'Connect to Multichamber server?',
     message: `Connect to "${payload.label}"?`,
     detail:
       `This will add ${payload.serverUrl} as a remote instance and route this app's activity ` +
@@ -2438,7 +2438,7 @@ const showQuakeWindow = (browserWindow, heightFraction) => {
     })();
   }
   try {
-    // macOS: a hotkey pressed from another app leaves OpenChamber in the
+    // macOS: a hotkey pressed from another app leaves Multichamber in the
     // background, where show/focus alone do not bring it forward.
     if (process.platform === 'darwin') app.focus({ steal: true });
     if (browserWindow.isMinimized()) browserWindow.restore();
@@ -3191,7 +3191,7 @@ const createMiniChatWindow = async ({ mode, sessionId = '', directory = '', proj
   const desktopClientToken = effectiveRuntimeConfig.clientToken || '';
   const desktopRequestHeaders = effectiveRuntimeConfig.requestHeaders || {};
   const browserWindow = new BrowserWindow({
-    title: 'OpenChamber Mini Chat',
+    title: 'Multichamber Mini Chat',
     width: MINI_CHAT_WINDOW_WIDTH,
     height: MINI_CHAT_WINDOW_HEIGHT,
     minWidth: MINI_CHAT_MIN_WINDOW_WIDTH,
@@ -4347,7 +4347,7 @@ const relayDevTunnelBridge = createRelayDevTunnelBridge({
 });
 const getDevTunnelClient = async () => {
   if (!devTunnelClientPromise) {
-    devTunnelClientPromise = import('@openchamber/web/server/lib/dev-tunnel/client.js')
+    devTunnelClientPromise = import('@multichamber/web/server/lib/dev-tunnel/client.js')
       .then(({ createDevTunnelClient }) => createDevTunnelClient({ logger: log }))
       .catch((error) => {
         devTunnelClientPromise = null;
@@ -4571,7 +4571,7 @@ const handleInvoke = async (browserWindow, command, args = {}) => {
     }
 
     // Dev-server tunnels: bind a loopback port here and pipe it to a dev server
-    // on the remote OpenChamber host, so the browser panel loads a real origin
+    // on the remote Multichamber host, so the browser panel loads a real origin
     // instead of a rewritten page. Deliberately absent from
     // COMMANDS_SAFE_FOR_REMOTE — a remote page must never open local listeners.
     // A space's dev server comes through the same tunnel, under the space's
@@ -4634,7 +4634,7 @@ const handleInvoke = async (browserWindow, command, args = {}) => {
     /**
      * Forces prefers-color-scheme for one previewed page.
      *
-     * nativeTheme.themeSource is app-wide and would drag OpenChamber's own
+     * nativeTheme.themeSource is app-wide and would drag Multichamber's own
      * appearance along with it, so this goes through the page's own emulation
      * instead. The debugger session has to stay attached: emulation is part of
      * that session and resets the moment it detaches.
@@ -4699,7 +4699,7 @@ const handleInvoke = async (browserWindow, command, args = {}) => {
      * Done here, in the panel's own session, rather than by the renderer: the
      * icon often sits behind the same login as the page, and letting the app's
      * own origin request it would both fail on those and quietly send traffic
-     * to third-party hosts from OpenChamber itself. The bytes come back as a
+     * to third-party hosts from Multichamber itself. The bytes come back as a
      * data URL so nothing else has to fetch anything.
      */
     case 'desktop_browser_fetch_favicon': {
@@ -4739,7 +4739,7 @@ const handleInvoke = async (browserWindow, command, args = {}) => {
     }
 
     // Scoped to the browser panel's own partition, so clearing it can never
-    // touch OpenChamber's session or any other window's storage.
+    // touch Multichamber's session or any other window's storage.
     case 'desktop_browser_clear_data': {
       // Exact names only: the panel's own partition, or a space's, whose shape
       // is checked whole. A prefix would also accept a partition that merely
@@ -4837,7 +4837,7 @@ const handleInvoke = async (browserWindow, command, args = {}) => {
       if (!underHome && !underTmp) {
         throw new Error('File is outside the allowed workspace');
       }
-      const DENIED_SEGMENTS = ['.ssh', '.aws', '.gnupg', '.gpg', '.config/gh', '.config/openchamber/credentials'];
+      const DENIED_SEGMENTS = ['.ssh', '.aws', '.gnupg', '.gpg', '.config/gh', '.config/openchamber/credentials', '.config/multichamber/credentials'];
       const relFromHome = underHome ? filePath.slice(home.length + 1) : '';
       const relNormalized = relFromHome.split(path.sep).join('/');
       if (DENIED_SEGMENTS.some((segment) => relNormalized === segment || relNormalized.startsWith(`${segment}/`))) {
@@ -5335,7 +5335,7 @@ const handleInvoke = async (browserWindow, command, args = {}) => {
       if (applyUpdate && process.platform === 'darwin' && typeof app.isInApplicationsFolder === 'function') {
         try {
           if (!app.isInApplicationsFolder()) {
-            throw new Error('Desktop update requires OpenChamber.app to be installed in /Applications');
+            throw new Error('Desktop update requires Multichamber.app to be installed in /Applications');
           }
         } catch (error) {
           log.warn('[electron] desktop_restart blocked', error);

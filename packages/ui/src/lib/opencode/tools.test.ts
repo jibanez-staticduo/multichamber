@@ -77,7 +77,7 @@ describe("tool input and metadata", () => {
 })
 
 describe("tool row description", () => {
-  test("OpenChamber tools show their action and the detail that tells calls apart", () => {
+  test("Multichamber tools show their action and the detail that tells calls apart", () => {
     expect(toolDescription("openchamber", {
       action: "session.link",
       parameters: { sessionId: "ses_1", link: { identifier: "#3998", title: "Keep PR badges after rebases", url: "https://x", kind: "change" } },
@@ -257,7 +257,7 @@ describe("renderedPage", () => {
   const completed = (input: ToolInput, metadata?: Metadata): ToolState => ({ status: "completed", input, output: "", metadata, time: { start: 1, end: 2 } })
   const running = (input: ToolInput): ToolState => ({ status: "running", input, time: { start: 1 } })
 
-  test("reads the page from parameters, or beside the action, once OpenChamber accepted it", () => {
+  test("reads the page from parameters, or beside the action, once Multichamber accepted it", () => {
     expect(renderedPage("openchamber_render", completed({ action: "render.page", parameters: { html: "<p>a</p>", title: "Chart" } }, accepted)))
       .toEqual({ html: "<p>a</p>", title: "Chart", ask: { kind: "show" } })
     expect(renderedPage("openchamber_render", completed({ action: "render.page", html: "<p>b</p>", title: "Flat" }, accepted)))

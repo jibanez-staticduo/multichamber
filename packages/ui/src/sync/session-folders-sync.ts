@@ -1,4 +1,4 @@
-import { subscribeOpenchamberEvents } from '@/lib/openchamberEvents';
+import { subscribeOpenchamberEvents } from '@/lib/multichamberEvents';
 import { getRuntimeKey } from '@/lib/runtime-switch';
 import { handleSessionFoldersChanged, handleSessionFoldersStreamReady } from '@/stores/useSessionFoldersStore';
 

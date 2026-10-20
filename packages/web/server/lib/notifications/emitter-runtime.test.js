@@ -53,7 +53,7 @@ describe('shared control notification delivery', () => {
     const failed = { write: () => { throw new Error('closed'); } };
     const broadcastGlobalUiEvent = vi.fn();
     const runtime = createRuntime({
-      getOpenChamberEventClients: () => new Set([failed, control]),
+      getMultichamberEventClients: () => new Set([failed, control]),
       getBroadcastGlobalUiEvent: () => broadcastGlobalUiEvent,
     });
     runtime.broadcastUiNotification({ title: 'Done', sessionId: 's1', kind: 'complete' });
@@ -68,7 +68,7 @@ describe('shared control notification delivery', () => {
     const control = { write: vi.fn() };
     const legacy = { write: vi.fn() };
     const runtime = createRuntime({
-      getOpenChamberEventClients: () => new Set([control]),
+      getMultichamberEventClients: () => new Set([control]),
       getUiNotificationClients: () => new Set([legacy]),
     });
     runtime.broadcastUiNotification({ title: 'Done' });

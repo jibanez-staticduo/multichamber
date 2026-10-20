@@ -1,4 +1,8 @@
-interface MultiRunModelSelection {
+import type { SessionEngine } from '@/lib/sessionEngine';
+
+export interface MultiRunModelSelection {
+  harness?: SessionEngine;
+  mode?: string;
   providerID: string;
   modelID: string;
   displayName?: string;
@@ -19,6 +23,8 @@ export interface MultiRunGroup {
 }
 
 export interface MultiRunAutoFusion {
+  harness?: SessionEngine;
+  mode?: string;
   providerID: string;
   modelID: string;
   variant?: string;

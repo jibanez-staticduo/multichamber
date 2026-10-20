@@ -11,6 +11,13 @@ const wire = (type, data, extra = {}) => ({
 });
 
 describe('translateWireEvent', () => {
+  test('preserves native turn usage scope and availability through step events', () => {
+    const metadata = { codex: { usageScope: 'turn', usageAvailable: true } };
+    const started = translateWireEvent(wire('session.step.started', { sessionID: 's1', assistantMessageID: 'msg1', metadata }));
+    const ended = translateWireEvent(wire('session.step.ended', { sessionID: 's1', assistantMessageID: 'msg1', metadata }));
+    expect(started[0].properties.info.metadata).toEqual(metadata);
+    expect(ended[0].properties.info.metadata).toEqual(metadata);
+  });
   test('ignores non-objects and unknown types', () => {
     expect(translateWireEvent(null)).toEqual([]);
     expect(translateWireEvent('nope')).toEqual([]);

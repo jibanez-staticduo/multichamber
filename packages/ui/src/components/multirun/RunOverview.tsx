@@ -38,6 +38,7 @@ type BarMode =
   | { kind: 'fuse'; excluded: ReadonlySet<string> };
 
 const modelLabelFor = (member: MultiRunMember, providers: ReturnType<typeof useConfigStore.getState>['providers']): string => {
+  if (member.identity.harness && member.identity.harness !== 'opencode') return member.identity.modelID;
   const provider = providers.find((entry) => entry.id === member.identity.providerID);
   const name = provider?.models.find((entry) => entry.id === member.identity.modelID)?.name || member.identity.modelID;
   return member.identity.index && member.identity.index > 1 ? `${name} #${member.identity.index}` : name;
@@ -250,7 +251,7 @@ function RunOverviewContent({ runKey }: { runKey: string }): React.ReactNode {
       await startRunFusion({
         run,
         sourceIds: fuseSources,
-        judge: resolveFusionJudge({ providerID: selection.providerID, modelID: selection.modelID, variant: selection.variant, agent: judgeAgent || undefined }),
+        judge: resolveFusionJudge({ harness: selection.harness, mode: selection.mode, providerID: selection.providerID, modelID: selection.modelID, variant: selection.variant, agent: judgeAgent || undefined }),
         sessionById,
       });
       setBar({ kind: 'idle' });
@@ -368,6 +369,7 @@ function RunOverviewContent({ runKey }: { runKey: string }): React.ReactNode {
           </span>
           <ModelEffortMenu
             appearance="trigger"
+            harness={pending.harness}
             providerID={pending.providerID}
             modelID={pending.modelID}
             variant={pending.variant}
@@ -576,13 +578,14 @@ function RunOverviewContent({ runKey }: { runKey: string }): React.ReactNode {
               {judge[0] ? (
                 <ModelEffortMenu
                   appearance="trigger"
+                  harness={judge[0].harness}
                   providerID={judge[0].providerID}
                   modelID={judge[0].modelID}
                   variant={judge[0].variant}
                   onChange={(variant) => setJudge((current) => current.map((entry) => ({ ...entry, variant })))}
                 />
               ) : null}
-              <AgentSelector value={judgeAgent} onChange={setJudgeAgent} className="w-fit" />
+              {(!judge[0]?.harness || judge[0].harness === 'opencode') ? <AgentSelector value={judgeAgent} onChange={setJudgeAgent} className="w-fit" /> : null}
               <span className="typography-micro text-muted-foreground">
                 {fuseMode === 'code' ? t('multirun.overview.fuse.modeCode') : t('multirun.overview.fuse.modeAnswers')}
               </span>

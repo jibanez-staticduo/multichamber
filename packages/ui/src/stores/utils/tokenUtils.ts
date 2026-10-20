@@ -1,3 +1,5 @@
+import { readCodexContext } from '@/lib/codexSessionMetadata';
+import type { Metadata } from '@/lib/opencode/model';
 import type { AssistantMessage, Message, Part } from "@/lib/opencode/model";
 import type { SessionContextUsage } from "../types/sessionTypes";
 
@@ -56,6 +58,8 @@ export type ContextFillMessage = {
     id?: string;
     role?: string;
     tokens?: TokenBreakdown;
+    providerID?: string;
+    metadata?: Metadata;
     /**
      * Compaction records carry OpenCode's lifecycle for the summarizing turn
      * here. Widened to `string` so a whole `Message` (a shell record reports its
@@ -66,7 +70,7 @@ export type ContextFillMessage = {
 };
 
 type LatestContextFill =
-    | { state: 'measured'; index: number; totalTokens: number }
+    | { state: 'measured'; index: number; totalTokens: number; contextWindow?: number | null; native?: boolean }
     /** Compacted since the last measured response; the current size is unknown. */
     | { state: 'compacted'; index: number };
 
@@ -94,6 +98,13 @@ export const findLatestContextFill = (messages: readonly ContextFillMessage[]): 
         }
 
         if (message?.role !== 'assistant') continue;
+        if (message.providerID === 'codex' || readCodexContext(message.metadata)) {
+            const context = readCodexContext(message.metadata);
+            if (!context) return null;
+            if (context.state === 'compacted') return { state: 'compacted', index };
+            return { state: 'measured', index, totalTokens: context.tokens, contextWindow: context.window, native: true };
+        }
+
 
         const totalTokens = contextTokensFromBreakdown(message.tokens);
         if (totalTokens > 0) return { state: 'measured', index, totalTokens };
@@ -113,10 +124,12 @@ export const buildSessionContextUsage = (
     const fill = findLatestContextFill(messages);
     if (!fill) return null;
 
+    if (fill.state === 'measured' && fill.native && !(fill.contextWindow && fill.contextWindow > 0)) return null;
+    const effectiveLimit = fill.state === 'measured' && fill.native ? fill.contextWindow ?? 0 : contextLimit;
     const limits = {
-        contextLimit: contextLimit > 0 ? contextLimit : 0,
+        contextLimit: effectiveLimit > 0 ? effectiveLimit : 0,
         outputLimit: outputLimit > 0 ? outputLimit : undefined,
-        thresholdLimit: contextLimit > 0 ? contextLimit : DEFAULT_THRESHOLD_LIMIT,
+        thresholdLimit: effectiveLimit > 0 ? effectiveLimit : DEFAULT_THRESHOLD_LIMIT,
         lastMessageId: messages[fill.index]?.id,
     };
 
@@ -129,7 +142,7 @@ export const buildSessionContextUsage = (
         state: 'measured',
         ...limits,
         totalTokens: fill.totalTokens,
-        percentage: contextLimit > 0 ? Math.round((fill.totalTokens / contextLimit) * 100) : 0,
+        percentage: effectiveLimit > 0 ? Math.round((fill.totalTokens / effectiveLimit) * 100) : 0,
         normalizedOutput: outputLimit > 0 ? Math.round((output / outputLimit) * 100) : undefined,
     };
 };

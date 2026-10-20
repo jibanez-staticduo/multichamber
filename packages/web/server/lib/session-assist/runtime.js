@@ -1,3 +1,4 @@
+import { withSessionHarnesses } from '../harnesses/session-client.js';
 // Background session assistance. Only live idle events arm generation; there
 // is no backfill. A new turn deletes the assist this process wrote; clients
 // retire any other payload older than the session's `time.idle`.
@@ -104,7 +105,7 @@ const extractUserMessage = (payload) => {
 };
 
 /**
- * The recap and the suggestion live in OpenChamber's own session metadata
+ * The recap and the suggestion live in Multichamber's own session metadata
  * store: OpenCode 2.x accepts session metadata only when a session is created.
  * `persistSessionAssist(sessionID, directory, assist)` writes it; without that
  * seam the runtime stays inert rather than generating text it cannot save.
@@ -116,7 +117,7 @@ export const createSessionAssistRuntime = ({
   getTargets = getSessionAssistTargets,
   quietMs = IDLE_QUIET_MS,
   persistSessionAssist = null,
-  // Archive state is OpenChamber's own in v2 (no OpenCode route sets it), so
+  // Archive state is Multichamber's own in v2 (no OpenCode route sets it), so
   // the runtime asks rather than reading `time.archived` off the record.
   isSessionArchived = async () => false,
   // Asked once when a turn ends, before the quiet window is armed: which of
@@ -188,14 +189,14 @@ export const createSessionAssistRuntime = ({
     };
     if (!targets.recap && !targets.suggestion) return;
     const baseUrl = buildOpenCodeUrl('/', '').replace(/\/$/, '');
-    const client = OpenCode.make({
+    const client = withSessionHarnesses(OpenCode.make({
       baseUrl,
       headers: {
         ...getOpenCodeAuthHeaders(),
         // v2 scopes by header and rejects non-ASCII header values.
         ...(directory ? { 'x-opencode-directory': encodeURIComponent(directory) } : {}),
       },
-    });
+    }));
     const requestOptions = () => ({ signal: AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)]) });
     const checkCurrent = () => {
       signal.throwIfAborted();

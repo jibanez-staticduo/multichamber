@@ -1,3 +1,4 @@
+import { nativeSessionOperation, readNativeActivity } from '../harnesses/session-client.js';
 // Session goal: a persisted, self-continuing objective attached to a session
 // (metadata.openchamber.goal). While the goal is active, the server keeps the
 // session working toward it: after each busy→idle transition it accounts token
@@ -153,7 +154,7 @@ const extractSessionUpdate = (payload) => {
   const info = payload.properties?.info;
   if (!info || typeof info !== 'object' || typeof info.id !== 'string' || !info.id) return null;
   // No goal here any more: the record OpenCode publishes carries only what
-  // OpenCode owns, and the goal lives in OpenChamber's own metadata store. A
+  // OpenCode owns, and the goal lives in Multichamber's own metadata store. A
   // new or resumed goal reaches this runtime through `notifyGoalChanged`.
   return {
     sessionId: info.id,
@@ -234,6 +235,7 @@ const toLoopMessage = (message) => {
           variant: model.variant,
           finish: message.finish,
           tokens: message.tokens,
+          metadata: message.metadata,
           error,
         },
         parts: (Array.isArray(message.content) ? message.content : [])
@@ -257,6 +259,7 @@ const toLoopMessage = (message) => {
           role: 'assistant',
           summary: true,
           tokens: message.tokens,
+          metadata: message.metadata,
           finish: 'stop',
         },
         parts: message.summary ? [{ type: 'text', text: String(message.summary) }] : [],
@@ -369,6 +372,8 @@ export const createSessionGoalRuntime = ({
   };
 
   const openCodeFetch = async (fetchPath, { directory, method = 'GET', body, query } = {}) => {
+    const native = await nativeSessionOperation(fetchPath, { method, body, query });
+    if (native.handled) return native.value;
     const base = buildOpenCodeUrl(fetchPath, '');
     const params = new URLSearchParams(query || {});
     if (directory) params.set('directory', directory);
@@ -417,7 +422,7 @@ export const createSessionGoalRuntime = ({
   // Returns the written goal, or null when the stored goal no longer matches
   // the expected id (user replaced/cleared it while we worked).
   /**
-   * The goal lives in OpenChamber's own metadata store: OpenCode 2.x accepts
+   * The goal lives in Multichamber's own metadata store: OpenCode 2.x accepts
    * session metadata only at create time. Re-read before every write so a
    * concurrent edit (the user pausing from the UI) is not overwritten.
    */
@@ -560,7 +565,7 @@ export const createSessionGoalRuntime = ({
     if (!goal || goal.status !== 'active') return;
 
     // File-backed objectives: the metadata carries only a flag; the objective
-    // TEXT lives under the OpenChamber data dir keyed by session id and is
+    // TEXT lives under the Multichamber data dir keyed by session id and is
     // read fresh on every tick (live-editable). A missing file falls back to
     // whatever inline objective the metadata still has — the goal must never
     // die just because a file went away.
@@ -584,14 +589,19 @@ export const createSessionGoalRuntime = ({
     // recheck after another quiet window: OpenCode normally runs the parent
     // again when the child finishes, but a missed parent idle event must not
     // strand the goal.
-    const statuses = await activityProbe.fetchActiveSessionStatuses();
+    let nativeActivity;
+    try { nativeActivity = await readNativeActivity(sessionId); }
+    catch { armTimer(sessionId, directory, idleQuietMs); return; }
+    const statuses = nativeActivity?.statuses ?? await activityProbe.fetchActiveSessionStatuses();
     if (!statuses) {
       armTimer(sessionId, directory, idleQuietMs);
       return;
     }
     if (isWorkingStatus(statuses[sessionId])) return;
 
-    const childrenWorking = await activityProbe.hasWorkingChildren(sessionId, statuses);
+    const childrenWorking = nativeActivity
+      ? nativeActivity.children.some((child) => child.parentID === sessionId && isWorkingStatus(statuses[child.id]))
+      : await activityProbe.hasWorkingChildren(sessionId, statuses);
     if (childrenWorking === null) {
       armTimer(sessionId, directory, idleQuietMs);
       return;
@@ -639,6 +649,13 @@ export const createSessionGoalRuntime = ({
     // exchange completes (the idle transition re-arms us).
     if (!lastAssistantInfo?.id) return;
 
+    // Numeric zero is not proof of reported usage for imported Codex turns.
+    if (nativeActivity && goal.tokenBudget !== undefined && goal.tokenBudget !== null
+      && lastAssistantInfo.providerID === 'codex' && lastAssistantInfo.metadata?.codex?.usageAvailable !== true) {
+      await settleGoal({ sessionId, directory, goal, status: 'blocked', statusReason: 'token usage unavailable' });
+      return;
+    }
+
     // --- Token accounting: snapshot of the latest completed assistant turn
     // (input + cache.read + output), goal-relative via a baseline captured on
     // the first tick. For a mid-session goal the baseline is the same
@@ -674,6 +691,13 @@ export const createSessionGoalRuntime = ({
       if (!(info.time?.completed > 0)) continue;
       sawNewMessages = true;
       const total = messageTokenTotal(info);
+      if (nativeActivity) {
+        // Native wire usage is per turn, not OpenCode's context snapshot.
+        if (info.time.completed > goal.createdAt) tokensCommitted += total;
+        tokensBaseline = 0;
+        if (!lastAccountedMessageID || info.id > lastAccountedMessageID) lastAccountedMessageID = info.id;
+        continue;
+      }
       if (info.summary === true) {
         // The summary message's own tokens are ZEROED by opencode — never
         // feed them into the closing value. Close the segment from what is
@@ -696,7 +720,7 @@ export const createSessionGoalRuntime = ({
       }
     }
     if (sawNewMessages) {
-      const segmentCurrent = segmentSnapshot !== null ? Math.max(0, segmentSnapshot - tokensBaseline) : 0;
+      const segmentCurrent = !nativeActivity && segmentSnapshot !== null ? Math.max(0, segmentSnapshot - tokensBaseline) : 0;
       // Monotonic: unflagged context shrinks (reverts, provider quirks) must
       // never move the budget backwards.
       tokensUsed = Math.max(goal.tokensUsed, tokensCommitted + segmentCurrent);
@@ -880,7 +904,7 @@ export const createSessionGoalRuntime = ({
   const isWired = () => typeof persistSessionGoal === 'function' && typeof readSessionMetadata === 'function';
 
   /**
-   * A goal is created, edited or resumed through OpenChamber's own metadata
+   * A goal is created, edited or resumed through Multichamber's own metadata
    * route, not through an OpenCode event, so the write tells this runtime
    * directly. That is also the authoritative moment: the store already holds it.
    */

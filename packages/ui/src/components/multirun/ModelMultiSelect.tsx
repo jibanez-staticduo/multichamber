@@ -1,3 +1,7 @@
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import type { SessionEngine } from '@/lib/sessionEngine';
+import { SessionEngineGlyph } from '@/components/session/SessionEngineGlyph';
+import { useMultiRunNativeCatalog } from '@/lib/multirun/nativeCatalog';
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { dropdownTriggerVariants } from '@/components/ui/dropdown-trigger';
@@ -17,6 +21,8 @@ const CHIP_HEIGHT_CLASS = 'h-7';
 
 /** UI-only type with instanceId for React keys and duplicate tracking */
 export interface ModelSelectionWithId {
+  harness?: SessionEngine;
+  mode?: string;
   providerID: string;
   modelID: string;
   displayName?: string;
@@ -44,7 +50,7 @@ const ModelChip: React.FC<{
 
   return (
     <div className={cn('flex items-center gap-1.5 px-2 rounded-md bg-interactive-selection/20 border border-border/30', CHIP_HEIGHT_CLASS)}>
-      <ProviderLogo providerId={model.providerID} className="h-3.5 w-3.5" />
+      {model.harness && model.harness !== 'opencode' ? <SessionEngineGlyph engine={model.harness} className="h-3.5 w-3.5" /> : <ProviderLogo providerId={model.providerID} className="h-3.5 w-3.5" />}
       <span className="typography-meta font-medium truncate max-w-[140px]">
         {label}
       </span>
@@ -119,6 +125,8 @@ export const ModelMultiSelect: React.FC<ModelMultiSelectProps> = ({
   const hiddenModels = useUIStore((state) => state.hiddenModels);
   const providerOrder = useUIStore((state) => state.providerOrder);
   const [isOpen, setIsOpen] = React.useState(false);
+  const [harness, setHarness] = React.useState<SessionEngine>('opencode');
+  const nativeModels = useMultiRunNativeCatalog(isOpen || selectedModels.some((model) => model.harness && model.harness !== 'opencode'));
   const [searchQuery, setSearchQuery] = React.useState('');
   const [availableHeight, setAvailableHeight] = React.useState<number | null>(null);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
@@ -132,7 +140,7 @@ export const ModelMultiSelect: React.FC<ModelMultiSelectProps> = ({
   const modelCounts = React.useMemo(() => {
     const counts = new Map<string, number>();
     for (const m of selectedModels) {
-      const key = `${m.providerID}:${m.modelID}`;
+      const key = `${m.harness ?? 'opencode'}:${m.providerID}:${m.modelID}`;
       counts.set(key, (counts.get(key) || 0) + 1);
     }
     return counts;
@@ -141,7 +149,7 @@ export const ModelMultiSelect: React.FC<ModelMultiSelectProps> = ({
   // Get instance index for a specific model selection
   const getInstanceIndex = React.useCallback((model: ModelSelectionWithId): number => {
     const sameModels = selectedModels.filter(
-      m => m.providerID === model.providerID && m.modelID === model.modelID
+      m => (m.harness ?? 'opencode') === (model.harness ?? 'opencode') && m.providerID === model.providerID && m.modelID === model.modelID
     );
     return sameModels.findIndex(m => m.instanceId === model.instanceId) + 1;
   }, [selectedModels]);
@@ -222,6 +230,7 @@ export const ModelMultiSelect: React.FC<ModelMultiSelectProps> = ({
 
   const handleSelectModel = React.useCallback((entry: ModelPickerEntry) => {
     const nextModel = {
+      harness: 'opencode' as const,
       providerID: entry.providerID,
       modelID: entry.modelID,
       displayName: (entry.model.name as string) || entry.modelID,
@@ -297,7 +306,14 @@ export const ModelMultiSelect: React.FC<ModelMultiSelectProps> = ({
                 background: 'linear-gradient(var(--surface-elevated),var(--surface-elevated)),linear-gradient(var(--surface-background),var(--surface-background))',
               }}
             >
-              <ModelPickerList
+              <div className="flex gap-1 p-2 border-b border-border">
+                {(['opencode', 'claude', 'codex'] as const).map((engine) => <button key={engine} type="button" aria-pressed={harness === engine} className={cn('flex items-center gap-1 px-2 py-1 rounded typography-meta', harness === engine && 'bg-interactive-selection')} onClick={() => setHarness(engine)}><SessionEngineGlyph engine={engine} className="size-3" />{engine === 'opencode' ? 'OpenCode' : engine === 'claude' ? 'Claude Code' : 'Codex'}</button>)}
+              </div>
+              {harness !== 'opencode' ? <div className="p-2"><DropdownMenu><DropdownMenuTrigger asChild><button type="button" className={dropdownTriggerVariants({ size: 'default' })}>{t('chat.modelControls.model')}</button></DropdownMenuTrigger><DropdownMenuContent>{nativeModels.filter((model) => model.harness === harness).map((model) => <DropdownMenuItem key={model.id} onSelect={() => {
+                const selection: ModelSelectionWithId = { harness, providerID: harness, modelID: model.id, displayName: model.label, instanceId: generateInstanceId() };
+                if (isSingleSelect && selectedModels.length && onUpdate) onUpdate(0, selection); else onAdd(selection);
+                if (isSingleSelect) setIsOpen(false);
+              }}><SessionEngineGlyph engine={harness} className="size-3.5" />{model.label}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu></div> : <ModelPickerList
                 providers={providers}
                 providerOrder={providerOrder}
                 favoriteModels={favoriteModelsList}
@@ -307,7 +323,7 @@ export const ModelMultiSelect: React.FC<ModelMultiSelectProps> = ({
                 onSearchQueryChange={setSearchQuery}
                 onSelect={handleSelectModel}
                 labels={labels}
-                selectionCount={(entry) => modelCounts.get(`${entry.providerID}:${entry.modelID}`) || 0}
+                selectionCount={(entry) => modelCounts.get(`opencode:${entry.providerID}:${entry.modelID}`) || 0}
                 disabled={!canAddModel}
                 maxHeightClassName="flex-1"
                 maxHeightStyle={{ maxHeight: availableHeight ? `${availableHeight}px` : '300px' }}
@@ -319,7 +335,7 @@ export const ModelMultiSelect: React.FC<ModelMultiSelectProps> = ({
                   setIsOpen(false);
                   setSearchQuery('');
                 }}
-              />
+              />}
             </div>,
           ) : null}
         </div>
@@ -328,7 +344,7 @@ export const ModelMultiSelect: React.FC<ModelMultiSelectProps> = ({
         {showChips && selectedModels.length > 0 && (
           <div className="flex flex-col gap-2 w-full">
             {selectedModels.map((model, index) => {
-              const key = `${model.providerID}:${model.modelID}`;
+              const key = `${model.harness ?? 'opencode'}:${model.providerID}:${model.modelID}`;
               const totalSameModel = modelCounts.get(key) || 1;
               const instanceIndex = getInstanceIndex(model);
 
@@ -336,7 +352,7 @@ export const ModelMultiSelect: React.FC<ModelMultiSelectProps> = ({
               const providerModel = provider?.models?.find((m: Record<string, unknown>) => (m as { id?: string }).id === model.modelID) as
                 | { variants?: ModelVariantSource }
                 | undefined;
-              const variantKeys = listModelVariantIds(providerModel?.variants);
+              const variantKeys = model.harness && model.harness !== 'opencode' ? nativeModels.find((entry) => entry.harness === model.harness && entry.id === model.modelID)?.efforts ?? [] : listModelVariantIds(providerModel?.variants);
               const hasVariants = variantKeys.length > 0;
 
               const DEFAULT_VARIANT_VALUE = '__default__';

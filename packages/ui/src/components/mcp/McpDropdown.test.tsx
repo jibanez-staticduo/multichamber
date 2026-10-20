@@ -12,6 +12,10 @@ import { useSessionUIStore } from '@/sync/session-ui-store';
 import { WorkStatusMcpSection } from '@/components/chat/work-status/WorkStatusMcpSection';
 import type { McpServerStatus } from '@/lib/opencode/model';
 import { toast } from 'sonner';
+import { SyncProvider } from '@/sync/sync-context';
+import { OpenCode } from '@opencode/client';
+
+const sdk = OpenCode.make({ baseUrl: 'http://mcp-dropdown.test', fetch: () => new Promise<Response>(() => {}) });
 
 type LoadMcpConfigs = (options?: { force?: boolean; directory?: string | null }) => Promise<boolean>;
 
@@ -40,11 +44,11 @@ describe('MCP dropdown status reads', () => {
     root = mounted;
     await act(async () => {
       mounted.render(
-        <I18nProvider>
+        <SyncProvider sdk={sdk} directory=""><I18nProvider>
           <TooltipProvider>
             {element}
           </TooltipProvider>
-        </I18nProvider>,
+        </I18nProvider></SyncProvider>,
       );
     });
     return host;
@@ -295,6 +299,7 @@ describe('MCP dropdown status reads', () => {
     await act(async () => { finish({ success: true, path: oldPath }); });
     expect(useSessionUIStore.getState().newSessionDraft.preparedChatDirectory).toBe(currentPath);
     expect(listSpy.mock.calls).toEqual([[currentPath]]);
-    expect(cleanup.mock.calls.length).toBe(1);
+    const deletions = cleanup.mock.calls.filter(([input]) => String(input).includes('/api/fs/delete'));
+    expect(deletions.length).toBe(1);
   });
 });

@@ -1,11 +1,11 @@
 import { createConfiguredWebAPIs, getDesktopRelayRestoreReady } from './runtimeConfig';
 import { registerSW } from 'virtual:pwa-register';
 
-import type { RuntimeAPIs } from '@openchamber/ui/lib/api/types';
-import { resolveHostedSurface, watchHostedSurfaceViewport, type HostedSurface } from '@openchamber/ui/lib/runtimeSurface';
-import '@openchamber/ui/index.css';
-import '@openchamber/ui/styles/fonts';
-import '@openchamber/ui/styles/katex-css';
+import type { RuntimeAPIs } from '@multichamber/ui/lib/api/types';
+import { resolveHostedSurface, watchHostedSurfaceViewport, type HostedSurface } from '@multichamber/ui/lib/runtimeSurface';
+import '@multichamber/ui/index.css';
+import '@multichamber/ui/styles/fonts';
+import '@multichamber/ui/styles/katex-css';
 
 declare global {
   interface Window {
@@ -89,14 +89,14 @@ const start = async (): Promise<void> => {
   watchHostedSurfaceViewport();
 
   if (hostedSurface === 'mobile') {
-    const { renderMobileApp } = await import('@openchamber/ui/apps/renderMobileApp');
+    const { renderMobileApp } = await import('@multichamber/ui/apps/renderMobileApp');
     renderMobileApp(window.__OPENCHAMBER_RUNTIME_APIS__);
     return;
   }
 
   // Hold the render until a desktop relay-host restore has picked its transport.
   await getDesktopRelayRestoreReady();
-  await import('@openchamber/ui/main');
+  await import('@multichamber/ui/main');
 };
 
 void start();

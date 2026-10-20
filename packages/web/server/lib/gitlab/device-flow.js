@@ -13,7 +13,7 @@ function form(fields) {
   return new URLSearchParams(Object.entries(fields).filter(([, value]) => isString(value) && value));
 }
 
-// OpenChamber registers its own OAuth application on gitlab.com only. A
+// Multichamber registers its own OAuth application on gitlab.com only. A
 // self-managed instance has no such application, so its operator supplies an
 // id through OPENCHAMBER_GITLAB_CLIENT_ID or the `gitlabClientId` setting;
 // until then that instance offers personal access tokens and `glab` instead.

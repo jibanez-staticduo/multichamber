@@ -1,3 +1,4 @@
+import { OpenSubtaskButton } from './OpenSubtaskButton';
 
 import React from 'react';
 import { useMobileAppActions } from '@/apps/mobileAppContext';
@@ -12,7 +13,6 @@ import type { FilePart, Metadata, Part, ToolInput, ToolPart as ToolPartType, Too
 import { toolDisplayStyles } from '@/lib/typography';
 import { WorkerHighlightedCode } from '@/components/code/WorkerHighlightedCode';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
-import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useDirectorySync, useSessionMessages } from '@/sync/sync-context';
 import { useRunningShell } from '@/sync/background-shells';
 import { findShellCancellation, findShellCompletion, readBackgroundShellID } from '@/lib/opencode/background-shell';
@@ -59,6 +59,7 @@ import {
     prepareTaskToolOutput,
     readTaskSessionIdFromOutput,
     readTaskSessionIdFromRecord,
+    readTaskSessionIdsFromRecord,
     resolveRunningTaskChildSessionId,
 } from './taskToolModel';
 import { areRenderRelevantPartsEqual } from '../renderCompare';
@@ -75,7 +76,6 @@ import {
     resolveToolQuickOpenTarget,
     type DiffPatchEntry,
 } from './toolDiffUtils';
-import { useChatColumnActions } from '@/components/chat/chatColumnSession';
 import { useStreamingTextThrottle } from '../../hooks/useStreamingTextThrottle';
 import { getStreamingOutputAppend, getToolOutput } from './toolOutput';
 import { toAbsoluteFilePath } from '@/lib/path-utils';
@@ -896,63 +896,6 @@ const useSubagentChildSessionId = (part: ToolPartType, directory: string): strin
     }, [state]);
     const inferred = useRunningTaskChildSessionId(!authoritative && state.status === 'running' ? part : undefined, directory);
     return authoritative ?? inferred;
-};
-
-/** Header action of a subagent row: opens the child session, whose own chat shows its work. */
-const OpenSubtaskButton: React.FC<{
-    sessionId: string;
-    agent: string | undefined;
-    isMobile: boolean;
-}> = ({ sessionId, agent, isMobile }) => {
-    const { t } = useI18n();
-    const currentDirectory = useEffectiveDirectory();
-    const setCurrentSession = useSessionUIStore((state) => state.setCurrentSession);
-    const column = useChatColumnActions();
-    const openContextPanelTab = useUIStore((state) => state.openContextPanelTab);
-    const runtime = React.useContext(RuntimeAPIContext);
-
-    const agentType = agent ?? 'subagent';
-    const agentLabel = agentType.charAt(0).toUpperCase() + agentType.slice(1);
-    const label = t('chat.toolPart.openSubtask', { type: agentLabel });
-
-    const handleOpen = (event: React.MouseEvent) => {
-        event.stopPropagation();
-        if (!currentDirectory) return;
-        // A chat already in the side panel opens the subtask in place.
-        if (column.pinned) {
-            column.openSession(sessionId, currentDirectory);
-            return;
-        }
-        // Single-surface layouts (mobile, VS Code) navigate in place.
-        // Otherwise open a new side-panel tab.
-        if (isMobile || runtime?.runtime.isVSCode) {
-            setCurrentSession(sessionId, currentDirectory);
-            return;
-        }
-        openContextPanelTab(currentDirectory, {
-            mode: 'chat',
-            dedupeKey: `session:${sessionId}`,
-            label: agentLabel,
-            readOnly: true,
-        });
-    };
-
-    return (
-        <button
-            type="button"
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={handleOpen}
-            className={cn(
-                'flex-shrink-0 inline-flex h-4 w-4 items-center justify-center rounded transition-opacity hover:bg-interactive-hover',
-                'opacity-60 hover:opacity-100 focus-visible:opacity-100',
-            )}
-            style={{ color: 'var(--tools-icon)' }}
-            title={label}
-            aria-label={label}
-        >
-            <Icon name="external-link" className="h-3 w-3" />
-        </button>
-    );
 };
 
 const TOOL_COLLAPSED_CUSTOM_STYLE: React.CSSProperties = {
@@ -2023,7 +1966,7 @@ const ToolPartContent: React.FC<ToolPartProps & { header?: ToolRowHeader; subage
                                     </button>
                                 ) : null}
                                 {taskSessionId ? (
-                                    <OpenSubtaskButton sessionId={taskSessionId} agent={subagentAgent(input)} isMobile={isMobile} />
+                                    (state.status !== 'pending' && readTaskSessionIdsFromRecord(metadata).length > 0 ? readTaskSessionIdsFromRecord(metadata) : [taskSessionId]).map((childId) => <OpenSubtaskButton directory={currentDirectory} key={childId} sessionId={childId} agent={subagentAgent(input)} isMobile={isMobile} />)
                                 ) : null}
                             </div>
                             {showsDuration && typeof effectiveTimeStart === 'number' && !header?.durationUnknown ? (

@@ -98,7 +98,7 @@ const credentialEndpoint = (endpointUrl) => {
 };
 
 /**
- * OpenChamber answering Git wherever a repository names it.
+ * Multichamber answering Git wherever a repository names it.
  *
  * A repository given an identity with an account has `.git/config` name this
  * helper as its credential chain, so `git push` acts as that account from
@@ -200,7 +200,7 @@ export function createGitRepositoryCredentialRuntime({
     publish: async () => {
       const port = getActivePort();
       if (!Number.isInteger(port) || port <= 0) {
-        throw new Error('OpenChamber listener port is unavailable for the Git credential helper');
+        throw new Error('Multichamber listener port is unavailable for the Git credential helper');
       }
       activeSecret = randomBytes(32).toString('base64url');
       const url = `http://${callbackHost()}:${port}/api/git/repository-credential`;

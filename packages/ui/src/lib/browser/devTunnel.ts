@@ -2,7 +2,7 @@
  * Makes a remote dev server browsable from the desktop app.
  *
  * A URL like `http://localhost:5173` means "this machine" to whoever resolves
- * it. When OpenChamber is running on another host, that is the wrong machine:
+ * it. When Multichamber is running on another host, that is the wrong machine:
  * the dev server is on the host, the browser is here. The desktop shell binds
  * an equivalent local port and pipes it to the host, so the same page loads
  * from a real local origin with nothing rewritten.
@@ -87,7 +87,7 @@ const isDesktopRuntime = (): boolean => (
 const localOrigin = (): string => globalThis.window?.__OPENCHAMBER_LOCAL_ORIGIN__ ?? '';
 
 /**
- * True when the app is talking to an OpenChamber on another machine. A local
+ * True when the app is talking to an Multichamber on another machine. A local
  * runtime resolves loopback URLs correctly on its own and must not be tunneled,
  * which would only add a hop. An SSH-forwarded remote runtime is loopback too,
  * but has a different origin from the desktop shell's own server.
@@ -107,7 +107,7 @@ const isRemoteRuntime = (baseUrl: string): boolean => {
 
 /**
  * True when a loopback URL of this directory cannot be reached from a browser
- * tab: it is on the OpenChamber machine, or inside an isolated space, whose
+ * tab: it is on the Multichamber machine, or inside an isolated space, whose
  * ports only the desktop's tunnel reaches. A tab's `localhost` is its own.
  */
 export const isRemoteWebLoopbackUrl = (url: string, directory?: string | null): boolean => {
@@ -232,7 +232,7 @@ export const resolveBrowsableUrl = async (url: string, directory?: string | null
 };
 
 /**
- * True when a loopback URL belongs to the machine OpenChamber runs on rather
+ * True when a loopback URL belongs to the machine Multichamber runs on rather
  * than to this one.
  *
  * A page served through a tunnel can send the browser to another local port —

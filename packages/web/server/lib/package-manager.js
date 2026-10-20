@@ -1,21 +1,26 @@
 import { spawnSync } from 'child_process';
-import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { fetchUpdateNotes } from './changelog/update-notes.js';
-import { isEnterpriseMode } from './enterprise-mode.js';
+import { z } from 'zod';
 
-import { resolveNpmRegistryRequest } from './opencode/npm-registry-config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PACKAGE_NAME = '@openchamber/web';
+const PACKAGE_NAME = '@multichamber/web';
+const LEGACY_PACKAGE_NAME = '@openchamber/web';
 const PACKAGE_PATH_SEGMENTS = PACKAGE_NAME.split('/');
-const GITHUB_RELEASES_URL = 'https://github.com/openchamber/openchamber/releases';
-const GITHUB_RELEASES_API_URL = 'https://api.github.com/repos/openchamber/openchamber/releases';
+const GITHUB_RELEASES_URL = 'https://github.com/jibanez-staticduo/multichamber/releases';
+const GITHUB_RELEASES_API_URL = 'https://api.github.com/repos/jibanez-staticduo/multichamber/releases';
+const forkReleaseSchema = z.object({
+  tag_name: z.string(),
+  draft: z.boolean(),
+  prerelease: z.boolean(),
+  body: z.string().nullable().optional(),
+  assets: z.array(z.object({ name: z.string(), browser_download_url: z.url().optional(), size: z.number().int().positive().optional() })),
+});
 // The reason is kept with the package manager: a later call must still tell
 // a copy no package manager installed from one it did.
 let cachedDetection = null;
@@ -23,174 +28,6 @@ let cachedDetection = null;
 function getSpawnSyncBaseOptions() {
   return process.platform === 'win32' ? { windowsHide: true } : {};
 }
-const UPDATE_CHECK_URL = process.env.OPENCHAMBER_UPDATE_API_URL || 'https://api.openchamber.dev/v1/update/check';
-
-function getOpenChamberConfigDir() {
-  if (process.platform === 'win32') {
-    const appData = process.env.APPDATA;
-    if (appData) return path.join(appData, 'openchamber');
-  }
-
-  return path.join(os.homedir(), '.config', 'openchamber');
-}
-
-function sanitizeInstallScope(scope) {
-  if (scope === 'desktop-electron' || scope === 'vscode' || scope === 'web' || scope === 'mobile-capacitor') return scope;
-  return 'web';
-}
-
-function getOrCreateInstallId(scope = 'web') {
-  const configDir = getOpenChamberConfigDir();
-  const normalizedScope = sanitizeInstallScope(scope);
-  const idPath = path.join(configDir, `install-id-${normalizedScope}`);
-
-  try {
-    const existing = fs.readFileSync(idPath, 'utf8').trim();
-    if (existing) return existing;
-  } catch {
-    // Generate new id.
-  }
-
-  const installId = crypto.randomUUID();
-  fs.mkdirSync(configDir, { recursive: true });
-  fs.writeFileSync(idPath, `${installId}\n`, { encoding: 'utf8', mode: 0o600 });
-  return installId;
-}
-
-function mapPlatform(value) {
-  if (value === 'darwin') return 'macos';
-  if (value === 'win32') return 'windows';
-  if (value === 'linux') return 'linux';
-  return 'web';
-}
-
-function mapArch(value) {
-  if (value === 'arm64' || value === 'aarch64') return 'arm64';
-  if (value === 'x64' || value === 'amd64') return 'x64';
-  return 'unknown';
-}
-
-function normalizeAppType(value) {
-  if (value === 'web' || value === 'desktop-electron' || value === 'vscode' || value === 'mobile-capacitor') return value;
-  return 'web';
-}
-
-function normalizeDeviceClass(value) {
-  if (value === 'mobile' || value === 'tablet' || value === 'desktop' || value === 'unknown') return value;
-  return 'unknown';
-}
-
-function normalizePlatform(value) {
-  if (value === 'macos' || value === 'windows' || value === 'linux' || value === 'web' || value === 'android' || value === 'ios') return value;
-  return mapPlatform(process.platform);
-}
-
-function normalizeArch(value) {
-  if (value === 'arm64' || value === 'x64' || value === 'unknown') return value;
-  return mapArch(process.arch);
-}
-
-async function resolveAndroidApkUrl(version, candidateUrl) {
-  if (typeof candidateUrl === 'string') {
-    try {
-      if (new URL(candidateUrl).pathname.toLowerCase().endsWith('.apk')) return candidateUrl;
-    } catch {
-      // Resolve malformed or non-APK values from the authoritative release assets below.
-    }
-  }
-
-  try {
-    const response = await fetch(`${GITHUB_RELEASES_API_URL}/tags/v${version}`, {
-      headers: {
-        Accept: 'application/vnd.github+json',
-        'User-Agent': 'openchamber-update-check',
-      },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!response.ok) return undefined;
-
-    const release = await response.json();
-    const apkAssets = Array.isArray(release?.assets)
-      ? release.assets.filter((asset) => (
-        typeof asset?.name === 'string'
-        && asset.name.toLowerCase().endsWith('.apk')
-        && typeof asset.browser_download_url === 'string'
-      ))
-      : [];
-    const canonicalAsset = apkAssets.find((asset) => /^OpenChamber-.+-android\.apk$/i.test(asset.name));
-    return (canonicalAsset || apkAssets[0])?.browser_download_url;
-  } catch {
-    return undefined;
-  }
-}
-
-async function checkForUpdatesFromApi(currentVersion, options = {}) {
-  try {
-    const appType = normalizeAppType(options.appType);
-    const hostPlatform = mapPlatform(process.platform);
-    const hostArch = mapArch(process.arch);
-    const shouldTrustClientPlatform = appType === 'desktop-electron' || appType === 'vscode' || appType === 'mobile-capacitor';
-    const platform = shouldTrustClientPlatform ? normalizePlatform(options.platform) : hostPlatform;
-    const arch = shouldTrustClientPlatform ? normalizeArch(options.arch) : hostArch;
-    // Enterprise mode keeps the update check (security fixes must reach the
-    // company) but never reports usage, whatever the client asked for.
-    const reportUsage = options.reportUsage !== false && !isEnterpriseMode();
-    const payload = {
-      appType,
-      deviceClass: normalizeDeviceClass(options.deviceClass),
-      platform,
-      arch,
-      channel: 'stable',
-      currentVersion,
-      installId: reportUsage ? (options.installId || getOrCreateInstallId(appType)) : undefined,
-      instanceMode: options.instanceMode || 'unknown',
-      reportUsage,
-    };
-
-    const response = await fetch(UPDATE_CHECK_URL, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (!response.ok) return null;
-    const data = await response.json();
-    if (typeof data?.latestVersion !== 'string') return null;
-
-    const versionComparison = compareVersions(data.latestVersion, currentVersion);
-    if (versionComparison < 0) return null;
-
-    const releaseUrl = `${GITHUB_RELEASES_URL}/tag/v${data.latestVersion}`;
-    const downloadUrl = typeof data.downloadUrl === 'string'
-      ? data.downloadUrl
-      : typeof data.download?.url === 'string'
-        ? data.download.url
-        : undefined;
-    const updateAvailable = Boolean(data.updateAvailable) && versionComparison > 0;
-    const mobileDownloadUrl = updateAvailable && appType === 'mobile-capacitor' && platform === 'android'
-      ? await resolveAndroidApkUrl(data.latestVersion, downloadUrl)
-      : undefined;
-    return {
-      available: updateAvailable,
-      version: data.latestVersion,
-      currentVersion,
-      body: typeof data.releaseNotes === 'string' ? data.releaseNotes : undefined,
-      releaseUrl: typeof data.releaseNotesUrl === 'string' ? data.releaseNotesUrl : releaseUrl,
-      downloadUrl: mobileDownloadUrl,
-      nextSuggestedCheckInSec:
-        typeof data.nextSuggestedCheckInSec === 'number' && Number.isFinite(data.nextSuggestedCheckInSec)
-          ? data.nextSuggestedCheckInSec
-          : undefined,
-    };
-  } catch {
-    return null;
-  }
-}
-
 function normalizePathForComparison(filePath) {
   if (!filePath || typeof filePath !== 'string') return null;
   const normalized = path.normalize(path.resolve(filePath));
@@ -350,14 +187,14 @@ function getGlobalNodeModulesRoots(pm) {
 function getOwnedPackagePathsFromGlobalBins(pm) {
   const packagePaths = [];
   for (const binDir of getGlobalBinDirs(pm)) {
-    const binaryName = process.platform === 'win32' ? 'openchamber.cmd' : 'openchamber';
-    const binaryPath = path.join(binDir, binaryName);
-    if (!fs.existsSync(binaryPath)) continue;
-
-    try {
-      const realBinaryPath = fs.realpathSync.native ? fs.realpathSync.native(binaryPath) : fs.realpathSync(binaryPath);
-      packagePaths.push(path.resolve(realBinaryPath, '..', '..'));
-    } catch {
+    for (const name of ['multichamber', 'openchamber']) {
+      const binaryName = process.platform === 'win32' ? `${name}.cmd` : name;
+      const binaryPath = path.join(binDir, binaryName);
+      if (!fs.existsSync(binaryPath)) continue;
+      try {
+        const realBinaryPath = fs.realpathSync.native ? fs.realpathSync.native(binaryPath) : fs.realpathSync(binaryPath);
+        packagePaths.push(path.resolve(realBinaryPath, '..', '..'));
+      } catch {}
     }
   }
 
@@ -371,7 +208,7 @@ function detectPackageManagerFromCurrentInstallPath() {
 function packageManagerOwnsCurrentInstall(pm) {
   const currentPackagePaths = getComparablePaths(getCurrentPackagePath());
   const candidatePackagePaths = [
-    ...getGlobalNodeModulesRoots(pm).map(getPackagePathForGlobalRoot),
+    ...getGlobalNodeModulesRoots(pm).flatMap((root) => [getPackagePathForGlobalRoot(root), path.join(root, ...LEGACY_PACKAGE_NAME.split('/'))]),
     ...getOwnedPackagePathsFromGlobalBins(pm),
   ];
 
@@ -618,7 +455,7 @@ function isPackageInstalledWith(pm) {
     });
 
     if (result.status !== 0) return false;
-    return result.stdout.includes(PACKAGE_NAME) || result.stdout.includes('openchamber');
+    return result.stdout.includes(PACKAGE_NAME) || result.stdout.includes(LEGACY_PACKAGE_NAME);
   } catch {
     return false;
   }
@@ -626,7 +463,7 @@ function isPackageInstalledWith(pm) {
 
 // npm, bun and yarn print `name@version`; pnpm separates the name and the
 // version with whitespace. An optional `v` covers yarn listing formats.
-const GLOBAL_VERSION_PATTERN = /@openchamber\/web[@\s]+v?(\d[\w.+-]*)/;
+const GLOBAL_VERSION_PATTERN = /@multichamber\/web[@\s]+v?(\d[\w.+-]*)/;
 
 /**
  * Read the globally installed version of the package as reported by the
@@ -661,7 +498,7 @@ function normalizeTargetVersion(value) {
 // Dependencies whose install scripts pnpm 10+ blocks until approved. pnpm 11+
 // stops a global install in a terminal to ask about them. Keep in sync with
 // scripts/install.sh and with the "Ignored build scripts" list a fresh
-// `pnpm add -g @openchamber/web` prints.
+// `pnpm add -g @multichamber/web` prints.
 const PNPM_BUILD_DEPENDENCIES = ['msgpackr-extract', 'node-pty'];
 // First pnpm release that accepts `--allow-build`; older ones reject it as an
 // unknown option, and pnpm 9 and older run build scripts without approval.
@@ -685,18 +522,21 @@ export function getUpdateCommand(pm = detectPackageManager(), options = {}) {
   if (options.targetVersion != null && !targetVersion) {
     throw new Error(`Invalid target version for update: ${String(options.targetVersion)}`);
   }
-  const versionSpec = targetVersion ? `@${targetVersion}` : '@latest';
+  const archiveUrl = targetVersion
+    ? `${GITHUB_RELEASES_URL}/download/v${targetVersion}/multichamber-web-${targetVersion}.tgz`
+    : `${GITHUB_RELEASES_URL}/latest/download/multichamber-web.tgz`;
+  const versionSpec = quoteCommand(archiveUrl);
   const resolvedCommand = resolvePackageManagerCommand(pm);
   const pmCommand = quoteCommand(resolvedCommand);
   switch (pm) {
     case 'pnpm':
-      return `${pmCommand} add -g${getPnpmAllowBuildFlags(resolvedCommand)} ${PACKAGE_NAME}${versionSpec}`;
+      return `${pmCommand} add -g${getPnpmAllowBuildFlags(resolvedCommand)} ${versionSpec}`;
     case 'yarn':
-      return `${pmCommand} global add ${PACKAGE_NAME}${versionSpec}`;
+      return `${pmCommand} global add ${versionSpec}`;
     case 'bun':
-      return `${pmCommand} add -g ${PACKAGE_NAME}${versionSpec}`;
+      return `${pmCommand} add -g ${versionSpec}`;
     default:
-      return `${pmCommand} install -g ${PACKAGE_NAME}${versionSpec}`;
+      return `${pmCommand} install -g ${versionSpec}`;
   }
 }
 
@@ -710,28 +550,6 @@ export function getCurrentVersion() {
     return pkg.version || 'unknown';
   } catch {
     return 'unknown';
-  }
-}
-
-/**
- * Fetch latest version from npm registry
- */
-async function getLatestVersion() {
-  try {
-    const request = resolveNpmRegistryRequest(PACKAGE_NAME);
-    const response = await fetch(request.url, {
-      headers: { Accept: 'application/json', ...request.headers },
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Registry responded with ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data['dist-tags']?.latest || null;
-  } catch (error) {
-    return null;
   }
 }
 
@@ -770,65 +588,48 @@ function compareVersions(left, right) {
   return 0;
 }
 
-/** Release notes between the installed and the offered version, or undefined. */
-async function fetchChangelogNotes(fromVersion, toVersion) {
-  return (await fetchUpdateNotes(fromVersion, toVersion, compareVersions)) ?? undefined;
-}
-
+/** Checks only the Multichamber release feed. A failed check never falls back to upstream. */
 export async function checkForUpdates(options = {}) {
   const currentVersion = options.currentVersion || getCurrentVersion();
   const pm = detectPackageManager();
-  const appType = normalizeAppType(options.appType);
-  const platform = normalizePlatform(options.platform);
-
-  if (currentVersion !== 'unknown') {
-    const remote = await checkForUpdatesFromApi(currentVersion, options);
-    if (remote) {
-      if (remote.available && appType === 'web') {
-        const npmLatest = await getLatestVersion();
-        if (!npmLatest || compareVersions(npmLatest, remote.version) < 0) {
-          remote.available = false;
-        }
-      }
-      return {
-        ...remote,
-        packageManager: pm,
-        updateCommand: 'openchamber update',
-      };
+  try {
+    if (currentVersion === 'unknown') throw new Error('Unable to determine installed version');
+    const response = await (options.fetchImpl ?? fetch)(`${options.releaseApiUrl ?? GITHUB_RELEASES_API_URL}/latest`, {
+      headers: { Accept: 'application/vnd.github+json' },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) throw new Error(`Multichamber release feed responded with ${response.status}`);
+    const release = forkReleaseSchema.parse(await response.json());
+    const version = normalizeTargetVersion(release.tag_name);
+    if (!version || release.draft || release.prerelease) throw new Error('Invalid stable Multichamber release');
+    const assets = release.assets;
+    const available = compareVersions(version, currentVersion) > 0;
+    const webArchives = assets.filter((asset) => asset.name === `multichamber-web-${version}.tgz`);
+    if (webArchives.length > 1) throw new Error('Multichamber release has duplicate web package archives');
+    const webArchive = webArchives[0];
+    if (available && (!options.appType || options.appType === 'web') && !webArchive) {
+      throw new Error('Multichamber release has no web package archive');
     }
-  }
-
-  const latestVersion = await getLatestVersion();
-
-  if (!latestVersion || currentVersion === 'unknown') {
+    const webDownloadUrl = `${GITHUB_RELEASES_URL}/download/v${version}/multichamber-web-${version}.tgz`;
+    if (webArchive?.browser_download_url && webArchive.browser_download_url !== webDownloadUrl) throw new Error('Multichamber release has an invalid web archive URL');
+    const apk = assets.find((asset) => /^Multichamber-.+-android\.apk$/i.test(asset.name));
+    const apkDownloadUrl = apk ? `${GITHUB_RELEASES_URL}/download/v${version}/${encodeURIComponent(apk.name)}` : undefined;
+    if (apk?.browser_download_url && apk.browser_download_url !== apkDownloadUrl) throw new Error('Multichamber release has an invalid Android archive URL');
     return {
-      available: false,
+      available,
+      version,
       currentVersion,
-      error: 'Unable to determine versions',
+      body: release.body ?? undefined,
+      releaseUrl: `${GITHUB_RELEASES_URL}/tag/v${version}`,
+      downloadUrl: available && options.appType === 'mobile-capacitor' && options.platform === 'android'
+        ? apkDownloadUrl
+        : available && (!options.appType || options.appType === 'web') ? webDownloadUrl : undefined,
+      packageManager: pm,
+      updateCommand: 'multichamber update',
     };
+  } catch (error) {
+    return { available: false, currentVersion, error: error.message || 'Unable to check Multichamber releases' };
   }
-
-  const available = compareVersions(latestVersion, currentVersion) > 0;
-  let changelog;
-  let downloadUrl;
-  if (available) {
-    changelog = await fetchChangelogNotes(currentVersion, latestVersion);
-    if (appType === 'mobile-capacitor' && platform === 'android') {
-      downloadUrl = await resolveAndroidApkUrl(latestVersion);
-    }
-  }
-
-  return {
-    available,
-    version: latestVersion,
-    currentVersion,
-    body: changelog,
-    releaseUrl: `${GITHUB_RELEASES_URL}/tag/v${latestVersion}`,
-    downloadUrl,
-    packageManager: pm,
-    // Show our CLI command, not raw package manager command
-    updateCommand: 'openchamber update',
-  };
 }
 
 /**

@@ -1,3 +1,11 @@
+const baselineFetch = globalThis.fetch;
+beforeEach(() => { globalThis.fetch = async (input, init) => {
+  const route = String(input instanceof Request ? input.url : input);
+  if (route.includes('/api/session-knowledge/sync')) return Response.json({ synced: true });
+  return baselineFetch(input, init);
+}; });
+afterEach(() => { globalThis.fetch = baselineFetch; });
+
 import { ensureChatsRootDirectory } from '@/lib/chatDirectories';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { opencodeClient } from '@/lib/opencode/client';
@@ -578,7 +586,7 @@ describe('openNewSessionDraft project binding', () => {
   });
 
   test('defaults an implicit draft to Chat when active project differs', () => {
-    useSessionUIStore.getState().openNewSessionDraft();
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true });
     const draft = useSessionUIStore.getState().newSessionDraft;
 
     expect(draft.open).toBe(true);
@@ -598,7 +606,7 @@ describe('openNewSessionDraft project binding', () => {
     });
     useProjectsStore.setState({ projects: [{ ...projectA, defaultModel: 'project/model', defaultVariant: 'high' }, projectB] });
     try {
-      useSessionUIStore.getState().openNewSessionDraft({ selectedProjectId: projectA.id });
+      useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, selectedProjectId: projectA.id });
       expect(useConfigStore.getState().currentProviderId).toBe('project');
       expect(useConfigStore.getState().currentModelId).toBe('model');
       expect(useConfigStore.getState().currentVariant).toBe('high');
@@ -623,8 +631,8 @@ describe('openNewSessionDraft project binding', () => {
       { ...projectB, defaultModel: 'beta/model' },
     ] });
     try {
-      useSessionUIStore.getState().openNewSessionDraft({ selectedProjectId: projectA.id });
-      useSessionUIStore.getState().openNewSessionDraft({ selectedProjectId: projectB.id });
+      useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, selectedProjectId: projectA.id });
+      useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, selectedProjectId: projectB.id });
       expect(useConfigStore.getState().currentProviderId).toBe('beta');
       finishActivation();
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -638,7 +646,7 @@ describe('openNewSessionDraft project binding', () => {
   test('defaults an implicit draft to Chat when current directory is unmatched', () => {
     useDirectoryStore.getState().setDirectory('/external/worktree', { showOverlay: false });
 
-    useSessionUIStore.getState().openNewSessionDraft();
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true });
     const draft = useSessionUIStore.getState().newSessionDraft;
 
     expect(draft.open).toBe(true);
@@ -652,13 +660,13 @@ describe('openNewSessionDraft project binding', () => {
     useSpaceArchivesStore.setState({ byDirectory: new Map([[archiveDirectory, { spaceId: 'a1b2c3d4e5f6', name: 'gone', projectDirectory: projectA.path, directory: archiveDirectory, archivedAt: 1 }]]) });
     try {
       // The "new chat" shortcut and the desktop menu forward the current directory, the archive's after its chat was open.
-      useSessionUIStore.getState().openNewSessionDraft({ directoryOverride: archiveDirectory });
+      useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, directoryOverride: archiveDirectory });
       let draft = useSessionUIStore.getState().newSessionDraft;
       expect(draft.target).toBe('chat');
       expect(draft.directoryOverride).toBeNull();
 
       useDirectoryStore.getState().setDirectory(archiveDirectory, { showOverlay: false });
-      useSessionUIStore.getState().openNewSessionDraft();
+      useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true });
       draft = useSessionUIStore.getState().newSessionDraft;
       expect(draft.target).toBe('chat');
       expect(draft.directoryOverride).toBeNull();
@@ -673,7 +681,7 @@ describe('openNewSessionDraft project binding', () => {
       JSON.stringify({ projectId: projectA.id, directory: projectA.path, target: 'project' }),
     );
 
-    useSessionUIStore.getState().openNewSessionDraft({ target: 'chat' });
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, target: 'chat' });
     const draft = useSessionUIStore.getState().newSessionDraft;
 
     expect(draft.target).toBe('chat');
@@ -688,7 +696,7 @@ describe('openNewSessionDraft project binding', () => {
     );
     useDirectoryStore.getState().setDirectory(projectB.path, { showOverlay: false });
 
-    useSessionUIStore.getState().openNewSessionDraft();
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true });
     const draft = useSessionUIStore.getState().newSessionDraft;
 
     expect(draft.target).toBe('project');
@@ -703,7 +711,7 @@ describe('openNewSessionDraft project binding', () => {
     );
     useDirectoryStore.getState().setDirectory('/external/worktree', { showOverlay: false });
 
-    useSessionUIStore.getState().openNewSessionDraft();
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true });
     await Bun.sleep(0);
 
     const draft = useSessionUIStore.getState().newSessionDraft;
@@ -728,7 +736,7 @@ describe('openNewSessionDraft project binding', () => {
     });
 
     try {
-      useSessionUIStore.getState().openNewSessionDraft({ target: 'chat' });
+      useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, target: 'chat' });
       expect(useSessionUIStore.getState().newSessionDraft).toMatchObject({
         target: 'chat',
         selectedProjectId: null,
@@ -768,7 +776,7 @@ describe('openNewSessionDraft project binding', () => {
     };
 
     try {
-      useSessionUIStore.getState().openNewSessionDraft({ directoryOverride: '/external/worktree' });
+      useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, directoryOverride: '/external/worktree' });
       expect(useSessionUIStore.getState().newSessionDraft).toMatchObject({
         target: 'project',
         directoryOverride: '/external/worktree',
@@ -812,7 +820,7 @@ describe('openNewSessionDraft project binding', () => {
     );
     useDirectoryStore.setState({ currentDirectory: '' });
 
-    useSessionUIStore.getState().openNewSessionDraft();
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true });
     const draft = useSessionUIStore.getState().newSessionDraft;
 
     expect(draft.target).toBe('project');
@@ -832,7 +840,7 @@ describe('openNewSessionDraft project binding', () => {
     opencodeClient.getDirectoryAvailability = async () => 'missing';
 
     try {
-      useSessionUIStore.getState().openNewSessionDraft();
+      useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true });
       expect(useSessionUIStore.getState().newSessionDraft).toMatchObject({
         target: 'project',
         selectedProjectId: projectA.id,
@@ -859,7 +867,7 @@ describe('openNewSessionDraft project binding', () => {
     );
     useDirectoryStore.getState().setDirectory('/external/worktree', { showOverlay: false });
 
-    useSessionUIStore.getState().openNewSessionDraft({ automatic: true });
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, automatic: true });
     const draft = useSessionUIStore.getState().newSessionDraft;
 
     expect(draft.target).toBe('project');
@@ -873,7 +881,7 @@ describe('openNewSessionDraft project binding', () => {
       JSON.stringify({ projectId: projectA.id, directory: projectA.path, target: 'project' }),
     );
 
-    useSessionUIStore.getState().openNewSessionDraft({ directoryOverride: '/projects/beta/src' });
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, directoryOverride: '/projects/beta/src' });
     const draft = useSessionUIStore.getState().newSessionDraft;
 
     expect(draft.open).toBe(true);
@@ -888,7 +896,7 @@ describe('openNewSessionDraft project binding', () => {
       JSON.stringify({ projectId: projectA.id, directory: projectA.path, target: 'project' }),
     );
 
-    useSessionUIStore.getState().openNewSessionDraft({ selectedProjectId: projectB.id });
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, selectedProjectId: projectB.id });
     const draft = useSessionUIStore.getState().newSessionDraft;
 
     expect(draft.open).toBe(true);
@@ -898,7 +906,7 @@ describe('openNewSessionDraft project binding', () => {
   });
 
   test('reopens an implicit draft on the project the target selector was last set to', () => {
-    useSessionUIStore.getState().openNewSessionDraft({ selectedProjectId: projectB.id });
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, selectedProjectId: projectB.id });
     useSessionUIStore.getState().closeNewSessionDraft();
     // A chat session leaves its managed scratch directory current; the project
     // to reopen on can only come from the recorded target.
@@ -907,7 +915,7 @@ describe('openNewSessionDraft project binding', () => {
       { showOverlay: false },
     );
 
-    useSessionUIStore.getState().openNewSessionDraft();
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true });
     const draft = useSessionUIStore.getState().newSessionDraft;
 
     expect(draft.target).toBe('project');
@@ -916,11 +924,11 @@ describe('openNewSessionDraft project binding', () => {
   });
 
   test('setNewSessionDraftTarget records Chat, so the next implicit draft opens on Chat', () => {
-    useSessionUIStore.getState().openNewSessionDraft({ selectedProjectId: projectB.id });
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, selectedProjectId: projectB.id });
     useSessionUIStore.getState().setNewSessionDraftTarget({ projectId: CHAT_DRAFT_PROJECT_ID });
     useSessionUIStore.getState().closeNewSessionDraft();
 
-    useSessionUIStore.getState().openNewSessionDraft();
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true });
 
     expect(useSessionUIStore.getState().newSessionDraft.target).toBe('chat');
   });
@@ -931,7 +939,7 @@ describe('openNewSessionDraft project binding', () => {
       JSON.stringify({ projectId: projectB.id, directory: projectB.path }),
     );
 
-    useSessionUIStore.getState().openNewSessionDraft();
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true });
 
     expect(useSessionUIStore.getState().newSessionDraft.target).toBe('chat');
   });
@@ -940,7 +948,7 @@ describe('openNewSessionDraft project binding', () => {
     // "New session in the current directory" callers forward the current
     // session's directory even when that session is a chat; its scratch
     // directory names no project.
-    useSessionUIStore.getState().openNewSessionDraft({
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true,
       directoryOverride: '/Users/tester/.config/openchamber/chats/ses_chat',
     });
     const draft = useSessionUIStore.getState().newSessionDraft;
@@ -955,7 +963,7 @@ describe('openNewSessionDraft project binding', () => {
       JSON.stringify({ projectId: projectB.id, directory: projectB.path, target: 'project' }),
     );
 
-    useSessionUIStore.getState().openNewSessionDraft({
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true,
       directoryOverride: '/Users/tester/.config/openchamber/chats/ses_chat',
     });
 
@@ -968,7 +976,7 @@ describe('openNewSessionDraft project binding', () => {
       JSON.stringify({ projectId: 'proj-removed', directory: '/projects/removed', target: 'project' }),
     );
 
-    useSessionUIStore.getState().openNewSessionDraft();
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true });
 
     expect(useSessionUIStore.getState().newSessionDraft.target).toBe('chat');
   });
@@ -1031,7 +1039,7 @@ describe('createSession draft lifecycle', () => {
     useDirectoryStore.getState().setDirectory('/private/deleted-worktree', { showOverlay: false });
     opencodeClient.getDirectoryAvailability = async () => 'missing';
 
-    useSessionUIStore.getState().openNewSessionDraft({ directoryOverride: '/private/deleted-worktree' });
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, directoryOverride: '/private/deleted-worktree' });
     await Bun.sleep(0);
 
     expect(useSessionUIStore.getState().newSessionDraft.directoryOverride).toBe('/projects/main');
@@ -1049,7 +1057,7 @@ describe('createSession draft lifecycle', () => {
       activeProjectId: 'project-active',
     });
     useDirectoryStore.getState().setDirectory('/private/deleted-worktree', { showOverlay: false });
-    useSessionUIStore.getState().openNewSessionDraft({ directoryOverride: '/private/deleted-worktree' });
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, directoryOverride: '/private/deleted-worktree' });
     opencodeClient.getDirectoryAvailability = async () => 'missing';
     opencodeClient.createSession = async (_params, directory) => {
       createSessionCalls.push(directory);
@@ -1069,7 +1077,7 @@ describe('createSession draft lifecycle', () => {
       projects: [{ id: 'project-main', path: '/projects/main', label: 'Main' }],
       activeProjectId: 'project-main',
     });
-    useSessionUIStore.getState().openNewSessionDraft({ directoryOverride: '/private/deleted-worktree', preserveDirectoryOverride: true });
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, directoryOverride: '/private/deleted-worktree', preserveDirectoryOverride: true });
     expect(useSessionUIStore.getState().newSessionDraft.preserveDirectoryOverride).toBe(true);
     opencodeClient.getDirectoryAvailability = async () => 'missing';
     opencodeClient.createSession = async (_params, directory) => {
@@ -1089,7 +1097,7 @@ describe('createSession draft lifecycle', () => {
       activeProjectId: 'project-main',
     });
     useDirectoryStore.getState().setDirectory('/private/deleted-worktree', { showOverlay: false });
-    useSessionUIStore.getState().openNewSessionDraft({ directoryOverride: '/private/deleted-worktree' });
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, directoryOverride: '/private/deleted-worktree' });
     expect(useSessionUIStore.getState().newSessionDraft.preserveDirectoryOverride).not.toBe(true);
     opencodeClient.getDirectoryAvailability = async () => 'missing';
     opencodeClient.createSession = async (_params, directory) => {
@@ -1109,7 +1117,7 @@ describe('createSession draft lifecycle', () => {
       activeProjectId: 'project-main',
     });
     useDirectoryStore.getState().setDirectory('/private/unavailable-worktree', { showOverlay: false });
-    useSessionUIStore.getState().openNewSessionDraft({ directoryOverride: '/private/unavailable-worktree' });
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, directoryOverride: '/private/unavailable-worktree' });
     opencodeClient.getDirectoryAvailability = async () => 'unknown';
     opencodeClient.createSession = async (_params, directory) => {
       createSessionCalls.push(directory);
@@ -1138,7 +1146,7 @@ describe('createSession draft lifecycle', () => {
       return { id: 'session-race', directory };
     };
 
-    useSessionUIStore.getState().openNewSessionDraft({ directoryOverride: '/private/deleted-worktree' });
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, directoryOverride: '/private/deleted-worktree' });
     const createPromise = useSessionUIStore.getState().createSession('Draft title', '/private/deleted-worktree');
     expect(availabilityResolvers.length).toBe(2);
 
@@ -1159,7 +1167,7 @@ describe('createSession draft lifecycle', () => {
       activeProjectId: 'project-main',
     });
     useDirectoryStore.getState().setDirectory('/private/deleted-worktree', { showOverlay: false });
-    useSessionUIStore.getState().openNewSessionDraft();
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true });
     opencodeClient.getDirectoryAvailability = async () => 'missing';
     opencodeClient.createSession = async () => {
       throw new Error('offline');
@@ -1270,7 +1278,8 @@ describe('sendMessage draft snapshot (issues #2222 / #2315)', () => {
     expect(sendMessageCalls).toHaveLength(1);
     expect(sendMessageCalls[0].id).toBe('session-materialized');
     expect(sendMessageCalls[0].directory).toBe('/projects/alpha');
-    expect(useSessionDisplayStore.getState().singleProjectId).toBe('project-alpha');
+    // Finishing the captured send must not undo the user's newer navigation.
+    expect(useSessionDisplayStore.getState().singleProjectId).toBe('project-beta');
   });
 
   test('existing-session send keeps the submit-time target even when selection changes', async () => {
@@ -1839,12 +1848,13 @@ describe('goal objective directory scoping', () => {
       metadataWrites.push({ sessionId, patch, directory });
       return { id: sessionId, ...patch };
     };
-    // Session metadata is OpenChamber-owned on v2: it travels through the
+    // Session metadata is Multichamber-owned on v2: it travels through the
     // server's metadata route, not OpenCode. Every other fetch fails, so the
     // file-backed objective write falls back to the inline objective.
     globalThis.fetch = async (input, init) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      const match = /\/api\/openchamber\/sessions\/([^/]+)\/metadata$/.exec(url);
+      if (url.includes('/api/session-knowledge/sync')) return Response.json({ synced: true });
+      const match = /\/api\/multichamber\/sessions\/([^/]+)\/metadata$/.exec(url);
       if (!match || init?.method !== 'POST') return new Response('', { status: 500 });
       const { patch } = JSON.parse(init.body);
       metadataWrites.push({ sessionId: decodeURIComponent(match[1]), patch, directory: '/repo/worktree' });

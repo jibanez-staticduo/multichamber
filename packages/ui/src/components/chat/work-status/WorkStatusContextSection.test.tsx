@@ -6,6 +6,8 @@ import { OpenCode } from '@opencode/client';
 import { toast } from 'sonner';
 import type { Session } from '@/lib/opencode/model';
 import type { LinkedIssue } from '@/lib/linkedIssues';
+import { useSkillsStore } from '@/stores/useSkillsStore';
+import { useMcpStore } from '@/stores/useMcpStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { I18nProvider } from '@/lib/i18n';
 import { SyncProvider } from '@/sync/sync-context';
@@ -122,4 +124,29 @@ describe('agent-linked threads in the context section', () => {
     reported.mockRestore();
     unlink.mockRestore();
   });
+  for (const backend of ['claude', 'codex']) {
+    test(`${backend} keeps generic links while hiding OpenCode skills and MCP`, async () => {
+      const skills = spyOn(useSkillsStore.getState(), 'loadSkills').mockResolvedValue(true);
+      try {
+        const store = getSyncChildStores().getChild(directory);
+        if (!store) throw new Error('Directory store missing');
+        await act(async () => store.setState({ session: [{ ...sessionWith([githubIssue]), metadata: { ...sessionWith([githubIssue]).metadata, backend } }] }));
+        const skillCalls = skills.mock.calls.length;
+        await render();
+        expect(container.textContent).toContain('Rail badge count');
+        expect(container.textContent).not.toContain('Skills');
+        expect(container.textContent).not.toContain('MCP servers');
+        expect(skills.mock.calls.length).toBe(skillCalls);
+        const { WorkStatusMcpSection } = await import('./WorkStatusMcpSection');
+        const ensure = spyOn(useMcpStore.getState(), 'ensureFresh').mockResolvedValue(undefined);
+        try {
+          await act(async () => root.render(<I18nProvider><SyncProvider sdk={sdk} directory={directory}><WorkStatusMcpSection sessionId={sessionId} directory={directory} /></SyncProvider></I18nProvider>));
+          expect(container.textContent).toBe('');
+          expect(container.querySelector('[role="switch"]')).toBeNull();
+          expect(ensure.mock.calls.length).toBe(0);
+        } finally { ensure.mockRestore(); }
+      } finally { skills.mockRestore(); }
+    });
+  }
+
 });

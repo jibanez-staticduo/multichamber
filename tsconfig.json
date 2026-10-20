@@ -12,8 +12,8 @@
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "paths": {
-      "@openchamber/ui/*": ["./packages/ui/src/*"],
-      "@openchamber/web/*": ["./packages/web/src/*"]
+      "@multichamber/ui/*": ["./packages/ui/src/*"],
+      "@multichamber/web/*": ["./packages/web/src/*"]
     }
   }
 }

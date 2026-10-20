@@ -87,9 +87,9 @@ export default defineConfig({
   ],
   resolve: {
     alias: [
-      { find: '@openchamber/sdk/schemas', replacement: path.resolve(__dirname, '../sdk/src/schemas.ts') },
-      { find: '@openchamber/sdk', replacement: path.resolve(__dirname, '../sdk/src/index.ts') },
-      { find: '@openchamber/ui', replacement: path.resolve(__dirname, '../ui/src') },
+      { find: '@multichamber/sdk/schemas', replacement: path.resolve(__dirname, '../sdk/src/schemas.ts') },
+      { find: '@multichamber/sdk', replacement: path.resolve(__dirname, '../sdk/src/index.ts') },
+      { find: '@multichamber/ui', replacement: path.resolve(__dirname, '../ui/src') },
       { find: '@web', replacement: path.resolve(__dirname, './src') },
       { find: '@', replacement: path.resolve(__dirname, '../ui/src') },
     ],

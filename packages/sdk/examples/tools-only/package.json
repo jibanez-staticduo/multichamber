@@ -1,9 +1,12 @@
 {
-  "name": "@openchamber/example-tools-only",
+  "name": "@multichamber/example-tools-only",
   "version": "1.1.0",
   "private": true,
   "type": "module",
-  "openchamber": {
+  "dependencies": {
+    "@multichamber/sdk": "workspace:*"
+  },
+  "multichamber": {
     "apiVersion": 1,
     "contributes": {
       "panel": {
@@ -16,19 +19,27 @@
           "match": "example_findings",
           "name": "Code review",
           "icon": "search",
-          "title": "Review · {input.scope}",
+          "title": "Review \u00b7 {input.scope}",
           "subtitle": "{output.summary}",
           "output": "table",
-          "columns": ["severity", "file", "finding"]
+          "columns": [
+            "severity",
+            "file",
+            "finding"
+          ]
         },
         {
           "match": "example_checks",
           "name": "Project checks",
           "icon": "checkbox-circle",
-          "title": "Checks · {input.project}",
+          "title": "Checks \u00b7 {input.project}",
           "subtitle": "{output.summary}",
           "output": "table",
-          "columns": ["check", "status", "detail"]
+          "columns": [
+            "check",
+            "status",
+            "detail"
+          ]
         },
         {
           "match": "mcp.*",
@@ -38,8 +49,5 @@
         }
       ]
     }
-  },
-  "dependencies": {
-    "@openchamber/sdk": "workspace:*"
   }
 }

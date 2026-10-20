@@ -126,7 +126,7 @@ describe('readDispatchOutcome', () => {
   });
 
   it('matches the turn by record order when the baseline is known, whatever the clocks say', () => {
-    // OpenCode's clock lags OpenChamber's: every record looks older than the
+    // OpenCode's clock lags Multichamber's: every record looks older than the
     // dispatch at 1000, yet a newer idle record than the baseline ended the turn.
     const records = [idle('succeeded', 30), assistant('Done on the remote', 20), user(15), idle('succeeded', 5), assistant('older', 4)];
     expect(readDispatchOutcome(records, 1000, 'msg_i5')).toEqual({ state: 'completed', text: 'Done on the remote', errorMessage: '' });

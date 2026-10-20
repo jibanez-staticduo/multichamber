@@ -13,6 +13,7 @@ let restoreGlobals: () => void;
 let mounts: number;
 let requests: string[];
 let respond: () => Promise<Response>;
+let nativeAvailable = false;
 
 const version = (value: string, canInstall = false) => Response.json({
   state: value.startsWith('2.') ? 'compatible' : 'incompatible',
@@ -30,6 +31,7 @@ beforeEach(() => {
     getComputedStyle: dom.getComputedStyle.bind(dom),
     IS_REACT_ACT_ENVIRONMENT: true,
     fetch: async (input: RequestInfo | URL) => {
+      if (String(input).includes('/api/engines')) return Response.json({ engines: [{ id: 'codex', available: nativeAvailable }] });
       requests.push(String(input));
       return respond();
     },
@@ -49,6 +51,7 @@ beforeEach(() => {
   mounts = 0;
   requests = [];
   respond = async () => version('1.18.30');
+  nativeAvailable = false;
 });
 
 afterEach(async () => {
@@ -77,6 +80,18 @@ test('v1 recovery replaces the application once the check confirms an incompatib
   expect(document.getElementById('initial-loading')).toBeNull();
   expect(requests).toHaveLength(1);
   expect(requests[0]).toContain('/api/opencode/compatibility');
+});
+
+test('a healthy native harness keeps the application mounted despite incompatible OpenCode', async () => {
+  nativeAvailable = true;
+  await render();
+  expect(host.textContent).toContain('Application mounted');
+  expect(host.textContent).not.toContain('OpenCode v2 required');
+  expect(mounts).toBe(1);
+  nativeAvailable = false;
+  await act(async () => { window.dispatchEvent(new window.CustomEvent('openchamber:runtime-endpoint-changed')); });
+  expect(host.textContent).not.toContain('Application mounted');
+  expect(host.textContent).toContain('OpenCode v2 required');
 });
 
 test('the application mounts while the check runs and stays mounted for v2', async () => {

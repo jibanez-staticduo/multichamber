@@ -1,8 +1,8 @@
-// Host-side parsing. OpenChamber (browser host and server) imports this to
+// Host-side parsing. Multichamber (browser host and server) imports this to
 // validate an untrusted guest's manifest and messages with zod. Guests import
-// `@openchamber/sdk`, which carries no schema library.
+// `@multichamber/sdk`, which carries no schema library.
 export {
-  openChamberManifestSchema,
+  multichamberManifestSchema,
   PACKAGE_VERSION_PATTERN,
   packageManifestSchema,
   parseManifest,

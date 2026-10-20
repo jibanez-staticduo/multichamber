@@ -619,7 +619,7 @@ const isUiFocused = (): boolean => (
 )
 
 /**
- * OpenChamber's own notification frame: the agent-completion notice for
+ * Multichamber's own notification frame: the agent-completion notice for
  * desktop, VS Code and mobile (the web surface has its own stream), plus the
  * toast raised when a managed OpenCode restart interrupted a turn.
  */

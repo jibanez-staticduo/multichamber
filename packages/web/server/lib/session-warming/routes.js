@@ -17,6 +17,7 @@
 import { z } from 'zod';
 import { isSpaceDirectory } from '../spaces/dispatcher.js';
 import { sessionIdSchema, warmingMinutesSchema } from './runtime.js';
+import { isNativeSession } from '../harnesses/session-client.js';
 
 const modeSchema = z.object({ mode: z.enum(['off', 'all', 'session']) });
 const durationSchema = z.object({ scope: z.enum(['all', 'session']), minutes: warmingMinutesSchema });
@@ -29,7 +30,7 @@ const sessionBodySchema = z.object({ directory: z.string().trim().min(1), warm: 
  * @param {(enabled: boolean) => unknown} options.setGlobalWarming Writes OpenCode's `warming` key.
  * @param {(minutes: number) => unknown} options.setGlobalWarmingDuration Writes OpenCode's `warming.duration`.
  */
-export const registerSessionWarmingRoutes = (app, { sessionWarmingRuntime, setGlobalWarming, setGlobalWarmingDuration }) => {
+export const registerSessionWarmingRoutes = (app, { sessionWarmingRuntime, setGlobalWarming, setGlobalWarmingDuration, isSessionSupported = (id) => !isNativeSession(id) }) => {
   app.get('/api/session-warming', (_req, res) => res.json(sessionWarmingRuntime.snapshot()));
 
   app.put('/api/session-warming/mode', (req, res) => {
@@ -64,6 +65,7 @@ export const registerSessionWarmingRoutes = (app, { sessionWarmingRuntime, setGl
     const sessionId = sessionIdSchema.safeParse(req.params.sessionId);
     const body = sessionBodySchema.safeParse(req.body);
     if (!sessionId.success || !body.success) return res.status(400).json({ error: 'a session id, directory and warm are required' });
+    if (!isSessionSupported(sessionId.data)) return res.status(400).json({ _tag: 'UnsupportedOperationError', code: 'unsupported_harness_operation', error: 'Cache warming is available only for OpenCode sessions' });
     // A space's sessions run on the space's own OpenCode, which this server does not ping.
     if (isSpaceDirectory(body.data.directory)) return res.status(400).json({ error: 'sessions in an isolated space cannot be kept warm' });
     const result = sessionWarmingRuntime.setSessionWarm(sessionId.data, body.data.directory, body.data.warm);

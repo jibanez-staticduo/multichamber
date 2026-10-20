@@ -1,38 +1,36 @@
 ---
 title: Instalação
-description: Instale o OpenChamber no desktop, na web, no VS Code ou no celular.
+description: Instale o Multichamber para desktop, web ou celular.
 ---
 
 # Instalação
 
-Escolha o app que combina com o seu jeito de trabalhar:
+## Escolha o aplicativo
 
-- app de desktop para macOS, Windows e Linux
-- app web executado pela CLI, que você pode instalar como um app de celular (um PWA)
-- extensão para VS Code, também para Cursor, Windsurf e Trae
-- apps móveis para iPhone e Android, em beta pública
+Use o aplicativo desktop no macOS, Windows ou Linux, ou execute o servidor web/PWA. As versões iOS e Android se conectam a um servidor existente. Este fork não fornece uma extensão do VS Code.
 
-## Desktop
+O desktop inclui OpenCode. O servidor web precisa de OpenCode e Node.js 24.14 ou posterior. Para Claude Code ou Codex, instale e autentique cada CLI nativa no servidor; OpenCode não as inclui.
 
-Baixe a versão mais recente na [página de download](https://openchamber.dev/download/) ou no [GitHub Releases](https://github.com/openchamber/openchamber/releases/latest) e abra. Para Linux há `.deb`, `.rpm` e AppImage.
+[Multichamber](https://github.com/jibanez-staticduo/multichamber/releases)
 
-O app de desktop traz a própria cópia do [OpenCode](https://opencode.ai) (o agente de IA para código em que o OpenChamber roda), então não há mais nada para instalar.
-
-## Web + PWA
-
-O app web precisa do [OpenCode](https://opencode.ai) e do Node.js 24.14 ou mais recente na máquina onde ele roda.
+## Web / PWA
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/openchamber/openchamber/main/scripts/install.sh | bash
-openchamber --ui-password be-creative-here
+curl -fsSL https://raw.githubusercontent.com/jibanez-staticduo/multichamber/main/scripts/install.sh | bash
+multichamber --ui-password be-creative-here
 ```
 
-Abra a URL que a CLI mostra (normalmente `http://localhost:3000`). Você deve ver a lista de sessões do OpenChamber. Para deixá-lo à mão, use a opção "Instalar" na barra de endereço do navegador e adicione-o como app.
+## iOS / Android
 
-## VS Code
+Use apenas arquivos ou links de distribuição publicados para este fork. iOS precisa de assinatura e distribuição autorizada pelo TestFlight ou App Store; não há promessa de beta público. Android precisa de um APK assinado compatível. A web móvel funciona sem uma compilação nativa.
 
-Instale o OpenChamber pelo [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=fedaykindev.openchamber). Cursor, Windsurf e Trae instalam pelo [Open VSX](https://open-vsx.org/extension/FedaykinDev/openchamber). A extensão precisa do [OpenCode](https://opencode.ai) instalado; depois, a visualização do OpenChamber abre na barra lateral.
+## Nix
 
-## Celular
+```bash
+nix run github:jibanez-staticduo/multichamber
+nix run github:jibanez-staticduo/multichamber#gui
+```
 
-Instale o app de iPhone pelo TestFlight ou o app de Android pela versão mais recente e depois pareie-o com o seu computador. [Apps Móveis e PWA](/pt-br/mobile/) mostra os dois passos.
+`packages.multichamber` · `packages.multichamber-desktop` · `nixosModules.multichamber`
+
+Nix gerencia atualizações dos aplicativos em seu armazenamento. Recompile com o flake atualizado; o atualizador do OpenCode não pode alterar o armazenamento Nix.

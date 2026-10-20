@@ -88,7 +88,7 @@ const output = {};
 // are already on the release and stay untouched.
 const macOnly = process.env.MAC_ONLY === '1';
 
-if (!macOnly) {
+if (!macOnly && process.env.SKIP_WINDOWS !== '1') {
   const winX64 = await read('latest-yml-x86_64-pc-windows-msvc', 'latest.yml');
   const winArm64 = await read('latest-yml-aarch64-pc-windows-msvc', 'latest.yml');
   if (!winX64 || !winArm64) {
@@ -101,6 +101,7 @@ if (!macOnly) {
 // One manifest serves both Mac architectures. The updater falls back to x64
 // files when it lists no arm64 ones, so a manifest missing an architecture
 // moves Apple Silicon users onto the Intel build under Rosetta.
+if (process.env.SKIP_MAC !== '1') {
 const macX64 = await read('latest-yml-x86_64-apple-darwin', 'latest-mac.yml');
 const macArm64 = await read('latest-yml-aarch64-apple-darwin', 'latest-mac.yml');
 if (!macX64 || !macArm64) {
@@ -112,6 +113,8 @@ output['latest-mac.yml'] = serialize({
   files: [...macArm64.files, ...macX64.files],
   releaseDate: macArm64.releaseDate,
 });
+
+}
 
 const tag = `v${version}`;
 const tmp = process.env.RUNNER_TEMP || '/tmp';

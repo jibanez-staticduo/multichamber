@@ -1,4 +1,5 @@
 import React from 'react';
+import { nativeSessionLabel } from '@/lib/nativeSessionLabel';
 import { useGlobalSessionStatusStore } from '@/sync/global-session-status';
 import { Icon } from '@/components/icon/Icon';
 import type { IconName } from '@/components/icon/icons';
@@ -96,13 +97,14 @@ export const WorkStatusSubagentsSection: React.FC<Props> = ({ sessionId, directo
 
   // Same branch the transcript's Task tool takes: surfaces that cannot host an
   // side panel navigate to the child session instead of opening a tab.
-  const openChildSession = React.useCallback((childId: string, label: string) => {
-    if (!directory) return;
+  const openChildSession = React.useCallback((childId: string, label: string, childDirectory: string) => {
+    const targetDirectory = childDirectory || directory;
+    if (!targetDirectory) return;
     if (isMobile || isVSCodeRuntime()) {
-      setCurrentSession(childId, directory);
+      setCurrentSession(childId, targetDirectory);
       return;
     }
-    openContextPanelTab(directory, {
+    openContextPanelTab(targetDirectory, {
       mode: 'chat',
       dedupeKey: `session:${childId}`,
       label,
@@ -157,7 +159,7 @@ export const WorkStatusSubagentsSection: React.FC<Props> = ({ sessionId, directo
     >
       <div className="max-h-56 overflow-y-auto">
         {rows.map(({ child, blocked, asked, busy, failed, done }) => {
-          const label = child.title?.trim() || t('chat.workStatus.subagent.untitled');
+          const label = nativeSessionLabel(child, t('chat.workStatus.subagent.untitled'));
           let icon: IconName = 'time';
           let iconColor: string | undefined;
           let statusLabel = '';
@@ -186,7 +188,7 @@ export const WorkStatusSubagentsSection: React.FC<Props> = ({ sessionId, directo
           return (
             <WorkStatusRow
               key={child.id}
-              onClick={directory ? () => openChildSession(child.id, label) : undefined}
+              onClick={child.directory || directory ? () => openChildSession(child.id, label, child.directory) : undefined}
               ariaLabel={[t('chat.workStatus.action.openSubagent', { name: label }), statusLabel].filter(Boolean).join('. ')}
               // The smaller status glyph sits centred in the panel's 14px icon
               // slot, so it lines up under the section icon and the label

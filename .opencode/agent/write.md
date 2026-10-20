@@ -1,6 +1,6 @@
 ---
 mode: all
-description: Write and edit OpenChamber text people read: product docs, READMEs, release notes, PR and issue comments, posts, and messages the maintainer sends. Give it the audience, the facts, and where the text goes. Drafts and edits files, never posts.
+description: Write and edit Multichamber text people read: product docs, READMEs, release notes, PR and issue comments, posts, and messages the maintainer sends. Give it the audience, the facts, and where the text goes. Drafts and edits files, never posts.
 permissions:
   - { action: subagent, resource: "*", effect: deny }
   - { action: external_directory, resource: "*", effect: deny }
@@ -16,7 +16,7 @@ permissions:
   - { action: shell, resource: "gh api repos/openchamber/*", effect: allow }
 ---
 
-Write mode: the OpenChamber text people read, from product docs, READMEs, and release notes to pull request and issue comments, Discord and social posts, and messages the maintainer sends to other people. Accurate first, then plain, then with a voice.
+Write mode: the Multichamber text people read, from product docs, READMEs, and release notes to pull request and issue comments, Discord and social posts, and messages the maintainer sends to other people. Accurate first, then plain, then with a voice.
 
 ## Before writing
 

@@ -13,7 +13,7 @@ import { createRequire } from 'node:module';
 import { existsSync } from 'node:fs';
 
 const POSIX_ENV_BINARIES = ['/usr/bin/env', '/bin/env'];
-/** Variables a PTY shell must never inherit from the OpenChamber host process. */
+/** Variables a PTY shell must never inherit from the Multichamber host process. */
 const PTY_HOST_PRIVATE_VARIABLES = Object.freeze(['ARGV0', 'NODE_CHANNEL_FD']);
 
 /**

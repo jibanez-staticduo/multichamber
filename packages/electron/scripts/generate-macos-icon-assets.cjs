@@ -1,5 +1,6 @@
 const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
+const crypto = require('node:crypto');
 const os = require('node:os');
 const path = require('node:path');
 
@@ -40,6 +41,10 @@ try {
   }
 
   fs.copyFileSync(generatedAssetsPath, outputAssetsPath);
+  const inputs = [sourceIconPath + '/icon.json', ...fs.readdirSync(path.join(sourceIconPath, 'Assets')).sort().map((name) => path.join(sourceIconPath, 'Assets', name))];
+  const hash = crypto.createHash('sha256');
+  for (const input of inputs) hash.update(fs.readFileSync(input));
+  fs.writeFileSync(outputAssetsPath + '.source-sha256', hash.digest('hex'));
   console.log(`Generated ${outputAssetsPath}`);
 } finally {
   fs.rmSync(tmpDir, { recursive: true, force: true });

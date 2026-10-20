@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 /**
- * What a fork made through the OpenChamber sessions API (CLI, scheduled tasks)
- * keeps from its source session's OpenChamber metadata. Server twin of the UI's
+ * What a fork made through the Multichamber sessions API (CLI, scheduled tasks)
+ * keeps from its source session's Multichamber metadata. Server twin of the UI's
  * `packages/ui/src/lib/sessionForkInheritance.ts`: UI forks call OpenCode
  * directly and repair themselves; forks made here are repaired here.
  *
@@ -25,14 +25,14 @@ const NamespaceSchema = z.looseObject({
 });
 const FileBackedGoalSchema = z.looseObject({ id: z.string().min(1), objectiveFile: z.literal(true) });
 
-const openChamberNamespace = (metadata) => {
+const multichamberNamespace = (metadata) => {
   const parsed = z.looseObject({ openchamber: NamespaceSchema }).safeParse(metadata);
   return parsed.success ? parsed.data.openchamber : null;
 };
 
 /** Merge patch (RFC 7386) removing source-owned links; null when there are none. */
 export const sourceOwnedLinksPatch = (metadata) => {
-  const namespace = openChamberNamespace(metadata);
+  const namespace = multichamberNamespace(metadata);
   if (!namespace) return null;
   const patch = {};
   for (const key of ['btwSessionID', 'reviewSessionID']) {
@@ -55,7 +55,7 @@ export const sourceOwnedLinksPatch = (metadata) => {
 };
 
 const fileBackedGoal = (metadata) => {
-  const parsed = FileBackedGoalSchema.safeParse(openChamberNamespace(metadata)?.goal);
+  const parsed = FileBackedGoalSchema.safeParse(multichamberNamespace(metadata)?.goal);
   return parsed.success ? parsed.data : null;
 };
 

@@ -15,11 +15,28 @@ on:
         required: false
         default: false
         type: boolean
-      finish_published_release:
-        description: 'Finish an already published release: build and add only macOS and iOS, skip npm, Windows, Linux and Android'
-        required: false
-        default: false
+      build_web:
         type: boolean
+        default: true
+      build_windows:
+        type: boolean
+        default: true
+      build_linux:
+        type: boolean
+        default: true
+      build_macos:
+        type: boolean
+        default: false
+      build_mobile:
+        type: boolean
+        default: false
+      publish_npm:
+        type: boolean
+        default: false
+      publish_release:
+        description: Publish the validated draft after platform QA
+        type: boolean
+        default: false
 
 env:
   CARGO_INCREMENTAL: 0
@@ -58,20 +75,16 @@ jobs:
           VERSION: ${{ steps.get_version.outputs.version }}
         run: |
           title=$(node scripts/changelog/release-notes.mjs "$VERSION" artifacts/release-notes.md)
-          echo "name=OpenChamber v$VERSION: $title" >> "$GITHUB_OUTPUT"
+          echo "name=Multichamber v$VERSION: $title" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         id: create_release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
-          # A release being finished is already public; keep it that way.
-          # Every later upload step sets draft: true. Without it the action
-          # publishes the draft after uploading, and updaters would see the
-          # release before every platform and manifest is on it. Only
-          # finalize-release publishes. On a release that is already public,
-          # draft: true changes nothing.
-          draft: ${{ github.event.inputs.finish_published_release != 'true' }}
+          # Uploads remain draft until the explicit publication gate runs.
+          draft: true
           generate_release_notes: false
           body_path: artifacts/release-notes.md
           name: ${{ steps.release_notes.outputs.name }}
@@ -80,8 +93,8 @@ jobs:
 
   publish-npm:
     needs: create-release
-    if: ${{ github.event.inputs.finish_published_release != 'true' }}
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    if: ${{ github.event_name == 'push' || inputs.build_web }}
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -100,20 +113,17 @@ jobs:
       - name: Build packages
         run: bun run build
 
-      # Both packages are packed and published with bun so the
-      # `workspace:*` link from @openchamber/web to @openchamber/sdk is
-      # rewritten to the released version. npm leaves it in place and the
-      # published tarball then fails to install.
+      # Release archives bundle the matching Multichamber SDK. npm publication
+      # uses the fork's own package scope and repository credentials.
       - name: Publish SDK to npm
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+        if: ${{ github.repository == 'jibanez-staticduo/multichamber' && inputs.publish_npm && github.event.inputs.dry_run != 'true' }}
         working-directory: packages/sdk
         run: bun publish --access public
         env:
           NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Create npm tarball
-        working-directory: packages/web
-        run: bun pm pack
+      - name: Create fork web archive
+        run: node scripts/package-fork-web.mjs
 
       - name: Upload npm tarball to release
         if: ${{ github.event.inputs.dry_run != 'true' }}
@@ -121,18 +131,19 @@ jobs:
         with:
           tag_name: v${{ needs.create-release.outputs.version }}
           draft: true
-          files: packages/web/*.tgz
+          files: artifacts/fork-web/*.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to npm
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+        if: ${{ github.repository == 'jibanez-staticduo/multichamber' && inputs.publish_npm && github.event.inputs.dry_run != 'true' }}
         working-directory: packages/web
         run: bun publish --access public
         env:
           NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   build-desktop-electron-macos:
+    if: ${{ inputs.build_macos }}
     needs: create-release
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -142,7 +153,7 @@ jobs:
           - target: aarch64-apple-darwin
             arch: arm64
             platform: darwin-aarch64
-            runner: blacksmith-6vcpu-macos-26
+            runner: macos-26
           - target: x86_64-apple-darwin
             arch: x64
             platform: darwin-x86_64
@@ -218,6 +229,7 @@ jobs:
           # target Electron ABI before packaging, otherwise node-pty/bun-pty
           # crash on require inside the packaged app.
           bun run rebuild:native
+          bun run generate:macos-icon
           bunx electron-builder --mac --${{ matrix.arch }} --publish=never
           bun run verify:opencode-cli:packaged
 
@@ -266,6 +278,7 @@ jobs:
           done
 
       - name: Upload DMG / ZIP / blockmaps to release
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: v${{ needs.create-release.outputs.version }}
@@ -286,7 +299,7 @@ jobs:
 
   build-desktop-electron-windows:
     needs: create-release
-    if: ${{ github.event.inputs.finish_published_release != 'true' }}
+    if: ${{ github.event_name == 'push' || inputs.build_windows }}
     # windows-latest currently resolves to a runner with Visual Studio 18,
     # which this electron/node-gyp stack does not detect correctly.
     runs-on: windows-2022
@@ -370,6 +383,7 @@ jobs:
           bun run verify:opencode-cli:packaged
 
       - name: Upload installer to release
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: v${{ needs.create-release.outputs.version }}
@@ -389,19 +403,19 @@ jobs:
 
   build-desktop-electron-linux:
     needs: create-release
-    if: ${{ github.event.inputs.finish_published_release != 'true' }}
+    if: ${{ github.event_name == 'push' || inputs.build_linux }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - runner: blacksmith-4vcpu-ubuntu-2404
+          - runner: ubuntu-24.04
             arch: x64
             host_arch: x86_64
             artifact_arch: x86_64
             deb_arch: amd64
             rpm_arch: x86_64
             manifest: latest-linux.yml
-          - runner: blacksmith-4vcpu-ubuntu-2404-arm
+          - runner: ubuntu-24.04-arm
             arch: arm64
             host_arch: aarch64
             artifact_arch: arm64
@@ -483,23 +497,24 @@ jobs:
         run: |
           set -euo pipefail
           node ./scripts/verify-update-manifest.mjs "dist/${MANIFEST}" "$VERSION" \
-            "dist/OpenChamber-${VERSION}-linux-${ARTIFACT_ARCH}.AppImage" \
-            "dist/OpenChamber-${VERSION}-linux-${DEB_ARCH}.deb" \
-            "dist/OpenChamber-${VERSION}-linux-${RPM_ARCH}.rpm"
+            "dist/Multichamber-${VERSION}-linux-${ARTIFACT_ARCH}.AppImage" \
+            "dist/Multichamber-${VERSION}-linux-${DEB_ARCH}.deb" \
+            "dist/Multichamber-${VERSION}-linux-${RPM_ARCH}.rpm"
 
       - name: Upload validated Linux release files
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: linux-release-${{ matrix.arch }}
           path: |
-            packages/electron/dist/OpenChamber-${{ needs.create-release.outputs.version }}-linux-${{ matrix.artifact_arch }}.AppImage
-            packages/electron/dist/OpenChamber-${{ needs.create-release.outputs.version }}-linux-${{ matrix.deb_arch }}.deb
-            packages/electron/dist/OpenChamber-${{ needs.create-release.outputs.version }}-linux-${{ matrix.rpm_arch }}.rpm
+            packages/electron/dist/Multichamber-${{ needs.create-release.outputs.version }}-linux-${{ matrix.artifact_arch }}.AppImage
+            packages/electron/dist/Multichamber-${{ needs.create-release.outputs.version }}-linux-${{ matrix.deb_arch }}.deb
+            packages/electron/dist/Multichamber-${{ needs.create-release.outputs.version }}-linux-${{ matrix.rpm_arch }}.rpm
             packages/electron/dist/${{ matrix.manifest }}
           if-no-files-found: error
           retention-days: 1
 
   publish-electron-linux:
+    if: ${{ github.event_name == 'push' || inputs.build_linux }}
     needs: [create-release, build-desktop-electron-linux]
     runs-on: ubuntu-latest
     steps:
@@ -524,14 +539,14 @@ jobs:
           set -euo pipefail
           node packages/electron/scripts/verify-update-manifest.mjs \
             artifacts/x64/latest-linux.yml "$VERSION" \
-            "artifacts/x64/OpenChamber-${VERSION}-linux-x86_64.AppImage" \
-            "artifacts/x64/OpenChamber-${VERSION}-linux-amd64.deb" \
-            "artifacts/x64/OpenChamber-${VERSION}-linux-x86_64.rpm"
+            "artifacts/x64/Multichamber-${VERSION}-linux-x86_64.AppImage" \
+            "artifacts/x64/Multichamber-${VERSION}-linux-amd64.deb" \
+            "artifacts/x64/Multichamber-${VERSION}-linux-x86_64.rpm"
           node packages/electron/scripts/verify-update-manifest.mjs \
             artifacts/arm64/latest-linux-arm64.yml "$VERSION" \
-            "artifacts/arm64/OpenChamber-${VERSION}-linux-arm64.AppImage" \
-            "artifacts/arm64/OpenChamber-${VERSION}-linux-arm64.deb" \
-            "artifacts/arm64/OpenChamber-${VERSION}-linux-aarch64.rpm"
+            "artifacts/arm64/Multichamber-${VERSION}-linux-arm64.AppImage" \
+            "artifacts/arm64/Multichamber-${VERSION}-linux-arm64.deb" \
+            "artifacts/arm64/Multichamber-${VERSION}-linux-aarch64.rpm"
 
       - name: Upload Linux packages and manifests to release
         if: ${{ github.event.inputs.dry_run != 'true' }}
@@ -540,20 +555,20 @@ jobs:
           tag_name: v${{ needs.create-release.outputs.version }}
           draft: true
           files: |
-            artifacts/x64/OpenChamber-${{ needs.create-release.outputs.version }}-linux-x86_64.AppImage
-            artifacts/x64/OpenChamber-${{ needs.create-release.outputs.version }}-linux-amd64.deb
-            artifacts/x64/OpenChamber-${{ needs.create-release.outputs.version }}-linux-x86_64.rpm
+            artifacts/x64/Multichamber-${{ needs.create-release.outputs.version }}-linux-x86_64.AppImage
+            artifacts/x64/Multichamber-${{ needs.create-release.outputs.version }}-linux-amd64.deb
+            artifacts/x64/Multichamber-${{ needs.create-release.outputs.version }}-linux-x86_64.rpm
             artifacts/x64/latest-linux.yml
-            artifacts/arm64/OpenChamber-${{ needs.create-release.outputs.version }}-linux-arm64.AppImage
-            artifacts/arm64/OpenChamber-${{ needs.create-release.outputs.version }}-linux-arm64.deb
-            artifacts/arm64/OpenChamber-${{ needs.create-release.outputs.version }}-linux-aarch64.rpm
+            artifacts/arm64/Multichamber-${{ needs.create-release.outputs.version }}-linux-arm64.AppImage
+            artifacts/arm64/Multichamber-${{ needs.create-release.outputs.version }}-linux-arm64.deb
+            artifacts/arm64/Multichamber-${{ needs.create-release.outputs.version }}-linux-aarch64.rpm
             artifacts/arm64/latest-linux-arm64.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   combine-electron-manifests:
     needs: [create-release, build-desktop-electron-macos, build-desktop-electron-windows]
-    if: ${{ !cancelled() && needs.create-release.result == 'success' }}
+    if: ${{ !cancelled() && !failure() && needs.create-release.result == 'success' && (github.event_name == 'push' || inputs.build_windows || inputs.build_macos) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -571,66 +586,65 @@ jobs:
 
       - name: Finalize combined manifests
         env:
-          MAC_ONLY: ${{ github.event.inputs.finish_published_release == 'true' && '1' || '' }}
+          SKIP_MAC: ${{ !inputs.build_macos && '1' || '' }}
+          SKIP_WINDOWS: ${{ github.event_name != 'push' && !inputs.build_windows && '1' || '' }}
           LATEST_YML_DIR: ${{ github.workspace }}/artifacts
           GH_REPO: ${{ github.repository }}
           OPENCHAMBER_VERSION: ${{ needs.create-release.outputs.version }}
         run: node packages/electron/scripts/finalize-latest-yml.mjs
 
       - name: Upload combined manifests to release
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: v${{ needs.create-release.outputs.version }}
           draft: true
           files: |
-            ${{ runner.temp }}/latest-mac.yml
-            ${{ runner.temp }}/latest.yml
-            ${{ runner.temp }}/latest-arm64.yml
+            ${{ runner.temp }}/latest*.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   mobile-release:
     needs: create-release
-    if: ${{ github.event.inputs.dry_run != 'true' }}
+    if: ${{ inputs.build_mobile && github.event.inputs.dry_run != 'true' }}
     uses: ./.github/workflows/mobile-release.yml
     with:
       version_name: ${{ needs.create-release.outputs.version }}
       build_number: ${{ github.run_number }}
       release_tag: v${{ needs.create-release.outputs.version }}
       upload_github_release: true
-      build_android: ${{ github.event.inputs.finish_published_release != 'true' }}
+      build_android: true
+      build_ios: true
     secrets: inherit
 
   finalize-release:
     needs: [create-release, build-desktop-electron-macos, build-desktop-electron-windows, build-desktop-electron-linux, publish-electron-linux, publish-npm, combine-electron-manifests, mobile-release]
-    # Jobs a finishing run skips count as done; any failure still stops the release.
+    # Optional platforms may be skipped; any selected build failure stops validation.
     if: ${{ !cancelled() && !failure() }}
     runs-on: ubuntu-latest
-    env:
-      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-      DISCORD_UPDATE_ROLE_ID: ${{ secrets.DISCORD_UPDATE_ROLE_ID }}
     steps:
-      - name: Verify final Linux release asset inventory
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Verify selected release asset inventory
         if: ${{ github.event.inputs.dry_run != 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository }}
           VERSION: ${{ needs.create-release.outputs.version }}
+          BUILD_WEB: ${{ github.event_name == 'push' || inputs.build_web }}
+          BUILD_WINDOWS: ${{ github.event_name == 'push' || inputs.build_windows }}
+          BUILD_LINUX: ${{ github.event_name == 'push' || inputs.build_linux }}
+          BUILD_MAC: ${{ inputs.build_macos }}
           RELEASE_ID: ${{ needs.create-release.outputs.release_id }}
         run: |
           node - <<'NODE'
           (async () => {
           const { REPOSITORY: repo, VERSION: version, RELEASE_ID: releaseId, GITHUB_TOKEN: token } = process.env;
-          const expected = [
-            `OpenChamber-${version}-linux-x86_64.AppImage`,
-            `OpenChamber-${version}-linux-amd64.deb`,
-            `OpenChamber-${version}-linux-x86_64.rpm`,
-            'latest-linux.yml',
-            `OpenChamber-${version}-linux-arm64.AppImage`,
-            `OpenChamber-${version}-linux-arm64.deb`,
-            `OpenChamber-${version}-linux-aarch64.rpm`,
-            'latest-linux-arm64.yml',
-          ];
+          const expected = [];
+          if (process.env.BUILD_WEB === 'true') expected.push(`multichamber-web-${version}.tgz`, 'multichamber-web.tgz');
+          if (process.env.BUILD_WINDOWS === 'true') expected.push(`Multichamber-${version}-win-x64.exe`, `Multichamber-${version}-win-arm64.exe`, 'latest.yml', 'latest-arm64.yml');
+          if (process.env.BUILD_LINUX === 'true') expected.push(`Multichamber-${version}-linux-x86_64.AppImage`, `Multichamber-${version}-linux-amd64.deb`, `Multichamber-${version}-linux-x86_64.rpm`, 'latest-linux.yml', `Multichamber-${version}-linux-arm64.AppImage`, `Multichamber-${version}-linux-arm64.deb`, `Multichamber-${version}-linux-aarch64.rpm`, 'latest-linux-arm64.yml');
+          if (process.env.BUILD_MAC === 'true') expected.push(`Multichamber-${version}-mac-x64.zip`, `Multichamber-${version}-mac-arm64.zip`, 'latest-mac.yml');
           // The release is still a draft here, and the by-tag endpoint
           // answers 404 for drafts; the id reaches it.
           const response = await fetch(`https://api.github.com/repos/${repo}/releases/${releaseId}`, {
@@ -638,6 +652,7 @@ jobs:
           });
           if (!response.ok) throw new Error(`Failed to inspect release assets: ${response.status} ${await response.text()}`);
           const release = await response.json();
+          if (!release.draft) throw new Error('Release staging requires a draft; refusing to modify a published release');
           for (const name of expected) {
             const matches = release.assets.filter((asset) => asset.name === name);
             if (matches.length !== 1) throw new Error(`Expected exactly one ${name} release asset, found ${matches.length}`);
@@ -645,7 +660,21 @@ jobs:
               throw new Error(`Release asset ${name} has invalid size ${matches[0].size}`);
             }
           }
-          console.log(`Verified ${expected.length} Linux release assets and both architecture manifests.`);
+          const manifests = expected.filter((name) => /^latest.*\.yml$/.test(name));
+          for (const name of manifests) {
+            const asset = release.assets.find((entry) => entry.name === name);
+            const metadataResponse = await fetch(asset.url, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/octet-stream' } });
+            if (!metadataResponse.ok) throw new Error(`Cannot read update manifest ${name}: ${metadataResponse.status}`);
+            const content = await metadataResponse.text();
+            if (!content.includes(`version: ${version}`)) throw new Error(`Wrong version in ${name}`);
+            const urls = [...content.matchAll(/^\s*- url:\s*(.+)$/gm)].map((match) => match[1].trim());
+            if (!urls.length || !/^\s+sha512:\s*\S+/m.test(content)) throw new Error(`Incomplete update manifest ${name}`);
+            for (const url of urls) {
+              const file = decodeURIComponent(url.split('/').pop());
+              if (!expected.includes(file)) throw new Error(`Unexpected artifact ${file} in ${name}`);
+            }
+          }
+          console.log(`Verified ${expected.length} selected release assets and ${manifests.length} update manifests.`);
           })().catch((error) => {
             console.error(error);
             process.exit(1);
@@ -653,102 +682,10 @@ jobs:
           NODE
 
       - name: Publish release
+        if: ${{ inputs.publish_release && github.event.inputs.dry_run != 'true' }}
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: v${{ needs.create-release.outputs.version }}
           draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Send release to Discord
-        if: ${{ env.DISCORD_WEBHOOK_URL != '' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ needs.create-release.outputs.version }}
-          REPOSITORY: ${{ github.repository }}
-          UPDATE_ROLE_ID: ${{ env.DISCORD_UPDATE_ROLE_ID }}
-        run: |
-          node - <<'NODE'
-          (async () => {
-            const tag = `v${process.env.VERSION}`;
-            const repo = process.env.REPOSITORY;
-            const rawRoleId = (process.env.UPDATE_ROLE_ID || '').trim();
-            const updateRoleId = /^\d+$/.test(rawRoleId) ? rawRoleId : '';
-
-            const releaseRes = await fetch(`https://api.github.com/repos/${repo}/releases/tags/${tag}`, {
-              headers: {
-                Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-                Accept: 'application/vnd.github+json',
-              },
-            });
-
-            if (!releaseRes.ok) {
-              const body = await releaseRes.text();
-              throw new Error(`Failed to fetch release ${tag}: ${releaseRes.status} ${body}`);
-            }
-
-            const release = await releaseRes.json();
-            const description = (release.body || `OpenChamber ${tag} released.`).slice(0, 4096);
-            const mention = updateRoleId ? `<@&${updateRoleId}>` : '';
-
-            const payload = {
-              username: 'OpenChamber Releases',
-              ...(mention ? { content: mention } : {}),
-              ...(updateRoleId
-                ? {
-                    allowed_mentions: {
-                      roles: [updateRoleId],
-                    },
-                  }
-                : {}),
-              embeds: [
-                {
-                  title: release.name || `OpenChamber ${tag}`,
-                  url: release.html_url,
-                  description,
-                  color: 2105893,
-                  footer: { text: 'OpenChamber Changelog' },
-                },
-              ],
-            };
-
-            const discordRes = await fetch(process.env.DISCORD_WEBHOOK_URL, {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify(payload),
-            });
-
-            if (!discordRes.ok) {
-              const body = await discordRes.text();
-              throw new Error(`Failed to send Discord release: ${discordRes.status} ${body}`);
-            }
-          })().catch((error) => {
-            console.error(error);
-            process.exit(1);
-          });
-          NODE
-
-      - name: Trigger openchamber-website site refresh (optional)
-        env:
-          WEBSITE_REPO: openchamber/openchamber-website
-          WEBSITE_TOKEN: ${{ secrets.OPENCHAMBER_WEBSITE_REPO_TOKEN }}
-          VERSION: ${{ needs.create-release.outputs.version }}
-        run: |
-          if [ -z "$WEBSITE_TOKEN" ]; then
-            echo "OPENCHAMBER_WEBSITE_REPO_TOKEN not set; skip site refresh dispatch."
-            exit 0
-          fi
-
-          curl --fail-with-body -sS -X POST \
-            -H "Authorization: Bearer $WEBSITE_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$WEBSITE_REPO/dispatches" \
-            -d @- <<JSON
-          {
-            "event_type": "site_refresh_requested",
-            "client_payload": {
-              "source_repo": "${{ github.repository }}",
-              "release_tag": "v$VERSION"
-            }
-          }
-          JSON

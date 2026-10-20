@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { AssistantMessage, Part, SyntheticMessage, TextPart, TokenUsageInfo, UserMessage } from '@/lib/opencode/model';
+import type { AssistantMessage, Metadata, Part, SyntheticMessage, TextPart, TokenUsageInfo, UserMessage } from '@/lib/opencode/model';
 import { formatTelemetryDuration, formatTelemetryTokens, formatThroughputRate, getLatestCompletedTurnStats, mergeTimeIntervals, sumIntervalsDuration } from './telemetry';
 
 const user: UserMessage = { id: 'u1', sessionID: 'session-1', role: 'user', time: { created: 0 } };
@@ -215,6 +215,21 @@ describe('turn telemetry', () => {
     ]));
     expect(stats?.responseTokensPerSecond).toBe(130);
     expect(stats?.tokensPerSecond).toBe(90);
+  });
+
+  test('turn-scoped Codex usage cannot become a final-response token rate', () => {
+    const finalText: TextPart = { ...text(4000), text: 'Final reply', time: { start: 4000, end: 5000 } };
+    const nativeUsage: Metadata[] = [{ usageScope: 'turn', usageAvailable: true }, { usageScope: 'turn' }, { usageAvailable: true }];
+    for (const codex of nativeUsage) {
+      const stats = getLatestCompletedTurnStats(turn(assistant({
+        providerID: 'codex', metadata: { codex }, tokens: { ...baseTokens(), output: 200 },
+      }), [finalText]));
+      expect(stats?.responseTokensPerSecond).toBeNull();
+      expect(stats?.tokensPerSecond).toBe(50);
+      expect(stats?.outputTokens).toBe(200);
+    }
+    const openCode = getLatestCompletedTurnStats(turn(assistant({ tokens: { ...baseTokens(), output: 100 } }), [finalText]));
+    expect(openCode?.responseTokensPerSecond).toBe(100);
   });
 
   test('unions overlapping text intervals without mutating the authoritative parts', () => {

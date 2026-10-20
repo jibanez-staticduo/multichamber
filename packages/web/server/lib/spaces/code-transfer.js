@@ -19,9 +19,9 @@ const GIT_VERSION_FLOOR_TEXT = '2.29';
 // Commits the host or the fixed scripts write carry a fixed identity, so a user without `user.name`
 // can still create a space and bring its work out.
 export const SNAPSHOT_IDENTITY = Object.freeze({
-  GIT_AUTHOR_NAME: 'OpenChamber',
+  GIT_AUTHOR_NAME: 'Multichamber',
   GIT_AUTHOR_EMAIL: 'spaces@openchamber.invalid',
-  GIT_COMMITTER_NAME: 'OpenChamber',
+  GIT_COMMITTER_NAME: 'Multichamber',
   GIT_COMMITTER_EMAIL: 'spaces@openchamber.invalid',
 });
 

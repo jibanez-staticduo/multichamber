@@ -4,8 +4,9 @@ import type { ComposerReference } from './composerReferences';
 
 type PendingComposerReferences = {
     references: ComposerReference[];
-    push: (references: readonly ComposerReference[]) => void;
-    consume: () => ComposerReference[];
+    bySession: ReadonlyMap<string, ComposerReference[]>;
+    push: (references: readonly ComposerReference[], sessionId?: string) => void;
+    consume: (sessionId?: string) => ComposerReference[];
 };
 
 /**
@@ -15,9 +16,18 @@ type PendingComposerReferences = {
  */
 export const usePendingComposerReferences = create<PendingComposerReferences>()((set, get) => ({
     references: [],
-    push: (references) => set((state) => ({ references: [...state.references, ...references] })),
-    consume: () => {
-        const { references } = get();
+    bySession: new Map(),
+    push: (references, sessionId) => set((state) => {
+        if (!sessionId) return { references: [...state.references, ...references] };
+        const bySession = new Map(state.bySession);
+        bySession.set(sessionId, [...(bySession.get(sessionId) ?? []), ...references]);
+        return { bySession };
+    }),
+    consume: (sessionId) => {
+        const state = get();
+        const targeted = sessionId ? state.bySession.get(sessionId) ?? [] : [];
+        if (sessionId && targeted.length) { const bySession = new Map(state.bySession); bySession.delete(sessionId); set({ bySession }); }
+        const references = [...state.references, ...targeted];
         if (references.length > 0) set({ references: [] });
         return references;
     },

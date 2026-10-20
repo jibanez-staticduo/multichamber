@@ -829,3 +829,31 @@ describe('buildSessionSidebarRowModel', () => {
     expect(buildSessionSidebarRowModel(input).sessionById.get('hidden')?.id).toBe('hidden');
   });
 });
+
+
+test('plain timeline rows omit the structural detail height while branch rows keep it', () => {
+  const input = args([project([group([])])]);
+  input.viewMode = 'timeline';
+  input.listGrouping = 'project';
+  input.timelineItems = [timelineItem('plain', { secondaryMeta: { branchLabel: null } }), timelineItem('branched')];
+  const rows = buildSessionSidebarRowModel(input).rows.filter((row) => row.kind === 'session');
+  expect(rows.find((row) => row.node.session.id === 'plain')?.estimateSize).toBe(35);
+  expect(rows.find((row) => row.node.session.id === 'branched')?.estimateSize).toBe(52);
+});
+
+
+test('mixed rows reserve a project line only for projects in authoritative topology', () => {
+  const input = args([]);
+  input.authoritativeSections = [project([group([])])];
+  input.detailedZoneRows = true;
+  input.workItems = [
+    timelineItem('known', { secondaryMeta: { branchLabel: null } }),
+    timelineItem('orphan', { projectId: null, secondaryMeta: { branchLabel: null } }),
+    timelineItem('removed', { projectId: 'removed-project', secondaryMeta: { branchLabel: null } }),
+    timelineItem('removed-with-branch', { projectId: 'removed-project', secondaryMeta: { branchLabel: 'main' } }),
+  ];
+  const rows = buildSessionSidebarRowModel(input).rows.filter((row) => row.kind === 'session');
+  expect(rows.map((row) => [row.node.session.id, row.estimateSize])).toEqual([
+    ['known', 52], ['orphan', 35], ['removed', 35], ['removed-with-branch', 52],
+  ]);
+});

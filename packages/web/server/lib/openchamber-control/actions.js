@@ -199,7 +199,7 @@ export const resolveAgentToolAction = (requested, toolName) => {
   }
 
   return {
-    error: `Unsupported OpenChamber action: ${value || 'missing'}. Use one of: ${known.join(', ')}`,
+    error: `Unsupported Multichamber action: ${value || 'missing'}. Use one of: ${known.join(', ')}`,
   };
 };
 

@@ -1,7 +1,9 @@
+import type { MultiRunModelSelection } from '@/types/multirun';
+import { resolveSessionEngine } from '@/lib/sessionEngine';
 import { opencodeClient } from '@/lib/opencode/client';
 import type { Session } from '@/lib/opencode/model';
 import { checkIsGitRepository, snapshotGitWorktree } from '@/lib/gitApi';
-import { getWorktreeSetupWaitEnabled } from '@/lib/openchamberConfig';
+import { getWorktreeSetupWaitEnabled } from '@/lib/multichamberConfig';
 import { getRuntimeKey } from '@/lib/runtime-switch';
 import { resolveWorktreeSetupCommands } from '@/lib/sharedTrustConfirmation';
 import { waitForWorktreeBootstrap } from '@/lib/worktrees/worktreeBootstrap';
@@ -77,7 +79,7 @@ export class NotFirstTurnError extends Error {
 export async function askOtherModels(input: {
   session: Session;
   turnUserMessageId: string;
-  models: ReadonlyArray<{ providerID: string; modelID: string; variant?: string; displayName?: string }>;
+  models: ReadonlyArray<MultiRunModelSelection>;
 }): Promise<{ runKey: string; failedCount: number }> {
   const { session } = input;
   const prompt = await loadLaneFirstPrompt(session.id, session.directory);
@@ -91,6 +93,7 @@ export async function askOtherModels(input: {
     version: 1,
     sessionID: session.id,
     group: { kind: 'id', id: generateUuid() },
+    harness: resolveSessionEngine(session),
     groupSlug: toGitSafeSlug(title) || 'multi-run',
     providerID,
     modelID,
@@ -140,7 +143,7 @@ export async function askOtherModels(input: {
 export async function addLaneToRun(input: {
   run: MultiRunSummary;
   runGroup: string | undefined;
-  model: { providerID: string; modelID: string; variant?: string; displayName?: string };
+  model: MultiRunModelSelection;
   sessionById: ReadonlyMap<string, Session>;
   /**
    * Give the new lane its own worktree even when the template lane works in
@@ -166,6 +169,7 @@ export async function addLaneToRun(input: {
   assertCurrent();
 
   const sameModel = run.lanes.filter((lane) => lane.identity.runGroup === template.identity.runGroup
+    && (lane.identity.harness ?? 'opencode') === (model.harness ?? 'opencode')
     && lane.identity.providerID === model.providerID && lane.identity.modelID === model.modelID);
   const index = sameModel.length > 0 ? sameModel.length + 1 : undefined;
   const variantLabel = run.variants.length > 1 ? multiRunVariantLabel(template.identity.runGroup) : null;
@@ -205,6 +209,7 @@ export async function addLaneToRun(input: {
     title: [`${model.displayName || model.modelID}${index ? ` #${index}` : ''}`, ...(variantLabel ? [variantLabel] : []), run.title].join(' · '),
     directory,
     identity: {
+      harness: model.harness, mode: model.mode, variant: model.variant,
       group: template.identity.group,
       groupSlug: template.identity.groupSlug,
       runGroup: template.identity.runGroup,
@@ -228,7 +233,7 @@ export async function addLaneToRun(input: {
     providerID: model.providerID,
     modelID: model.modelID,
     variant: model.variant,
-    agent: templateSession.agent,
+    agent: model.harness && model.harness !== 'opencode' ? undefined : templateSession.agent,
     files: prompt.files.map((file) => ({ type: 'file' as const, mime: file.mime, url: file.url, filename: file.filename ?? 'attachment' })),
   });
   return session.id;

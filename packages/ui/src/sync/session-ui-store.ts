@@ -1,3 +1,9 @@
+import { formatMessage, useI18nStore } from '@/lib/i18n';
+import { requestSessionCreation, type SessionCreationOptions } from '@/lib/sessionCreation';
+import type { SessionEngine } from '@/lib/sessionEngine';
+import { spaceIdOfDirectory } from '@/lib/spaces/space-route';
+import { EngineUnsupportedError } from '@/lib/sessionEngine';
+import { engineInfoForSession } from '@/stores/useEngineStore';
 /**
  * Session UI Store — ephemeral UI state only.
  *
@@ -44,7 +50,7 @@ import { composeForkSessionMessage } from "@/lib/messages/executionMeta"
 import { findLatestUserModelChoice } from "@/lib/messages/userModelChoice"
 import { noteDraftSendWaiting, waitForPendingDraftWorktreeRequest } from "@/lib/worktrees/pendingDraftWorktree"
 import { waitForWorktreeBootstrap } from "@/lib/worktrees/worktreeBootstrap"
-import { getWorktreeSetupWaitEnabled } from "@/lib/openchamberConfig"
+import { getWorktreeSetupWaitEnabled } from "@/lib/multichamberConfig"
 import { resolveCreatedWorktreeStartDirectory, resolveStartDirectory, resolveWorktreeStartDirectory } from "@/lib/worktrees/worktreeStartDirectory"
 import { resolveProjectForSessionDirectory } from "@/lib/projectResolution"
 import {
@@ -159,6 +165,7 @@ export function resolveSendSelection(
 ): { model?: ModelRef; agent?: string } {
   const sessions = getDirectoryState(directory)?.session ?? getAllSyncSessions()
   const session = sessions.find((candidate) => candidate.id === sessionId)
+  if (engineInfoForSession(session ?? { id: sessionId }).ownModelCatalog) return {}
   // Compared in wire form: an explicit `Default` (null) switches the session
   // off an effort once, then matches the `"default"` OpenCode records for it.
   const model = toModelRef({ providerID: desired.providerID, id: desired.modelID, variant: desired.variant })
@@ -217,6 +224,17 @@ export async function routeMessage(params: {
   const contextFiles = (params.additionalParts ?? []).flatMap((part) => part.files ?? [])
   const sendFiles = [...(params.files ?? []), ...contextFiles]
 
+  const engine = engineInfoForSession(getAllSyncSessions().find((session) => session.id === params.sessionId) ?? { id: params.sessionId })
+  if (params.inputMode === "shell" && !engine.capabilities.shell) throw new EngineUnsupportedError(engine, "shell")
+  if (params.content.startsWith("/") && engine.capabilities.commands === "prompt") {
+    const [head, ...tail] = params.content.split(" ")
+    const name = head.slice(1)
+    if (/^[A-Za-z][A-Za-z0-9:._-]*$/.test(name)) {
+      params.appendSubmissions?.()
+      await opencodeClient.sendCommand({ runtimeKey: params.runtimeKey, id: params.sessionId, command: name, arguments: tail.join(" "), directory: requestDirectory, files: sendFiles, context: contextItems })
+      return 'command'
+    }
+  }
   if (params.inputMode === "shell") {
     await opencodeClient.shellSession({
       runtimeKey: params.runtimeKey,
@@ -229,7 +247,7 @@ export async function routeMessage(params: {
 
   let skills = params.skills
   // Slash commands use the command route; skills attach to a normal prompt.
-  if (params.content.startsWith("/")) {
+  if (params.content.startsWith("/") && engine.capabilities.commands === "server") {
     const [head, ...tail] = params.content.split(" ")
     const cmdName = head.slice(1)
 
@@ -407,6 +425,8 @@ type NewSessionDraftTarget = "chat" | "project"
 
 export type NewSessionDraftState = {
   draftId: number
+  harness?: SessionEngine
+  nativeSelection?: { model?: string; effort?: string; mode?: string }
   open: boolean
   selectedProjectId?: string | null
   directoryOverride: string | null
@@ -453,7 +473,7 @@ export type SessionUIState = {
   clearMaterializedDraftSession: (sessionId: string) => void
   prepareForRuntimeSwitch: (apiBaseUrl?: string | null) => void
   restoreForRuntimeSwitch: (apiBaseUrl?: string | null, previousRuntimeKey?: string | null) => void
-  openNewSessionDraft: (options?: Partial<NewSessionDraftState> & { automatic?: boolean }) => void
+  openNewSessionDraft: (options?: SessionCreationOptions & { resolvedHarness?: boolean }) => void
   prepareChatDraftDirectory: () => Promise<string | null>
   closeNewSessionDraft: () => void
   setNewSessionDraftTarget: (target: { projectId?: string | null; selectedProjectId?: string | null; directoryOverride?: string | null }, options?: { force?: boolean }) => void
@@ -465,9 +485,9 @@ export type SessionUIState = {
   /** Arms "press Esc again to stop" for `sessionId`, the selected session by default. */
   armAbortPrompt: (durationMs?: number, sessionId?: string) => number | null
   clearError: () => void
-  markSessionAsOpenChamberCreated: (sessionId: string) => void
-  isOpenChamberCreatedSession: (sessionId: string) => boolean
-  initializeNewOpenChamberSession: (sessionId: string, agents: unknown[]) => void
+  markSessionAsMultichamberCreated: (sessionId: string) => void
+  isMultichamberCreatedSession: (sessionId: string) => boolean
+  initializeNewMultichamberSession: (sessionId: string, agents: unknown[]) => void
   /** `cwd` is where the session runs inside the checkout; it defaults to the worktree root. */
   setWorktreeMetadata: (sessionId: string, metadata: WorktreeMetadata | null, cwd?: string) => void
   overrideNewSessionDraftTarget: (options: Record<string, unknown>) => void
@@ -988,16 +1008,21 @@ const createSessionWithDraftLifecycle = async (
 ): Promise<Session | null> => {
   const store = useSessionUIStore.getState()
   const draft = store.newSessionDraft
+  const creationRuntimeKey = getRuntimeKey()
   const targetFolderId = draft.targetFolderId
 
   try {
     const resolved = await resolveCreatableDraftDirectory(draft, directoryOverride)
     if (resolved.status === "aborted") return null
     const directory = resolved.directory
-    const session = await createSessionAction(title, directory, metadata, selectionTransition, selection)
+    const session = await createSessionAction(title, directory, metadata, selectionTransition, selection, "preserve")
     if (!session) return null
 
-    useSessionUIStore.getState().closeNewSessionDraft()
+    const currentDraft = useSessionUIStore.getState().newSessionDraft
+    if (getRuntimeKey() === creationRuntimeKey && currentDraft.draftId === draft.draftId && currentDraft.open) {
+      useSessionUIStore.getState().closeNewSessionDraft()
+      useSessionUIStore.getState().setCurrentSession(session.id, session.directory || directory, selectionTransition)
+    }
 
     if (targetFolderId) {
       const currentStore = useSessionUIStore.getState()
@@ -1049,6 +1074,7 @@ export async function materializeOpenDraftSession(selection: {
   const draft = draftOverride ?? store.newSessionDraft
   if (!draft?.open) return null
   const draftPermissionMode = draft.permissionMode
+  const nativeHarness = draft.harness && draft.harness !== 'opencode' ? draft.harness : null
 
   const trimmedAgent = typeof selection.agent === "string" && selection.agent.trim().length > 0
     ? selection.agent.trim()
@@ -1089,11 +1115,13 @@ export async function materializeOpenDraftSession(selection: {
   const created = await createSessionWithDraftLifecycle(
     draft.title,
     draftDirectoryOverride,
-    draftPins.notes.length > 0 || draftPins.plans.length > 0
-      ? { openchamber: { project_context_pins: draftPins } }
-      : undefined,
+    nativeHarness
+      ? { backend: nativeHarness, [nativeHarness]: draft.nativeSelection ?? {}, openchamber: { project_context_pins: draftPins } }
+      : draftPins.notes.length > 0 || draftPins.plans.length > 0
+        ? { openchamber: { project_context_pins: draftPins } }
+        : undefined,
     "submitted-draft",
-    {
+    nativeHarness ? undefined : {
       model: { providerID: selection.providerID, id: selection.modelID, variant: selection.variant },
       agent: trimmedAgent,
     },
@@ -1130,11 +1158,11 @@ export async function materializeOpenDraftSession(selection: {
 
   const draftSyntheticParts = draft.syntheticParts
   const configState = useConfigStore.getState()
-  void activateConfigForDirectory(createdDirectory).catch((error) => {
+  if (!nativeHarness) void activateConfigForDirectory(createdDirectory).catch((error) => {
     console.warn("Failed to activate directory after creating session:", error)
   })
 
-  const effectiveDraftAgent = trimmedAgent ?? configState.currentAgentName
+  const effectiveDraftAgent = nativeHarness ? undefined : trimmedAgent ?? configState.currentAgentName
   const variantOverride = resolveVariantToRecord(
     effectiveDraftAgent,
     selection.providerID,
@@ -1142,7 +1170,7 @@ export async function materializeOpenDraftSession(selection: {
     selection.variant,
   )
 
-  useSelectionStore.getState().saveSessionModelSelection(created.id, selection.providerID, selection.modelID)
+  if (!nativeHarness) useSelectionStore.getState().saveSessionModelSelection(created.id, selection.providerID, selection.modelID)
 
   if (effectiveDraftAgent) {
     useSelectionStore.getState().saveSessionAgentSelection(created.id, effectiveDraftAgent)
@@ -1152,14 +1180,14 @@ export async function materializeOpenDraftSession(selection: {
     useSelectionStore.getState().saveAgentModelVariantForSession(created.id, effectiveDraftAgent, selection.providerID, selection.modelID, variantOverride)
   }
 
-  store.initializeNewOpenChamberSession(created.id, configState.agents ?? [])
+  if (!nativeHarness) store.initializeNewMultichamberSession(created.id, configState.agents ?? [])
 
   const permissionMode = permissionModeForNewSession(
     draftPermissionMode,
     isSpaceDirectory(createdDirectory),
     useUIStore.getState().permissionDefaultMode,
   )
-  if (permissionMode) {
+  if (permissionMode && !nativeHarness) {
     void import("@/stores/permissionStore")
       .then(({ usePermissionStore }) => usePermissionStore.getState().setSessionMode(created.id, permissionMode))
       .catch((error) => {
@@ -1403,6 +1431,15 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
 
 
   openNewSessionDraft: (options) => {
+    if (!options?.resolvedHarness) {
+      void requestSessionCreation(options).catch((error) => { set({ error: error instanceof Error ? error.message : String(error) }) })
+      return
+    }
+    if (options?.harness && options.harness !== 'opencode' && (options.pendingWorktreeRequestId || options.bootstrapPendingDirectory || (options.directoryOverride && spaceIdOfDirectory(options.directoryOverride)))) {
+      set({ error: formatMessage(useI18nStore.getState().dictionary, 'sessions.creation.unsupportedTarget', { engine: options.harness }) })
+      return
+    }
+
     // A USER-initiated draft open is a navigation choice: the next cold launch
     // should land on the draft, not re-open the session left behind — drop the
     // persisted last-session pointer for this runtime. `automatic: true` marks
@@ -1518,6 +1555,7 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
 
     const nextDraft: NewSessionDraftState = {
       draftId: nextDraftId++,
+      harness: options?.harness ?? 'opencode',
       open: true,
       target,
       preparedChatDirectory: null,
@@ -1542,9 +1580,30 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
     })
 
     writeRuntimeSessionMemory(runtimeMemoryKey(), { sessionId: null, directory, draft: nextDraft })
+    if (!options?.automatic && nextDraft.harness && nextDraft.harness !== 'opencode') {
+      const harness = nextDraft.harness
+      const creationRuntime = getRuntimeKey()
+      const creationDraftId = nextDraft.draftId
+      const nativeDirectory = target === 'chat' ? get().prepareChatDraftDirectory() : Promise.resolve(directory)
+      void nativeDirectory.then((ownedDirectory) => {
+        if (getRuntimeKey() !== creationRuntime || get().newSessionDraft.draftId !== creationDraftId) return null
+        return createSessionWithDraftLifecycle(options?.title, ownedDirectory, { backend: harness, openchamber: { project_context_pins: nextDraft.projectContextPins ?? { notes: [], plans: [] } } }).then(async (session) => {
+          if (!session && target === "chat" && ownedDirectory) await deleteChatDirectory(ownedDirectory).catch(() => undefined)
+          return session
+        })
+      }).then((session) => {
+        if (getRuntimeKey() !== creationRuntime) { options?.onCreated?.(null); return }
+        if (session && get().currentSessionId === session.id && nextDraft.syntheticParts?.length) useInputStore.getState().setPendingSyntheticParts(nextDraft.syntheticParts)
+        if (!session) set({ error: formatMessage(useI18nStore.getState().dictionary, 'sessions.creation.failed', { engine: harness }) })
+        options?.onCreated?.(session)
+      }).catch((error) => { if (getRuntimeKey() === creationRuntime) set({ error: error instanceof Error ? error.message : String(error) }); options?.onCreated?.(null) })
+    }
+
     if (options?.initialPrompt) {
       useInputStore.getState().setPendingInputText(options.initialPrompt)
     }
+
+    if (nextDraft.harness && nextDraft.harness !== 'opencode') return
 
     // Config (providers/agents/default model+agent) lives at the PROJECT level. When the user
     // came from a worktree session, `directory` is the worktree path, whose provider list does
@@ -1657,7 +1716,7 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
       }
     })
 
-    applyDraftTargetSelectionDefaults(get().newSessionDraft, get().availableWorktreesByProject, undefined, previousDraft)
+    if (!get().newSessionDraft.harness || get().newSessionDraft.harness === "opencode") applyDraftTargetSelectionDefaults(get().newSessionDraft, get().availableWorktreesByProject, undefined, previousDraft)
 
     const nextDraft = get().newSessionDraft
     // Persist the chosen draft target so reopening the composer restores the
@@ -1721,16 +1780,16 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
 
   clearError: () => set({ error: null }),
 
-  markSessionAsOpenChamberCreated: (sessionId) =>
+  markSessionAsMultichamberCreated: (sessionId) =>
     set((s) => {
       const next = new Set(s.webUICreatedSessions)
       next.add(sessionId)
       return { webUICreatedSessions: next }
     }),
 
-  isOpenChamberCreatedSession: (sessionId) => get().webUICreatedSessions.has(sessionId),
+  isMultichamberCreatedSession: (sessionId) => get().webUICreatedSessions.has(sessionId),
 
-  initializeNewOpenChamberSession: () => {
+  initializeNewMultichamberSession: () => {
     // Stub — was a no-op in old store
   },
 
@@ -1769,7 +1828,7 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
       )
       return { newSessionDraft: nextDraft }
     })
-    applyDraftTargetSelectionDefaults(get().newSessionDraft, get().availableWorktreesByProject, undefined, previousDraft)
+    if (!get().newSessionDraft.harness || get().newSessionDraft.harness === "opencode") applyDraftTargetSelectionDefaults(get().newSessionDraft, get().availableWorktreesByProject, undefined, previousDraft)
 
     if (nextDirectory && nextDirectory !== useDirectoryStore.getState().currentDirectory) {
       useDirectoryStore.getState().setDirectory(nextDirectory)
@@ -1832,12 +1891,16 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
     // A message sent while OpenCode is still starting waits for it here, ahead
     // of session creation, commands and shell, all of which need OpenCode.
     // Held sends go out one after another, in the order they were made.
-    return runAfterOpenCodeStartup(async () => {
+    const sendingSession = capturedTarget?.sessionId ?? options?.sessionId ?? get().currentSessionId
+    const sendingHarness = sendingSession ? engineInfoForSession({ id: sendingSession }).id : (options?.draftSnapshot ?? get().newSessionDraft).harness ?? 'opencode'
+    const send = async () => {
       const draft = options?.draftSnapshot ?? get().newSessionDraft
       const trimmedAgent = typeof agent === "string" && agent.trim().length > 0 ? agent.trim() : undefined
 
       const queuedGoal = options?.queuedGoal
-      const goalArm = inputMode === "shell" || content.trim().length === 0
+      const goalTarget = capturedTarget?.sessionId ?? get().currentSessionId
+      const goalEngine = engineInfoForSession({ id: goalTarget })
+      const goalArm = !goalEngine.capabilities.goals || inputMode === "shell" || content.trim().length === 0
         ? { armed: false, objectiveOverride: null }
         : queuedGoal !== undefined
           ? { armed: queuedGoal !== null, objectiveOverride: queuedGoal?.objective ?? null }
@@ -1966,11 +2029,11 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
       const configAgentName = useConfigStore.getState().currentAgentName
       const effectiveAgent = trimmedAgent || sessionAgentSelection || configAgentName || undefined
 
-      if (targetSessionId) {
+      if (targetSessionId && sendingHarness === "opencode") {
         useSelectionStore.getState().saveSessionModelSelection(targetSessionId, providerID, modelID)
       }
 
-      if (targetSessionId && effectiveAgent) {
+      if (targetSessionId && effectiveAgent && sendingHarness === "opencode") {
         useSelectionStore.getState().saveSessionAgentSelection(targetSessionId, effectiveAgent)
         useSelectionStore.getState().saveAgentModelVariantForSession(
           targetSessionId,
@@ -2068,7 +2131,8 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
       })
       // Keep restore failures outside the send promise and its retry path.
       void resumeAfterSend?.().catch(console.warn)
-    })
+    }
+    return sendingHarness === 'opencode' ? runAfterOpenCodeStartup(send) : send()
   },
 
   // ---------------------------------------------------------------------------
@@ -2251,12 +2315,12 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
         sourceDirectory,
       )
       if (!project?.path) {
-        throw new Error("Project is not registered in OpenChamber")
+        throw new Error("Project is not registered in Multichamber")
       }
 
       const [branchNameModule, configModule, trustModule, createModule] = await Promise.all([
         import("@/lib/git/branchNameGenerator"),
-        import("@/lib/openchamberConfig"),
+        import("@/lib/multichamberConfig"),
         import("@/lib/sharedTrustConfirmation"),
         import("@/lib/worktrees/worktreeCreate"),
       ])

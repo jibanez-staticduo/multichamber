@@ -2,7 +2,7 @@ import React from 'react';
 
 import { Icon } from '@/components/icon/Icon';
 import { Button } from '@/components/ui/button';
-import { OpenChamberLogo } from '@/components/ui/OpenChamberLogo';
+import { MultichamberLogo } from '@/components/ui/MultichamberLogo';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useWaitingBlink } from '@/hooks/useDurationTicker';
@@ -54,7 +54,7 @@ export const MobileConnectionWelcome: React.FC<{
   // Accept a pasted pairing link (openchamber://connect?...) in the URL field and
   // split it back into the server URL + token.
   const handleUrlChange = React.useCallback((value: string) => {
-    if (/^openchamber:\/\//i.test(value.trim())) {
+    if (/^(?:multichamber|openchamber):\/\//i.test(value.trim())) {
       const payload = parseConnectionPayload(value);
       if (payload) {
         if ('pairing' in payload) {
@@ -140,7 +140,7 @@ export const MobileConnectionWelcome: React.FC<{
       <div className="m-auto flex w-full max-w-[360px] shrink-0 flex-col items-center gap-9 py-8">
         <div className="flex flex-col items-center gap-5 text-center">
           <span {...debugLongPress} className="select-none" style={{ touchAction: 'manipulation' }}>
-            <OpenChamberLogo width={72} height={72} className="size-[72px]" />
+            <MultichamberLogo width={72} height={72} className="size-[72px]" />
           </span>
           <h1 className="typography-h2 text-foreground">{t('mobile.connect.welcome.title')}</h1>
         </div>

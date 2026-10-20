@@ -1,12 +1,12 @@
-import type { RuntimeAPIs } from '@openchamber/ui/lib/api/types';
-import { createDesktopThemeFileAPI } from '@openchamber/ui/lib/desktop';
+import type { RuntimeAPIs } from '@multichamber/ui/lib/api/types';
+import { createDesktopThemeFileAPI } from '@multichamber/ui/lib/desktop';
 import {
   createRuntimeUrlResolver,
   getRuntimeUrlResolver,
   setRuntimeUrlResolver,
   type RuntimeUrlResolver,
-} from '@openchamber/ui/lib/runtime-url';
-import { useDirectoryStore } from '@openchamber/ui/stores/useDirectoryStore';
+} from '@multichamber/ui/lib/runtime-url';
+import { useDirectoryStore } from '@multichamber/ui/stores/useDirectoryStore';
 import { createWebTerminalAPI } from './terminal';
 import { createWebGitAPI } from './git';
 import { createWebFilesAPI } from './files';

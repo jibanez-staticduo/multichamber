@@ -9,7 +9,7 @@ import type {
   PublicService,
   PublicGuestCapabilities,
   PublicIntegration,
-} from '@openchamber/sdk';
+} from '@multichamber/sdk';
 
 export type GuestSource = 'bundled' | 'path' | 'zip' | 'git';
 

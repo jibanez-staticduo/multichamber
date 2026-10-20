@@ -266,6 +266,10 @@ export function createMessageQueueRuntime({
   resolveAutoSelection = null,
   // Saves the goal record of a message queued as a goal (the session metadata store).
   persistSessionGoal = null,
+  // Another session engine's delivery (the Claude surface's `queueTransport`,
+  // lib/claude/routes.js), read at dispatch time: it is created after the
+  // queue. A session it owns is never sent to OpenCode, which does not know it.
+  getEngineTransport = null,
   dataDir,
   fetchImpl = fetch,
   now = Date.now,
@@ -291,6 +295,7 @@ export function createMessageQueueRuntime({
 
   /** In-memory only — a restart has no in-flight sends. */
   const sending = new Map(); // sessionId → itemId
+  const idleDuringSend = new Set();
   const timers = new Map(); // sessionId → timeout
   const failures = new Map(); // sessionId → { itemId, failures, nextAttemptAt }
   const abortedAt = new Map(); // sessionId → timestamp
@@ -458,12 +463,22 @@ export function createMessageQueueRuntime({
 
   /** True while a subagent of the session runs; null when it could not be checked. */
   const hasWorkingSubagents = async (sessionId) => {
+    // An engine of its own reports a turn with its subagents as one status.
+    if (engineTransportFor(sessionId)) return false;
     const statuses = await activityProbe.fetchActiveSessionStatuses();
     if (!statuses) return null;
     return activityProbe.hasWorkingDescendants(sessionId, statuses);
   };
 
+  /** The engine transport that owns `sessionId`, or null for an OpenCode session. */
+  const engineTransportFor = (sessionId) => {
+    const transport = typeof getEngineTransport === 'function' ? getEngineTransport(sessionId) : null;
+    return transport && transport.owns(sessionId) ? transport : null;
+  };
+
   const isSessionIdle = async (sessionId, directory) => {
+    const transport = engineTransportFor(sessionId);
+    if (transport) return transport.isIdle(sessionId, directory).catch(() => null);
     // `/api/session/active` is global and lists only the sessions that are
     // running right now, so an absent entry means idle.
     // The route answers `{ data: { [id]: { type: 'running' } } }`; the shared
@@ -529,7 +544,33 @@ export function createMessageQueueRuntime({
       : [withMetadata];
   };
 
+  /**
+   * Deliver to a session of another engine: its own transport, with the
+   * captured context and standing knowledge admitted ahead of the text. The
+   * OpenCode model/agent switch and command lookup do not apply to it.
+   */
+  const sendItemThroughEngine = async (transport, sessionId, directory, item) => {
+    const knowledge = sessionKnowledgeRuntime
+      ? await sessionKnowledgeRuntime.resolvePendingForSession(sessionId, directory)
+        .catch(() => ({ text: '', signature: '' }))
+      : { text: '', signature: '' };
+    const result = await transport.send(sessionId, directory, {
+      text: item.text,
+      files: item.attachments.map(toPromptFile),
+      context: item.context.flatMap(toContextMessages).map((message) => message.text),
+      knowledge: knowledge.text,
+      sendConfig: item.sendConfig,
+    });
+    // Only when the engine says it went out: a command carries no knowledge,
+    // and recording it anyway would keep the next prompt from carrying it.
+    if (knowledge.text && result?.knowledgeDelivered && sessionKnowledgeRuntime) {
+      await sessionKnowledgeRuntime.recordDelivered(sessionId, directory, knowledge.signature).catch(() => undefined);
+    }
+  };
+
   const sendItem = async (sessionId, directory, item) => {
+    const transport = engineTransportFor(sessionId);
+    if (transport) return sendItemThroughEngine(transport, sessionId, directory, item);
     const { providerID, modelID, variant } = item.sendConfig;
     let agent = item.sendConfig.agent;
     let model = { id: modelID, providerID, ...(variant ? { variant } : {}) };
@@ -750,8 +791,10 @@ export function createMessageQueueRuntime({
         // bookkeeping only
       }
       console.log(`[message-queue] sent queued message to ${sessionId}`);
+      if (idleDuringSend.delete(sessionId)) armDispatch(sessionId);
     } catch (error) {
       sending.delete(sessionId);
+      idleDuringSend.delete(sessionId);
       const count = (failure?.itemId === item.id ? failure.failures : 0) + 1;
       const nextAttemptAt = now() + retryDelayMs(count);
       failures.set(sessionId, { itemId: item.id, failures: count, nextAttemptAt });
@@ -919,8 +962,13 @@ export function createMessageQueueRuntime({
     const status = extractSessionStatus(payload);
     if (status) {
       if (!queues.has(status.sessionId)) return;
-      if (status.type === 'idle') armDispatch(status.sessionId);
-      else clearTimer(status.sessionId);
+      if (status.type === 'idle') {
+        if (sending.has(status.sessionId)) idleDuringSend.add(status.sessionId);
+        armDispatch(status.sessionId);
+      } else {
+        idleDuringSend.delete(status.sessionId);
+        clearTimer(status.sessionId);
+      }
       return;
     }
 

@@ -59,15 +59,15 @@ describe.skipIf(!PACKED_ENABLED)('development build inside a space: docker (live
 
   it('runs the local sdk everywhere in the tree, not the published one with the same version', async () => {
     const sdk = fs.readFileSync(new URL('../../../../../sdk/package.json', import.meta.url), 'utf8');
-    const copies = await place.exec(spec.id, ['sh', '-c', `find ${TOOLS_MOUNT_PATH}/node_modules -type d -path '*/@openchamber/sdk' -not -path '*/sdk/*'`]);
-    expect(copies.stdout).toBe(`${TOOLS_MOUNT_PATH}/node_modules/@openchamber/sdk\n`);
+    const copies = await place.exec(spec.id, ['sh', '-c', `find ${TOOLS_MOUNT_PATH}/node_modules -type d -path '*/@multichamber/sdk' -not -path '*/sdk/*'`]);
+    expect(copies.stdout).toBe(`${TOOLS_MOUNT_PATH}/node_modules/@multichamber/sdk\n`);
 
     // The lock file names where each package came from: the sdk from the local tarball, never from the registry.
     const lock = JSON.parse((await place.exec(spec.id, ['cat', `${TOOLS_MOUNT_PATH}/package-lock.json`])).stdout);
-    const installed = lock.packages['node_modules/@openchamber/sdk'];
+    const installed = lock.packages['node_modules/@multichamber/sdk'];
     expect(installed.version).toBe(JSON.parse(sdk).version);
     expect(installed.resolved).toMatch(/^file:.*openchamber-sdk\.tgz$/);
-    expect(lock.packages['node_modules/@openchamber/web'].resolved).toMatch(/^file:.*openchamber-web\.tgz$/);
+    expect(lock.packages['node_modules/@multichamber/web'].resolved).toMatch(/^file:.*openchamber-web\.tgz$/);
   });
 
   it('leaves the tarballs out of the volume', async () => {

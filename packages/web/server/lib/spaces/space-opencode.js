@@ -208,7 +208,7 @@ export function buildLoginRow(provider, login) {
   const metadata = method.rowMetadata(login, spaceWindowUrl(provider));
   const value = { type: 'oauth', methodID: login.methodID, access: WINDOW_PLACEHOLDER_KEY, refresh: WINDOW_PLACEHOLDER_KEY, expires: NEVER_EXPIRES };
   if (Object.keys(metadata).length > 0) value.metadata = metadata;
-  return { id: spaceLoginCredentialId(provider), integrationID: provider, label: 'OpenChamber space', value };
+  return { id: spaceLoginCredentialId(provider), integrationID: provider, label: 'Multichamber space', value };
 }
 
 // A chat larger than this is not taken out: the host reads one chat into memory at a time, and a
@@ -282,7 +282,7 @@ const readCapped = (response, cap, timeoutMs) => new Promise((resolve, reject) =
 });
 
 // Every tool of every agent refused in an archived chat, by OpenCode itself. The chat lives in the
-// host's OpenCode, which VS Code, the OpenCode CLI and any other client reach without OpenChamber's
+// host's OpenCode, which VS Code, the OpenCode CLI and any other client reach without Multichamber's
 // server; a turn someone starts there anyway runs no tool on the host. OpenCode takes the last
 // rule that matches, and a session's rules come after the agent's.
 const ARCHIVED_CHAT_PERMISSIONS = Object.freeze([Object.freeze({ action: '*', resource: '*', effect: 'deny' })]);

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAutomaticSessionDraft } from './useAutomaticSessionDraft';
 import { createPortal } from 'react-dom';
 import type { Message, Part, Session } from '@/lib/opencode/model';
 import { getLastConversationRecord, isIncompleteAssistantTurn } from '@/lib/opencode/model';
@@ -858,7 +859,6 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
     const revealWaited = Boolean(currentSessionId) && currentSessionId === waitedSessionIdRef.current;
 
     const clearMaterializedDraftSession = useSessionUIStore((s) => s.clearMaterializedDraftSession);
-    const openNewSessionDraft = useSessionUIStore((s) => s.openNewSessionDraft);
     const newSessionDraft = useSessionUIStore((s) => s.newSessionDraft);
 
     // Sync actions
@@ -1198,18 +1198,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
     // after a click the deferred id still names the previous session (or
     // nothing) for one commit, and acting on that would open a draft over the
     // session the user just chose.
-    React.useEffect(() => {
-        if (!autoOpenDraft || liveSessionId || draftOpen) return;
-        // Checked again against the store when the effect runs: a session link
-        // can select a session between this render and the effect (a startup
-        // route, Strict Mode's effect replay), and a draft opened from the
-        // stale render would throw that selection away.
-        const live = useSessionUIStore.getState();
-        if (live.currentSessionId || live.newSessionDraft.open) return;
-        // Programmatic fallback, not user navigation — must not clear the
-        // persisted last-session pointer the cold-launch restore reads.
-        openNewSessionDraft({ automatic: true });
-    }, [autoOpenDraft, liveSessionId, draftOpen, openNewSessionDraft]);
+    useAutomaticSessionDraft(autoOpenDraft && !liveSessionId);
 
     const activeTurnChangeRef = React.useRef<(turnId: string | null) => void>(() => {});
     const handleActiveTurnChange = React.useCallback((turnId: string | null) => {
@@ -1304,7 +1293,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
     // the chat (its composer, or nothing focused after clicking its text)
     // opens this bar. With several chat columns on screen, an unfocused
     // Cmd+F goes to the column the pointer last pressed in. Search is opt-in;
-    // while it is off the shortcut is left alone. VS Code has no OpenChamber
+    // while it is off the shortcut is left alone. VS Code has no Multichamber
     // server and so no index to search.
     const chatRootRef = React.useRef<HTMLDivElement>(null);
     const lastPressedInsideRef = React.useRef(false);

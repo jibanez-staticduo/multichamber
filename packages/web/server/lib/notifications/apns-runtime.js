@@ -2,8 +2,7 @@
 //
 // Device tokens are persisted per UI session (mirrors push-runtime.js). Delivery has two
 // modes, chosen at send time:
-//   - Relay (default): POST tokens + generic text to the central Cloudflare relay, which
-//     holds the single project APNs key and signs+sends — so users configure nothing.
+//   - Relay (explicit): POST tokens + generic text to a deployment-owned relay.
 //   - Direct (fallback): sign an ES256 JWT with Node crypto and send over HTTP/2 ourselves,
 //     for self-hosters who set OPENCHAMBER_APNS_* and OPENCHAMBER_PUSH_RELAY_DISABLED=true.
 // Wired into the same trigger fanout as web push (see runtime.js); the relay carries only
@@ -21,8 +20,7 @@ const APNS_HOST_PRODUCTION = 'https://api.push.apple.com';
 const APNS_HOST_SANDBOX = 'https://api.sandbox.push.apple.com';
 // APNs rejects auth tokens older than 1h; refresh well inside that window.
 const JWT_TTL_MS = 50 * 60 * 1000;
-const DEFAULT_BUNDLE_ID = 'com.openchamber.app';
-const DEFAULT_RELAY_URL = 'https://api.openchamber.dev/v1/push/send';
+const DEFAULT_BUNDLE_ID = 'com.staticduo.multichamber';
 const MAX_TOKENS_PER_SESSION = 10;
 // APNs reasons that mean the token is permanently invalid → drop it.
 const DEAD_TOKEN_REASONS = new Set(['BadDeviceToken', 'Unregistered', 'DeviceTokenNotForTopic']);
@@ -394,13 +392,12 @@ export const createApnsRuntime = (deps) => {
       req.end(body);
     });
 
-  // Relay mode (default): the single APNs key lives in the central Cloudflare relay, not on
-  // each user's server — so users configure nothing. The server just POSTs device tokens +
-  // generic text; the relay signs + sends and reports which tokens to drop. Direct mode (below)
-  // is the fallback for self-hosters who set OPENCHAMBER_APNS_* and disable the relay.
+  // Relay mode requires an explicitly configured deployment endpoint. Without
+  // one, direct APNs credentials own delivery; neither path has a hosted default.
   const resolveRelayConfig = () => {
     if (trimmedEnv('OPENCHAMBER_PUSH_RELAY_DISABLED') === 'true') return null;
-    const url = trimmedEnv('OPENCHAMBER_PUSH_RELAY_URL') || DEFAULT_RELAY_URL;
+    const url = trimmedEnv('OPENCHAMBER_PUSH_RELAY_URL');
+    if (!url) return null;
     const override = (trimmedEnv('OPENCHAMBER_APNS_ENVIRONMENT') || '').toLowerCase();
     return {
       url,
@@ -413,7 +410,7 @@ export const createApnsRuntime = (deps) => {
 
   const sendViaRelay = async (deviceTokens, payload, relay, environment) => {
     const tokens = deviceTokens.slice(0, 100);
-    const title = typeof payload?.title === 'string' && payload.title.length > 0 ? payload.title : 'OpenChamber';
+    const title = typeof payload?.title === 'string' && payload.title.length > 0 ? payload.title : 'Multichamber';
     const { privateKey, publicJwk } = await getOrCreateRelayKeypair();
     const ts = Date.now();
     // Sign over the same canonical form the relay verifies: ts.sortedTokens.title.
@@ -458,7 +455,7 @@ export const createApnsRuntime = (deps) => {
       if (!warnedUnconfigured) {
         warnedUnconfigured = true;
         console.warn(
-          '[APNs] Relay disabled and no direct config; set OPENCHAMBER_APNS_KEY_ID / OPENCHAMBER_APNS_TEAM_ID / OPENCHAMBER_APNS_P8 for direct send.',
+          '[APNs] Push is not configured; set MULTICHAMBER_PUSH_RELAY_URL or direct MULTICHAMBER_APNS_KEY_ID / TEAM_ID / P8 credentials.',
         );
       }
       return;
@@ -571,6 +568,7 @@ export const createApnsRuntime = (deps) => {
     removeApnsToken,
     removeApnsTokenFromAllSessions,
     sendApnsToAllUiSessions,
+    getConfigurationStatus: async () => resolveRelayConfig() ? { configured: true, mode: 'relay' } : await resolveApnsConfig() ? { configured: true, mode: 'direct' } : { configured: false, mode: 'unconfigured' },
     resolveApnsConfig,
     // exposed for tests
     signApnsJwt,

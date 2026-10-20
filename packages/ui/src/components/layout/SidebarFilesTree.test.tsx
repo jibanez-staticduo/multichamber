@@ -65,7 +65,7 @@ test('a draft waiting for a new space lists nothing of this computer\'s while th
     grants: [], access: null, needsAccess: [], accessFailures: [], damage: null, setup: null,
   };
   // As "Create space" leaves it: the draft stays on the project's folder while it waits for the space.
-  useSessionUIStore.getState().openNewSessionDraft({ directoryOverride: PROJECT, pendingWorktreeRequestId: 'worktree_space', preserveDirectoryOverride: true });
+  useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, directoryOverride: PROJECT, pendingWorktreeRequestId: 'worktree_space', preserveDirectoryOverride: true });
   noteSpaceCreationRequest('worktree_space', space.id);
   useSpacesStore.getState().addJourneyEntry(space);
 

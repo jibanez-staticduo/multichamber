@@ -1,3 +1,4 @@
+import { SessionEngineGlyph } from '@/components/session/SessionEngineGlyph';
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -54,7 +55,7 @@ function LaunchSettingsDialog({
   const firstModel = state.variants[state.active]?.models[0];
   // The judge shown while fusion is off is the one "Automatic" would pick.
   const judge = state.fuse ?? (firstModel
-    ? { providerID: firstModel.providerID, modelID: firstModel.modelID, variant: firstModel.variant, displayName: firstModel.displayName }
+    ? { harness: firstModel.harness, mode: firstModel.mode, providerID: firstModel.providerID, modelID: firstModel.modelID, variant: firstModel.variant, displayName: firstModel.displayName }
     : null);
   const judgeSelection: ModelSelectionWithId[] = judge ? [{ ...judge, instanceId: `${judge.providerID}:${judge.modelID}` }] : [];
   const close = () => {
@@ -131,8 +132,8 @@ function LaunchSettingsDialog({
               <div className={cn('flex flex-wrap items-center gap-1.5', !state.fuse && 'pointer-events-none opacity-50')} aria-disabled={!state.fuse}>
                 <ModelMultiSelect
                   selectedModels={judgeSelection}
-                  onAdd={(model) => parallel.setFuse({ providerID: model.providerID, modelID: model.modelID, displayName: model.displayName })}
-                  onUpdate={(_, model) => parallel.setFuse({ providerID: model.providerID, modelID: model.modelID, displayName: model.displayName })}
+                  onAdd={(model) => parallel.setFuse({ harness: model.harness, mode: model.mode, providerID: model.providerID, modelID: model.modelID, displayName: model.displayName })}
+                  onUpdate={(_, model) => parallel.setFuse({ harness: model.harness, mode: model.mode, providerID: model.providerID, modelID: model.modelID, displayName: model.displayName })}
                   onRemove={() => parallel.setFuse(null)}
                   maxModels={1}
                   showChips={false}
@@ -143,6 +144,7 @@ function LaunchSettingsDialog({
                 {judge ? (
                   <ModelEffortMenu
                     appearance="trigger"
+                    harness={judge.harness}
                     providerID={judge.providerID}
                     modelID={judge.modelID}
                     variant={judge.variant}
@@ -273,9 +275,10 @@ export function ParallelComposerStrip({
             key={`${model.providerID}:${model.modelID}:${model.variant ?? ''}`}
             className="group/chip inline-flex h-6 items-center gap-1 rounded-md border border-border bg-[var(--surface-elevated)] ps-1.5 pe-0.5 typography-micro text-foreground"
           >
-            <ProviderLogo providerId={model.providerID} className="size-3.5" />
+            {model.harness && model.harness !== 'opencode' ? <SessionEngineGlyph engine={model.harness} className="size-3.5" /> : <ProviderLogo providerId={model.providerID} className="size-3.5" />}
             <span className="max-w-[10rem] truncate">{model.displayName || model.modelID}</span>
             <ModelEffortMenu
+              harness={model.harness}
               providerID={model.providerID}
               modelID={model.modelID}
               variant={model.variant}
@@ -302,7 +305,7 @@ export function ParallelComposerStrip({
         ))}
         <ModelMultiSelect
           selectedModels={[]}
-          onAdd={(model) => parallel.addModel({ providerID: model.providerID, modelID: model.modelID, variant: model.variant, displayName: model.displayName })}
+          onAdd={(model) => parallel.addModel({ harness: model.harness, mode: model.mode, providerID: model.providerID, modelID: model.modelID, variant: model.variant, displayName: model.displayName })}
           onRemove={() => undefined}
           maxModels={1}
           showChips={false}

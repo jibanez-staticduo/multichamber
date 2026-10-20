@@ -8,7 +8,7 @@ import {
   GUEST_REQUEST_RESPONSE_MAX,
   GUEST_REQUEST_TIMEOUT_MS,
   isGuestRequestPath,
-} from '@openchamber/sdk';
+} from '@multichamber/sdk';
 
 import { readExtensionStore, updateExtensionStore } from './persist.js';
 import { readBoundedResponseText } from './response-body.js';

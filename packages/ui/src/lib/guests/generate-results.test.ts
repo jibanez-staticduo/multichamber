@@ -6,7 +6,7 @@ import {
   OPENCHAMBER_SDK_API_VERSION,
   OPENCHAMBER_SDK_CHANNEL,
   type LateGenerateResult,
-} from '@openchamber/sdk';
+} from '@multichamber/sdk';
 
 import { createGuestGenerateResults, lateGenerateResult, type GenerateOwner } from './generate-results.ts';
 import type { InstalledGuest } from './types.ts';

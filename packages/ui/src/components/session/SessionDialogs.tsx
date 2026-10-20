@@ -1,4 +1,6 @@
 import React from 'react';
+import { CodexSessionCreationDialogs } from './CodexSessionCreationDialogs';
+import { ClaudeSessionCreationDialogs } from './ClaudeSessionCreationDialogs';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui';
 
@@ -827,6 +829,8 @@ export const SessionDialogs: React.FC = () => {
                 </Dialog>
             )}
 
+            <CodexSessionCreationDialogs />
+            <ClaudeSessionCreationDialogs />
             <DirectoryExplorerDialog
                 open={isDirectoryDialogOpen}
                 onOpenChange={setIsDirectoryDialogOpen}

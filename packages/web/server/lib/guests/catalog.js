@@ -1,8 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import { hasGuestPage, requestedGuestCapabilities, resolveAttachEntry, resolveAttachMode, resolvePageEntry, resolveStatusSectionEntry, toPublicService, toPublicIntegration, hostMeetsOpenChamberEngine, openChamberEngineMinimum } from '@openchamber/sdk';
-import { parseManifestJson } from '@openchamber/sdk/schemas';
+import { hasGuestPage, requestedGuestCapabilities, resolveAttachEntry, resolveAttachMode, resolvePageEntry, resolveStatusSectionEntry, toPublicService, toPublicIntegration, hostMeetsMultichamberEngine, multichamberEngineMinimum } from '@multichamber/sdk';
+import { parseManifestJson } from '@multichamber/sdk/schemas';
 
 import { listRelativeGuestScriptHrefs, resolveGuestHtmlRelativePath } from './html-tokens.js';
 import { effectiveGrants, guestGrantScope } from './grant-scope.js';
@@ -162,14 +162,14 @@ export const inspectGuestPackage = async (packageRoot, { openchamberVersion, ski
   if (!skipEngineCheck && !parsed.version) {
     return { ok: false, code: 'invalid-manifest' };
   }
-  const engine = parsed.manifest.engines?.openchamber;
+  const engine = parsed.manifest.engines?.multichamber;
   if (engine && !skipEngineCheck) {
     const hostVersion = typeof openchamberVersion === 'string' ? openchamberVersion : '';
-    if (!hostMeetsOpenChamberEngine(hostVersion, engine)) {
+    if (!hostMeetsMultichamberEngine(hostVersion, engine)) {
       return {
         ok: false,
         code: 'host-too-old',
-        required: openChamberEngineMinimum(engine) ?? engine,
+        required: multichamberEngineMinimum(engine) ?? engine,
       };
     }
   }

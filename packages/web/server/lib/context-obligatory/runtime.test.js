@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createContextObligatoryRuntime } from './runtime.js';
 
 /**
- * Pinned messages and the compaction cursor live in OpenChamber's own session
+ * Pinned messages and the compaction cursor live in Multichamber's own session
  * metadata store. `readSessionMetadata` and `persistContextCursor` are the
  * seams; without both the runtime stays inert and says so once.
  *
@@ -141,7 +141,7 @@ describe('context obligatory runtime', () => {
     const upstream = fetchMock.getMockImplementation();
     fetchMock.mockImplementation(async (input, init) => {
       if (new URL(input).pathname.endsWith('/synthetic')) {
-        return new Response('<!doctype html><title>OpenChamber</title>', { status: 200, headers: { 'content-type': 'text/html' } });
+        return new Response('<!doctype html><title>Multichamber</title>', { status: 200, headers: { 'content-type': 'text/html' } });
       }
       return upstream(input, init);
     });

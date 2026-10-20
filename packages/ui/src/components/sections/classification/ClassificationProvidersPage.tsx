@@ -23,7 +23,7 @@ import { ClassifierTestButton } from './ClassifierTestButton';
 import { SettingsInlineLink } from './JevAccessNote';
 
 // The docs keep the list of features Jev answers for, so this page never goes stale.
-const CLASSIFICATION_DOCS_URL = 'https://docs.openchamber.dev/classification-providers/';
+const CLASSIFICATION_DOCS_URL = 'https://github.com/jibanez-staticduo/multichamber/blob/main/packages/docs/content/docs/classification-providers.mdx';
 
 interface ClassificationProvidersPageProps {
   titleLeading: React.ReactNode;

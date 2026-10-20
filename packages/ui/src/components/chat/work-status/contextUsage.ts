@@ -1,3 +1,4 @@
+import type { readCodexContext } from '@/lib/codexSessionMetadata';
 /**
  * Context-window usage for a specific session.
  *
@@ -41,12 +42,14 @@ export const DEFAULT_CONTEXT_LIMIT = 200_000;
 export const computeContextUsage = (
   messages: readonly ContextFillMessage[],
   contextLimit: number,
+  nativeContext?: ReturnType<typeof readCodexContext>,
 ): WorkStatusContextUsage | null => {
-  const fill = findLatestContextFill(messages);
+  const fill = nativeContext ? nativeContext.state === 'compacted' ? { state: 'compacted' as const, index: -1 } : { state: 'measured' as const, index: -1, totalTokens: nativeContext.tokens, contextWindow: nativeContext.window, native: true } : findLatestContextFill(messages);
   if (!fill) return null;
 
-  const limit = contextLimit > 0 ? contextLimit : DEFAULT_CONTEXT_LIMIT;
-  if (fill.state === 'compacted') return { state: 'compacted', limit };
+  if (fill.state === 'measured' && fill.native && !fill.contextWindow) return null;
+  const limit = fill.state === 'measured' && fill.native ? fill.contextWindow ?? 0 : contextLimit > 0 ? contextLimit : DEFAULT_CONTEXT_LIMIT;
+  if (fill.state === 'compacted') return { state: 'compacted', limit: nativeContext ? nativeContext.window ?? 0 : limit };
 
   return { state: 'measured', totalTokens: fill.totalTokens, limit, percent: (fill.totalTokens / limit) * 100 };
 };

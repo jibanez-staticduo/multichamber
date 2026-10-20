@@ -19,6 +19,28 @@ Do not put high-frequency local component state here just because it is convenie
 
 There are multiple store categories in this directory.
 
+### Native harness readiness
+
+`useConfigStore.nativeReadyRuntimeKey` records a successful, current-host
+`/api/engines` response declaring Claude or Codex available. It is runtime-only,
+is cleared on host switches, and never hydrates from storage. It lets web,
+Electron, hosted mobile and Capacitor keep the application and settings usable
+while OpenCode is unavailable. `isConnected`, provider/agent loaded flags and
+`lastInitFailure` still describe OpenCode and retain its failures. Native
+readiness does not authorize an OpenCode send or substitute an empty catalog.
+The compatibility gate preserves the shared application when this independent
+probe succeeds; without a native engine, incompatible OpenCode keeps its
+existing recovery screen.
+
+While OpenCode is disconnected, `useNativeHarnessBootstrap` reads the available
+native engines' independent session, activity and pending-request endpoints.
+Lists only upsert their own entities and never mark the global list complete.
+Activity and requests reconcile only the matching engine, preserve newer live
+mutations, and leave failed scopes unchanged. Refreshes run sequentially every
+45 seconds until OpenCode reconnects; abort and runtime identity discard late
+answers from a previous host. Existing directory stores receive the same
+session records without claiming their OpenCode bootstrap completed.
+
 ### Catalog refresh
 
 `catalogRefresh.ts` re-reads the lists Settings and the composer show — agents,
@@ -84,7 +106,7 @@ credential never changing. The entry is replaced by the new account's failure.
 A switch is picked up from OpenCode's event stream rather than from the screen
 that made it, so `catalogRefreshTasks("credential")` re-reads the selected
 trackers when a credential changes. That is what covers a switch made in
-OpenCode's own TUI or by another client, which no OpenChamber screen can see.
+OpenCode's own TUI or by another client, which no Multichamber screen can see.
 Only the trackers the store already shows are re-read. That is gated on the
 results the store holds, not on the instance-level load flag, because runtimes
 differ in how they load: the VS Code layout fetches quotas on open and never
@@ -97,7 +119,7 @@ request, including JSON body delivery. Compact usage cards and Settings display
 refresh errors alongside retained data. The mobile popover makes at most one
 refresh attempt per opening, so a failed first load cannot create a retry loop.
 
-`useSmallModelStore` answers one question: can OpenChamber's background model
+`useSmallModelStore` answers one question: can Multichamber's background model
 (the Small Model) run right now? `GET /api/small-model` says `available: false`
 on, for instance, a fresh install on OpenCode's free tier, where chat works but
 a stateless generation has nothing to run on. Session renaming, the session goal
@@ -160,6 +182,10 @@ Context-panel session chats render in this app as a chat column pinned to
 their session (`ChatView` `pinnedSession`, see the sync documentation's
 *Pinned chat columns*). Only the active chat tab is mounted while the panel is
 open; switching tabs opens the other session like a session switch.
+Chat-tab labels resolve across live directory stores and the global session
+index. Untitled Codex children use the same native identity fallback as their
+sidebar rows. Metadata arrival updates the label even when `time.updated` is
+unchanged, and refreshes the persisted tab fallback for later store eviction.
 
 `useDirectoryStore.ts` resolves the home directory when the module loads and
 again on every runtime switch; only the newest resolution commits. On a
@@ -262,10 +288,13 @@ failed read keeps what was known and records `loadError` instead of reading as
 
 `useSessionWarmingStore.ts` projects which sessions the server keeps warm and
 until when (`packages/web/server/lib/session-warming/DOCUMENTATION.md`).
+Warming uses OpenCode's transient generation API. The sidebar offers it only
+for OpenCode sessions, and direct store requests for Claude or Codex reject
+before making an HTTP request.
 Nothing is persisted. `sync/session-warming-sync.ts` reads the snapshot on
 subscribe and whenever the control stream reconnects, and applies the whole
 snapshot each broadcast carries; an older revision is ignored, and a runtime
-switch resets the store first. VS Code keeps it empty: it has no OpenChamber
+switch resets the store first. VS Code keeps it empty: it has no Multichamber
 server and offers only OpenCode's global warming.
 
 `messageQueueStore.ts` has two owners, decided by `isServerOwnedMessageQueue()`.
@@ -282,7 +311,7 @@ scheduled item has no pinned send config; ordinary items keep their captured
 provider and model. Both appear in the same queue. Scheduled items allow reorder
 and removal, but not editing or manual send. Bulk take leaves them queued.
 `sync/message-queue-sync.ts` receives queue events through the shared control SSE
-stream at `/api/openchamber/events`, including while OpenCode uses SSE fallback.
+stream at `/api/multichamber/events`, including while OpenCode uses SSE fallback.
 It adds no poller or per-session connection. Either stream reconnecting requests
 `resync()`, independently of directory-bootstrap suppression.
 
@@ -356,7 +385,7 @@ Settings fields are declared once in the settings registry (`packages/ui/src/lib
 
 Session defaults belong to the active runtime. Switching instances clears the in-memory defaults and directory config snapshots; persisted config hydrates only when its recorded runtime matches. Legacy snapshots without an owner are refetched. Initialization, health checks, and directory activation reject obsolete continuations, including A to B to A switches.
 
-Persisted config (`config-store`) holds selections only. The provider and agent catalogs and their `*Loaded` flags stay in memory, both top level and per directory. VS Code gives every OpenChamber webview one origin, so each localStorage write reaches every webview in every window as a `StorageEvent` carrying the old and the new value. With the catalogs included, one write was tens of megabytes, and the shared webview renderer ran out of memory. A cold start therefore paints the pickers once `initializeApp` / `activateDirectory` load the catalogs; an empty hydrated snapshot reports not-loaded, never an authoritative empty list. The last live catalogs are kept instead in IndexedDB (`configCatalogCache.ts`, which fires no `StorageEvent`), keyed by runtime and config directory, bounded to 24 directories, with a schema version; a record that fails its shape check or names another schema is deleted on read. Records hold only what the pickers and composer show, built field by field from an allowlist and read through strict schemas: provider, model and variant `settings`/`headers`/`body`, an agent's request (apart from its numeric `temperature`/`topP`) and its system prompt are never written, because they carry API keys and authorization headers. At startup and on a directory switch the cached catalog fills a directory whose live catalog has not loaded, without setting `*Loaded`: the composer pickers render from it, Settings pickers and recovery loops keep waiting for a live load. Only live loads write the cache, 3 s after they apply and only when no catalog event for that directory arrived since the load began (the re-read the event triggers writes instead), so a starting location's partial first answer is never stored; an empty answer is written only by a re-read. A location OpenCode is still starting answers empty, then partial, so the first live answer for a directory shown from the cache is held back when it lists fewer models or agents than the cache, and re-read once after 2.5 s; that re-read replaces the cache whatever it holds. Older blobs that still carry catalogs hydrate as before. The slim format is persist version 1: a build without it has no `migrate` for version 1 and skips the blob, so it gets a cold start instead of reading `snapshot.agents` on a snapshot that has none. The persist middleware writes after every `set()`, including one whose updater returns the same state, so selection setters (`setProvider`, `setModel`, `setAgent` and the model it resolves) check for an unchanged selection before calling `set()`.
+Persisted config (`config-store`) holds selections only. The provider and agent catalogs and their `*Loaded` flags stay in memory, both top level and per directory. VS Code gives every Multichamber webview one origin, so each localStorage write reaches every webview in every window as a `StorageEvent` carrying the old and the new value. With the catalogs included, one write was tens of megabytes, and the shared webview renderer ran out of memory. A cold start therefore paints the pickers once `initializeApp` / `activateDirectory` load the catalogs; an empty hydrated snapshot reports not-loaded, never an authoritative empty list. The last live catalogs are kept instead in IndexedDB (`configCatalogCache.ts`, which fires no `StorageEvent`), keyed by runtime and config directory, bounded to 24 directories, with a schema version; a record that fails its shape check or names another schema is deleted on read. Records hold only what the pickers and composer show, built field by field from an allowlist and read through strict schemas: provider, model and variant `settings`/`headers`/`body`, an agent's request (apart from its numeric `temperature`/`topP`) and its system prompt are never written, because they carry API keys and authorization headers. At startup and on a directory switch the cached catalog fills a directory whose live catalog has not loaded, without setting `*Loaded`: the composer pickers render from it, Settings pickers and recovery loops keep waiting for a live load. Only live loads write the cache, 3 s after they apply and only when no catalog event for that directory arrived since the load began (the re-read the event triggers writes instead), so a starting location's partial first answer is never stored; an empty answer is written only by a re-read. A location OpenCode is still starting answers empty, then partial, so the first live answer for a directory shown from the cache is held back when it lists fewer models or agents than the cache, and re-read once after 2.5 s; that re-read replaces the cache whatever it holds. Older blobs that still carry catalogs hydrate as before. The slim format is persist version 1: a build without it has no `migrate` for version 1 and skips the blob, so it gets a cold start instead of reading `snapshot.agents` on a snapshot that has none. The persist middleware writes after every `set()`, including one whose updater returns the same state, so selection setters (`setProvider`, `setModel`, `setAgent` and the model it resolves) check for an unchanged selection before calling `set()`.
 
 Configured project and global model identifiers remain selected through provider discovery gaps, except for an Auto selection the server has confirmed it cannot honour. A draft can display its configured identifier before model metadata arrives. Catalog absence never selects Big Pickle in its place. An unknown settings document defers fallback selection; a successful document with no configured model permits the normal OpenCode fallback. Before that fallback comes the model last picked in a chat composer (`lastSelectedModel`, a synced profile setting written only by the composer's model picker and the favorite-model shortcuts, never by other model pickers or session restores), so a new session starts where the user last chose when nothing configured names a model. Like a configured identifier it survives catalog gaps; a model hidden since is skipped, and so is an Auto pick the server cannot honour. The fallback itself (Big Pickle, else the first model) skips models hidden in the picker, on the client and in the server's session routes; a configured project, settings, agent, or OpenCode model is honoured even when hidden, and with every model hidden the unfiltered pick stands. Saved thinking preferences stay in settings; an OpenCode config `model` carries its effort as a `#variant` suffix, and a discovered model's supported variants determine the effective thinking level.
 
@@ -422,7 +451,7 @@ Project ordering defaults to manual. Session display persistence v3 migrates the
 
 Session display persistence keeps a hydrated local cache for the independent all-projects/single-project mode, session grouping, project sort, and Recent preference; successful server settings snapshots are authoritative for the fields they carry, and a field the server omits leaves the local cache untouched (it is not seeded back to the server). The last confirmed or manually selected project and sticky-header preference stay local to the device. Draft target changes do not write the picker selection; materialized session navigation updates it from the resolved project directory.
 
-Session folders are stored by the OpenChamber server and shared by all of its clients (`packages/web/server/lib/session-folders/DOCUMENTATION.md` owns the stored format and the change semantics). `useSessionFoldersStore` shows the server's last answer with this device's not-yet-stored changes laid over it. Every folder action is one change (`lib/sessionFolders/folderChanges.ts`) that the store applies at once, queues in runtime-scoped storage (`oc.sessions.folderChanges.v2:<runtime>`, written immediately so a reload still sends it) and sends to `PATCH /api/session-folders` 150 ms later, up to 500 changes per request; a change stays queued until the server stored it, a failed write retries with backoff up to 30 s and again when the event stream reconnects, and a change the server rejects as malformed is dropped and the server copy read again. The server's answer and every later read replace the shown folders only when their revision is not older than the last one shown. `sync/session-folders-sync.ts` reads them again when the control stream announces `session-folders-changed` with a newer revision, and after each reconnect. Before the first successful read nothing is sent: on its first contact with a server a device hands its own folders from older versions to the server once (an `import` change, with any tombstones an older version left unsent), marks the runtime in `oc.sessions.foldersShared.v2:<runtime>` and only then shows the server's folders. Creates, renames, moves and deletions queued before that are already in the copy the import sends (deletions as tombstones) and leave the queue with it, since a new folder the server joins by name would otherwise come back as a second one under its local id; until that succeeds the local copy stays on screen. A missing file on a server that stores shared folders is an empty list; a failed or malformed read keeps what is shown. A server from before shared folders answers 404 to `PATCH`; the store then writes its whole copy with `POST` the way older clients did, with the folders it deleted as tombstones, and gets no live updates from that server. The runtime-specific v2 browser keys stay as this device's cache of the server copy, flushed on runtime switch, page hide, freeze and unload. Which folders are collapsed stays on the device (`oc.sessions.folderCollapse.v2:<runtime>`) and is never read from the server. VS Code has no OpenChamber server, so its folders stay in its own storage and nothing is sent. File-search cache and in-flight keys include runtime plus directory and are cleared on endpoint reset.
+Session folders are stored by the Multichamber server and shared by all of its clients (`packages/web/server/lib/session-folders/DOCUMENTATION.md` owns the stored format and the change semantics). `useSessionFoldersStore` shows the server's last answer with this device's not-yet-stored changes laid over it. Every folder action is one change (`lib/sessionFolders/folderChanges.ts`) that the store applies at once, queues in runtime-scoped storage (`oc.sessions.folderChanges.v2:<runtime>`, written immediately so a reload still sends it) and sends to `PATCH /api/session-folders` 150 ms later, up to 500 changes per request; a change stays queued until the server stored it, a failed write retries with backoff up to 30 s and again when the event stream reconnects, and a change the server rejects as malformed is dropped and the server copy read again. The server's answer and every later read replace the shown folders only when their revision is not older than the last one shown. `sync/session-folders-sync.ts` reads them again when the control stream announces `session-folders-changed` with a newer revision, and after each reconnect. Before the first successful read nothing is sent: on its first contact with a server a device hands its own folders from older versions to the server once (an `import` change, with any tombstones an older version left unsent), marks the runtime in `oc.sessions.foldersShared.v2:<runtime>` and only then shows the server's folders. Creates, renames, moves and deletions queued before that are already in the copy the import sends (deletions as tombstones) and leave the queue with it, since a new folder the server joins by name would otherwise come back as a second one under its local id; until that succeeds the local copy stays on screen. A missing file on a server that stores shared folders is an empty list; a failed or malformed read keeps what is shown. A server from before shared folders answers 404 to `PATCH`; the store then writes its whole copy with `POST` the way older clients did, with the folders it deleted as tombstones, and gets no live updates from that server. The runtime-specific v2 browser keys stay as this device's cache of the server copy, flushed on runtime switch, page hide, freeze and unload. Which folders are collapsed stays on the device (`oc.sessions.folderCollapse.v2:<runtime>`) and is never read from the server. VS Code has no Multichamber server, so its folders stay in its own storage and nothing is sent. File-search cache and in-flight keys include runtime plus directory and are cleared on endpoint reset.
 
 Persisted session todos use a bounded composite key of runtime, normalized directory, and session ID. Ambiguous legacy todo entries are discarded rather than claimed by whichever runtime starts first. Authoritative deletion uses an explicit runtime identity, and session-folder deletion scans every scope in the active runtime so archived assignments cannot survive after their session is gone; it reaches the server as a `forget-sessions` change, so the chat leaves its folder on every client. Closing a project sends `forget-scopes` for its root, its archive and each of its worktrees, so its folders do not come back when the project is added again.
 
@@ -550,7 +579,7 @@ Important properties:
 - `startWatching()` / `stopWatching()` are for true live PR consumers only. Nothing polls a watched entry: `noteBranchActivity(directory)` (an agent turn finished there) and `noteWindowReturned()` (answers older than `60s`) refresh it, both wired by `lib/trackedItems/interest.ts`
 - `refreshTargets()` supports one-shot multi-target bootstrap without turning on live watching
 - an entry's open pull or merge request is a tracked item read with the bound account (`getBranchTrackedPull`, `useBranchTrackedPulls`); the server pushes its live state and `applyTrackedPulls` lays it on every entry of that request, skipping entries whose full refresh is newer and leaving semantically unchanged entries untouched.
-- PRs, merge requests and issues linked to sessions (GitHub, GitLab, Linear) are not in this store. The server follows them (`packages/web/server/lib/tracked-items/`) and pushes changes over the OpenChamber event stream; `useTrackedItemsStore` holds what it sent, persisted for 12 h (at most 300 records, re-parsed on hydration, an older answer never replaces a newer one), keyed by runtime and item key. Surfaces declare what they show with `useTrackedItems` (`lib/trackedItems/interest.ts`), which sends the union only when it changes and again after a reconnect, and reads with `useTrackedPullVisualSummaries` / `useTrackedIssueStates` / `useTrackedLinearStates`. Pull and merge request badges go through `getLinkedChangeRequestVisualSummary`, the same colour rule as a branch's PR.
+- PRs, merge requests and issues linked to sessions (GitHub, GitLab, Linear) are not in this store. The server follows them (`packages/web/server/lib/tracked-items/`) and pushes changes over the Multichamber event stream; `useTrackedItemsStore` holds what it sent, persisted for 12 h (at most 300 records, re-parsed on hydration, an older answer never replaces a newer one), keyed by runtime and item key. Surfaces declare what they show with `useTrackedItems` (`lib/trackedItems/interest.ts`), which sends the union only when it changes and again after a reconnect, and reads with `useTrackedPullVisualSummaries` / `useTrackedIssueStates` / `useTrackedLinearStates`. Pull and merge request badges go through `getLinkedChangeRequestVisualSummary`, the same colour rule as a branch's PR.
 - runtime reset disposes timers, watchers, API references, and request ownership while inert namespaced snapshots remain isolated
 - auth and context requests are deduplicated per provider instance and reject completions from an older runtime generation
 - context failures preserve the last complete cached result instead of becoming authoritative empty data
@@ -586,7 +615,7 @@ These rules are important. Breaking them tends to reintroduce idle CPU churn, st
 `useAgentsStore`, `useCommandsStore`, `useSkillsStore`, `useMcpConfigStore` and
 the provider half of `useConfigStore` describe directory-scoped configuration.
 Provider and agent catalogs use the actual worktree directory when selected;
-the parent project still supplies its OpenChamber project defaults.
+the parent project still supplies its Multichamber project defaults.
 Two surfaces read them at once: the app (chat, autocompletes, pickers), which
 wants the active project, and Settings, whose own project selector may point
 somewhere else.

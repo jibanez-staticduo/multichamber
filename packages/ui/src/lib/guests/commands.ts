@@ -1,4 +1,4 @@
-import type { GuestCommandContribution } from '@openchamber/sdk';
+import type { GuestCommandContribution } from '@multichamber/sdk';
 
 import { isGuestActive } from './capabilities.ts';
 import type { InstalledGuest } from './types.ts';

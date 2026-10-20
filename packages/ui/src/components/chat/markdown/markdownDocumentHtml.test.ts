@@ -21,7 +21,7 @@ const { isGeneratedMarkdownClass, isSafeSrcset } = await import('./markdownSecur
 const renderDocument = (markdown: string): string => renderMarkdownSync(markdown, 'inline', 'sanitize');
 
 const README_HEAD = [
-  '# <picture><source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.svg"><img src="docs/logo-light.svg" width="32" height="32" align="absmiddle" /></picture> OpenChamber',
+  '# <picture><source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.svg"><img src="docs/logo-light.svg" width="32" height="32" align="absmiddle" /></picture> Multichamber',
   '',
   '[![GitHub stars](https://img.shields.io/github/stars/openchamber/openchamber?style=flat)](https://github.com/openchamber/openchamber/stargazers)',
   '',
@@ -34,7 +34,7 @@ describe('document raw HTML', () => {
   test('renders GitHub-style README markup: pictures, badges and aligned blocks', () => {
     const html = renderDocument(README_HEAD);
 
-    expect(html).toContain('<h1><picture><source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.svg"><img src="docs/logo-light.svg" width="32" height="32" align="absmiddle" style="aspect-ratio:32/32"></picture> OpenChamber</h1>');
+    expect(html).toContain('<h1><picture><source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.svg"><img src="docs/logo-light.svg" width="32" height="32" align="absmiddle" style="aspect-ratio:32/32"></picture> Multichamber</h1>');
     expect(html).toContain('<img src="https://img.shields.io/github/stars/openchamber/openchamber?style=flat" alt="GitHub stars"></a>');
     expect(html).toContain('<a href="https://www.blacksmith.sh/"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/blacksmith-dark.svg"><img src="docs/blacksmith-light.svg" height="28" alt="CI powered by Blacksmith" style="height:28px"></picture></a>');
     expect(html).toContain('<p align="center"><sub>small</sub> <kbd>Ctrl</kbd></p>');

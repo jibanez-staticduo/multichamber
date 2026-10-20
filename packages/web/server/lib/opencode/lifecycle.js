@@ -28,7 +28,7 @@ const OPENCODE_HEALTH_PATH = '/api/info';
 const OPENCODE_REQUIRED_MAJOR_VERSION = 2;
 
 /**
- * OpenChamber talks to OpenCode 2.x only. v1 serves its routes without the
+ * Multichamber talks to OpenCode 2.x only. v1 serves its routes without the
  * `/api` prefix, publishes a different event vocabulary and has no `plugins`
  * config key, so an older binary fails in a hundred small ways instead of one
  * clear one.
@@ -41,7 +41,7 @@ const OPENCODE_REQUIRED_MAJOR_VERSION = 2;
  * field, only `{ version, pid, urls, paths }`.
  */
 const OPENCODE_VERSION_REQUIREMENT_DETAIL =
-  `OpenChamber requires OpenCode ${OPENCODE_REQUIRED_MAJOR_VERSION}.x`;
+  `Multichamber requires OpenCode ${OPENCODE_REQUIRED_MAJOR_VERSION}.x`;
 
 const classifyOpenCodeVersion = (version) => {
   if (typeof version !== 'string') return { ok: true };
@@ -50,7 +50,7 @@ const classifyOpenCodeVersion = (version) => {
   if (Number(match[1]) >= OPENCODE_REQUIRED_MAJOR_VERSION) return { ok: true };
   return {
     ok: false,
-    detail: `${OPENCODE_VERSION_REQUIREMENT_DETAIL}, found ${version.trim()}. Update OpenCode and start OpenChamber again.`,
+    detail: `${OPENCODE_VERSION_REQUIREMENT_DETAIL}, found ${version.trim()}. Update OpenCode and start Multichamber again.`,
   };
 };
 // Only the directory the user will open anyway. On OpenCode 2 the first
@@ -527,7 +527,7 @@ export const createOpenCodeLifecycleRuntime = (deps) => {
       const onExit = (code, signal) => {
         const reason = signal ? `signal ${signal}` : `code ${code}`;
         const appBundleHint = process.platform === 'darwin' && /\/OpenCode\.app\/Contents\/MacOS\/(?:OpenCode|opencode-cli)$/i.test(binary)
-          ? ' The configured binary appears to point at the macOS desktop app bundle; OpenChamber needs the standalone opencode CLI.'
+          ? ' The configured binary appears to point at the macOS desktop app bundle; Multichamber needs the standalone opencode CLI.'
           : '';
         finish(reject, new Error(`OpenCode process exited before serving with ${reason}. Binary used: ${binary}.${appBundleHint} ${formatCapturedOutput({ stdout, stderr })}`));
       };
@@ -765,10 +765,10 @@ export const createOpenCodeLifecycleRuntime = (deps) => {
     }
 
     // The user's variables go over the inherited environment (a PATH entry
-    // in front of the managed PATH) and under everything OpenChamber itself
+    // in front of the managed PATH) and under everything Multichamber itself
     // sets for OpenCode.
     const inheritedEnv = overlayEnvironment({ ...shellEnv, ...process.env, PATH: envPath }, getUserEnvironment());
-    // What OpenChamber sets for OpenCode is recorded as injected, so a shell
+    // What Multichamber sets for OpenCode is recorded as injected, so a shell
     // the agent opens can tell it from the user's own variables.
     const processEnv = stripAppImageLauncherEnv(stripAppImageArgv0Leak(applyProviderEnvAliases(assignInjectedEnv(
       { ...inheritedEnv },
@@ -1027,7 +1027,7 @@ export const createOpenCodeLifecycleRuntime = (deps) => {
         }
 
         const info = await readOpenCodeInfo(response);
-        if (!info) throw new Error('The server did not identify itself as OpenCode 2.x. OpenChamber requires OpenCode 2.x; if the server runs an older OpenCode, upgrade it.');
+        if (!info) throw new Error('The server did not identify itself as OpenCode 2.x. Multichamber requires OpenCode 2.x; if the server runs an older OpenCode, upgrade it.');
         if (!isSupportedOpenCodeVersion(info.version)) throw new UnsupportedOpenCodeVersionError(info.version);
         state.isOpenCodeReady = true;
         state.lastOpenCodeError = null;
@@ -1094,7 +1094,7 @@ export const createOpenCodeLifecycleRuntime = (deps) => {
 
     // A managed OpenCode process is restarted (and thus re-reads config from
     // disk) by restartOpenCode(). An external OpenCode server is NOT owned by
-    // OpenChamber: restartOpenCode() only re-probes its health, so the freshly
+    // Multichamber: restartOpenCode() only re-probes its health, so the freshly
     // written config is on disk but the running server keeps serving its old,
     // startup-cached config until the user restarts it themselves. Report this
     // honestly so callers don't claim the change is live.
@@ -1173,11 +1173,11 @@ export const createOpenCodeLifecycleRuntime = (deps) => {
         env.ENV_EFFECTIVE_PORT,
         env.ENV_CONFIGURED_OPENCODE_HOST?.origin,
       ))) {
-        // The configured server is an OpenCode this OpenChamber cannot use.
+        // The configured server is an OpenCode this Multichamber cannot use.
         // Attach to it anyway, not ready, so the compatibility check reports
         // its version instead of a managed instance silently replacing it.
         const label = env.ENV_CONFIGURED_OPENCODE_HOST ? env.ENV_CONFIGURED_OPENCODE_HOST.origin : `http://localhost:${env.ENV_EFFECTIVE_PORT}`;
-        console.warn(`OpenCode ${unsupportedExternalVersion} at ${label} is not supported by this OpenChamber`);
+        console.warn(`OpenCode ${unsupportedExternalVersion} at ${label} is not supported by this Multichamber`);
         state.openCodeBaseUrl = env.ENV_CONFIGURED_OPENCODE_HOST?.origin ?? null;
         setOpenCodePort(env.ENV_EFFECTIVE_PORT);
         state.isExternalOpenCode = true;

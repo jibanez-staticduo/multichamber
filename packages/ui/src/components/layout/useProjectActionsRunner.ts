@@ -17,10 +17,10 @@ import { useI18n } from '@/lib/i18n';
 import {
   getProjectActionsState,
   getProjectSetup,
-  type OpenChamberProjectAction,
+  type MultichamberProjectAction,
   type ProjectSetup,
   type ProjectRef,
-} from '@/lib/openchamberConfig';
+} from '@/lib/multichamberConfig';
 import { ensureSharedSetupTrusted } from '@/lib/sharedTrustConfirmation';
 import {
   AUTO_DISCOVER_ACTION_ID,
@@ -81,9 +81,9 @@ export interface ProjectActionsRunner {
   /** False where actions cannot run: VS Code, phones, or no project. */
   available: boolean;
   /** The project's own actions, then auto-discovery where it is offered. */
-  actions: OpenChamberProjectAction[];
+  actions: MultichamberProjectAction[];
   /** The action the Work Status row shows: a running one wins over the stored pick. */
-  shown: OpenChamberProjectAction | null;
+  shown: MultichamberProjectAction | null;
   isLoading: boolean;
   /**
    * Keeps run states current until the returned release is called: while any
@@ -92,14 +92,14 @@ export interface ProjectActionsRunner {
    * ended. Nothing polls while nothing shows.
    */
   observe: () => () => void;
-  runOf: (action: OpenChamberProjectAction) => ProjectActionRun | null;
+  runOf: (action: MultichamberProjectAction) => ProjectActionRun | null;
   /** Remembers the action as this project's pick. */
-  select: (action: OpenChamberProjectAction) => void;
+  select: (action: MultichamberProjectAction) => void;
   /** Runs the action, through the shared-setup trust prompt when it comes from the repo. */
-  run: (action: OpenChamberProjectAction) => void;
-  stop: (action: OpenChamberProjectAction) => void;
+  run: (action: MultichamberProjectAction) => void;
+  stop: (action: MultichamberProjectAction) => void;
   /** Stops a running action, runs an idle one, and ignores one already stopping. */
-  toggle: (action: OpenChamberProjectAction) => void;
+  toggle: (action: MultichamberProjectAction) => void;
   openSettings: () => void;
 }
 
@@ -166,7 +166,7 @@ export const useProjectActionsRunner = ({
   const matchesActionExecution = useTerminalStore((state) => state.matchesActionExecution);
   const captureStartedActionMutationRevisions = useTerminalStore((state) => state.captureStartedActionMutationRevisions);
 
-  const [actions, setActions] = React.useState<OpenChamberProjectAction[]>([]);
+  const [actions, setActions] = React.useState<MultichamberProjectAction[]>([]);
   // The last merged setup, for the trust check before a shared action runs.
   const setupRef = React.useRef<ProjectSetup | null>(null);
   const [selectedActionId, setSelectedActionId] = React.useState<string | null>(
@@ -281,7 +281,7 @@ export const useProjectActionsRunner = ({
     return directories;
   }, [normalizedDirectory, normalizedProjectDirectory]);
 
-  const executionDirectoryFor = React.useCallback((action: OpenChamberProjectAction): string => {
+  const executionDirectoryFor = React.useCallback((action: MultichamberProjectAction): string => {
     if (action.id !== AUTO_DISCOVER_ACTION_ID && action.runIn === 'parent') {
       return normalizedProjectDirectory || normalizedDirectory;
     }
@@ -396,7 +396,7 @@ export const useProjectActionsRunner = ({
     });
   }, []);
 
-  const autoDiscoverAction = React.useMemo<OpenChamberProjectAction>(() => ({
+  const autoDiscoverAction = React.useMemo<MultichamberProjectAction>(() => ({
     id: AUTO_DISCOVER_ACTION_ID,
     name: t('projectActions.actions.autoDiscover'),
     command: '',
@@ -700,7 +700,7 @@ export const useProjectActionsRunner = ({
     }
   }, [clearExecutionUi, executionKey, matchesActionExecution, terminal, watchedTerminalStates]);
 
-  const getOrCreateActionTab = React.useCallback(async (action: OpenChamberProjectAction) => {
+  const getOrCreateActionTab = React.useCallback(async (action: MultichamberProjectAction) => {
     const executionDirectory = executionDirectoryFor(action);
     if (!executionDirectory) {
       throw new Error(t('projectActions.error.noActiveDirectory'));
@@ -740,7 +740,7 @@ export const useProjectActionsRunner = ({
     t,
   ]);
 
-  const runAction = React.useCallback(async (action: OpenChamberProjectAction) => {
+  const runAction = React.useCallback(async (action: MultichamberProjectAction) => {
     if (runtime.isVSCode || (!allowMobile && isMobile)) {
       return;
     }
@@ -761,7 +761,7 @@ export const useProjectActionsRunner = ({
 
     try {
       const discovered = action.id === AUTO_DISCOVER_ACTION_ID
-        ? await (async (): Promise<OpenChamberProjectAction> => {
+        ? await (async (): Promise<MultichamberProjectAction> => {
           const [actionsState, scripts] = await Promise.all([
             getProjectActionsState({ id: stableProjectRef?.id ?? '', path: normalizedDirectory }),
             readPackageJsonScripts(normalizedDirectory),
@@ -1031,7 +1031,7 @@ export const useProjectActionsRunner = ({
     terminal,
   ]);
 
-  const stopAction = React.useCallback(async (action: OpenChamberProjectAction) => {
+  const stopAction = React.useCallback(async (action: MultichamberProjectAction) => {
     const runKey = toProjectActionRunKey(executionDirectoryFor(action), action.id);
     const activeRun = projectActionRuns[runKey];
     if (!activeRun) {
@@ -1061,7 +1061,7 @@ export const useProjectActionsRunner = ({
 
   // A shared action comes from the repo: the first time one would run, the
   // trust prompt shows the team's commands; "not this time" runs nothing.
-  const runActionWithTrust = React.useCallback(async (action: OpenChamberProjectAction) => {
+  const runActionWithTrust = React.useCallback(async (action: MultichamberProjectAction) => {
     if (action.source === 'shared' && stableProjectRef) {
       const setup = setupRef.current?.trust.trusted ? setupRef.current : await getProjectSetup(stableProjectRef);
       setupRef.current = setup;
@@ -1075,7 +1075,7 @@ export const useProjectActionsRunner = ({
 
   // A running action wins over an idle pick: the row is where it gets stopped,
   // so it must not hide behind whichever action was chosen last.
-  const runOf = React.useCallback((entry: OpenChamberProjectAction): ProjectActionRun | null => (
+  const runOf = React.useCallback((entry: MultichamberProjectAction): ProjectActionRun | null => (
     projectActionRuns[toProjectActionRunKey(executionDirectoryFor(entry), entry.id)] ?? null
   ), [executionDirectoryFor, projectActionRuns]);
   const shown = (selectedAction && runOf(selectedAction) ? selectedAction : null)
@@ -1084,7 +1084,7 @@ export const useProjectActionsRunner = ({
     ?? displayActions[0]
     ?? null;
 
-  const toggle = React.useCallback((action: OpenChamberProjectAction) => {
+  const toggle = React.useCallback((action: MultichamberProjectAction) => {
     const runningEntry = runOf(action);
     if (runningEntry?.status === 'stopping') {
       return;
@@ -1096,15 +1096,15 @@ export const useProjectActionsRunner = ({
     void runActionWithTrust(action);
   }, [runActionWithTrust, runOf, stopAction]);
 
-  const run = React.useCallback((action: OpenChamberProjectAction) => {
+  const run = React.useCallback((action: MultichamberProjectAction) => {
     void runActionWithTrust(action);
   }, [runActionWithTrust]);
 
-  const stop = React.useCallback((action: OpenChamberProjectAction) => {
+  const stop = React.useCallback((action: MultichamberProjectAction) => {
     void stopAction(action);
   }, [stopAction]);
 
-  const select = React.useCallback((action: OpenChamberProjectAction) => {
+  const select = React.useCallback((action: MultichamberProjectAction) => {
     setSelectedActionId(action.id);
     if (projectId) setSelectedProjectActionId(projectId, action.id);
   }, [projectId]);

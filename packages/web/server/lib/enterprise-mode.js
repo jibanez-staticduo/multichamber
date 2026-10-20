@@ -28,6 +28,8 @@ import { z } from 'zod';
  *
  * Each feature that could send conversation content anywhere else checks it
  * at its own server boundary:
+ * - the Codex engine refuses its routes and queue sends, hides its sessions,
+ *   and suppresses its event publication while enterprise mode is enabled;
  * - Model providers come only from the OpenCode config: connecting one,
  *   signing in, adding a key or creating a custom provider through this
  *   server is refused, as is probing a custom provider's model endpoint
@@ -73,15 +75,15 @@ import { z } from 'zod';
  * The file can also pin the OpenCode CLI (`opencodeBinary`), with or without
  * enterprise mode: managed OpenCode then starts only from that path, never
  * falls back to the bundled CLI or PATH, ignores the user's binary setting,
- * and OpenChamber neither installs nor upgrades it (`opencode/env-runtime.js`,
+ * and Multichamber neither installs nor upgrades it (`opencode/env-runtime.js`,
  * `packages/vscode/src/opencode.ts`).
  *
- * The file can also hide the skills catalogs OpenChamber ships with
+ * The file can also hide the skills catalogs Multichamber ships with
  * (`hideBuiltinSkillCatalogs`), with or without enterprise mode, so the only
  * catalogs on offer are the ones the organization added
  * (`skills-catalog/curated-sources.js`, `packages/vscode/src/skillsCatalog.ts`).
  *
- * The VS Code extension host, which runs no OpenChamber server, reads the
+ * The VS Code extension host, which runs no Multichamber server, reads the
  * same policy through this module for the parts it has (provider connection,
  * update checks).
  */
@@ -96,11 +98,11 @@ const WINDOWS_PROGRAM_DATA = 'C:\\ProgramData';
  * redirecting it cannot hide a policy the administrator placed there.
  */
 export const policyFilePaths = ({ platform = process.platform, env = process.env } = {}) => {
-  if (platform === 'darwin') return ['/Library/Application Support/OpenChamber/policy.json'];
+  if (platform === 'darwin') return ['/Library/Application Support/Multichamber/policy.json'];
   if (platform === 'win32') {
-    const fixed = path.win32.join(WINDOWS_PROGRAM_DATA, 'OpenChamber', 'policy.json');
+    const fixed = path.win32.join(WINDOWS_PROGRAM_DATA, 'Multichamber', 'policy.json');
     const programData = (env.ProgramData ?? '').trim();
-    const fromEnv = programData ? path.win32.join(programData, 'OpenChamber', 'policy.json') : null;
+    const fromEnv = programData ? path.win32.join(programData, 'Multichamber', 'policy.json') : null;
     return fromEnv && fromEnv.toLowerCase() !== fixed.toLowerCase() ? [fixed, fromEnv] : [fixed];
   }
   return ['/etc/openchamber/policy.json'];
@@ -271,7 +273,7 @@ export const isNetworkAccessBlocked = (options) => {
   return policy.enterpriseMode && !policy.allowNetworkAccess;
 };
 
-export const NETWORK_ACCESS_BLOCKED_ERROR = 'Enterprise mode keeps OpenChamber on this machine: it does not listen on a network address. '
+export const NETWORK_ACCESS_BLOCKED_ERROR = 'Enterprise mode keeps Multichamber on this machine: it does not listen on a network address. '
   + 'An administrator can allow it with "allowNetworkAccess": true in the policy file, or OPENCHAMBER_ALLOW_NETWORK_ACCESS=1 where the environment turns enterprise mode on.';
 
 /** What a client may know about the policy; pinned endpoints and keys stay on the server. */
@@ -365,4 +367,4 @@ export const isCredentialListRequest = (method, requestPath) => {
   return segments.length === 2 && segments[0].toLowerCase() === 'api' && segments[1].toLowerCase() === 'credential';
 };
 
-export const CREDENTIAL_LIST_ERROR = 'OpenChamber does not hand stored provider keys to clients.';
+export const CREDENTIAL_LIST_ERROR = 'Multichamber does not hand stored provider keys to clients.';

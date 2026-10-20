@@ -157,12 +157,12 @@ describe('local SSE routes', () => {
     }
   });
 
-  it('serves OpenChamber SSE with nginx-safe headers', () => {
+  it('serves Multichamber SSE with nginx-safe headers', () => {
     const { app, getRoute } = createRouteRegistry();
     const clients = new Set();
 
     registerScheduledTaskRoutes(app, {
-      getOpenChamberEventClients: () => clients,
+      getMultichamberEventClients: () => clients,
       writeSseEvent(res, payload) {
         res.write(`data: ${JSON.stringify(payload)}\n\n`);
       },

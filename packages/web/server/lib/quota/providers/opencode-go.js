@@ -129,7 +129,7 @@ export const fetchOpenCodeGoUsage = async (apiKey, fetchImpl = fetch, { consoleK
       Accept: 'application/json',
       Authorization: `Bearer ${apiKey}`,
       'x-opencode-session': 'openchamber-usage',
-      'User-Agent': 'OpenChamber quota provider',
+      'User-Agent': 'Multichamber quota provider',
     },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
@@ -154,7 +154,7 @@ export const fetchConsoleGoUsage = async ({ access, orgID, expires }, fetchImpl 
       Accept: 'application/json',
       Authorization: `Bearer ${access}`,
       'x-org-id': orgID,
-      'User-Agent': 'OpenChamber quota provider',
+      'User-Agent': 'Multichamber quota provider',
     },
     // The bearer token belongs to opencode.ai/console; never follow a redirect
     // that would forward it to another origin.
@@ -190,7 +190,7 @@ export const fetchConsoleBillingBalance = async ({ access, orgID }, fetchImpl = 
         Accept: 'application/json',
         Authorization: `Bearer ${access}`,
         'x-org-id': orgID,
-        'User-Agent': 'OpenChamber quota provider',
+        'User-Agent': 'Multichamber quota provider',
       },
       redirect: 'error',
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),

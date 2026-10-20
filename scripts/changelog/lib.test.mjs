@@ -103,8 +103,8 @@ A short intro.
   assert.deepEqual(index[1].vscode, { new: ['Comments on code.'], improvements: [], fixes: [], misc: [] });
   assert.equal(index[0].vscode, null);
 
-  assert.deepEqual(Object.keys(renderOutputs(loaded)), ['packages/vscode/CHANGELOG.md', 'changelog/index.json']);
-  assert.deepEqual(Object.keys(renderOutputs(loaded, { legacyAppChangelog: true })), ['CHANGELOG.md', 'packages/vscode/CHANGELOG.md', 'changelog/index.json']);
+  assert.deepEqual(Object.keys(renderOutputs(loaded)), ['changelog/index.json']);
+  assert.deepEqual(Object.keys(renderOutputs(loaded, { legacyAppChangelog: true })), ['CHANGELOG.md', 'changelog/index.json']);
 });
 
 test('SDK notes survive Markdown and JSON rendering between Fixes and Misc', () => {

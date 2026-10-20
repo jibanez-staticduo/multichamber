@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { z } from 'zod';
 import { runtimeFetch } from '@/lib/runtime-fetch';
+import { resolveSessionEngine } from '@/lib/sessionEngine';
 
 /**
  * Per-session warming, owned by the server (`lib/session-warming`). The server
@@ -18,7 +19,7 @@ export const sessionWarmingSnapshotSchema = z.object({
 
 export type SessionWarmingSnapshot = z.infer<typeof sessionWarmingSnapshotSchema>;
 
-/** How OpenChamber keeps idle sessions warm: not at all, every session (OpenCode's config), or the chosen ones. */
+/** How Multichamber keeps idle sessions warm: not at all, every session (OpenCode's config), or the chosen ones. */
 export type SessionWarmingMode = 'off' | 'all' | 'session';
 
 /** The warm durations Settings offers, in minutes; the server accepts only these. */
@@ -114,6 +115,7 @@ export const useSessionWarmingStore = create<SessionWarmingState>()((set, get) =
   },
 
   setSessionWarm: async (sessionId, directory, warm) => {
+    if (resolveSessionEngine({ id: sessionId }) !== 'opencode') throw new Error('Session warming requires an OpenCode session');
     get().applySnapshot(await readSnapshot(`/api/session-warming/sessions/${encodeURIComponent(sessionId)}`, {
       method: 'PUT',
       body: JSON.stringify({ directory, warm }),

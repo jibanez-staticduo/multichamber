@@ -87,7 +87,7 @@ interface OpenCodeUpgradeStatusLike {
 /**
  * Pulls the candidate version out of an `/api/opencode/upgrade-status` JSON
  * payload. Returns `''` when the payload is missing the field, has the wrong
- * type, or reports `available !== true`. Whether OpenChamber can install it is
+ * type, or reports `available !== true`. Whether Multichamber can install it is
  * a separate question (`isOpenCodeUpgradeSupported`): a newer OpenCode is
  * worth announcing even when the user has to run the update themselves.
  */

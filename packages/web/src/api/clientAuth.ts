@@ -7,8 +7,8 @@ import type {
   RemoteClientRecord,
   RelayHostStatus,
   RemoteClientRevokeResult,
-} from '@openchamber/ui/lib/api/types';
-import { runtimeFetch } from '@openchamber/ui/lib/runtime-fetch';
+} from '@multichamber/ui/lib/api/types';
+import { runtimeFetch } from '@multichamber/ui/lib/runtime-fetch';
 import { z } from 'zod';
 
 const jsonOrNull = async <T>(response: Response): Promise<T | null> => {

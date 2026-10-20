@@ -33,8 +33,8 @@ import { createProviderReadCache } from '../provider-read-cache/index.js';
 import { createTrackedItemReaders } from '../tracked-items/readers.js';
 import { createTrackedItemsPersistence } from '../tracked-items/persistence.js';
 import { registerTrackedItemsRoutes } from '../tracked-items/routes.js';
-import { registerOpenChamberSessionRoutes } from '../openchamber-sessions/routes.js';
-import { registerOpenChamberControlRoutes } from '../openchamber-control/routes.js';
+import { registerMultichamberSessionRoutes } from '../openchamber-sessions/routes.js';
+import { registerMultichamberControlRoutes } from '../openchamber-control/routes.js';
 import { registerMarkdownImageGrantRoutes } from '../markdown-image-grants/routes.js';
 import { registerSkillRoutes } from './skill-routes.js';
 import { registerPluginRoutes } from './plugin-routes.js';
@@ -253,10 +253,10 @@ export const createFeatureRoutesRuntime = (dependencies) => {
       sessionKnowledgeRuntime,
       scheduledTasksRuntime,
       scheduledTaskService,
-      openChamberSessionService,
-      openChamberControlService,
+      multichamberSessionService,
+      multichamberControlService,
       waitForOpenCodeReady,
-      getOpenChamberEventClients,
+      getMultichamberEventClients,
       writeSseEvent,
       emitSessionCreatedEvent,
       permissionAutoAcceptRuntime,
@@ -321,11 +321,11 @@ export const createFeatureRoutesRuntime = (dependencies) => {
       projectConfigRuntime,
       scheduledTasksRuntime,
       scheduledTaskService,
-      getOpenChamberEventClients,
+      getMultichamberEventClients,
       writeSseEvent,
     });
 
-    registerOpenChamberSessionRoutes(app, {
+    registerMultichamberSessionRoutes(app, {
       readSettingsFromDiskMigrated,
       sanitizeProjects,
       validateDirectoryPath,
@@ -333,10 +333,10 @@ export const createFeatureRoutesRuntime = (dependencies) => {
       getOpenCodeAuthHeaders,
       waitForOpenCodeReady,
       emitSessionCreatedEvent,
-      sessionService: openChamberSessionService,
+      sessionService: multichamberSessionService,
     });
 
-    registerOpenChamberControlRoutes(app, { controlService: openChamberControlService });
+    registerMultichamberControlRoutes(app, { controlService: multichamberControlService });
 
     registerMarkdownImageGrantRoutes(app, {
       fsPromises,
@@ -411,7 +411,7 @@ export const createFeatureRoutesRuntime = (dependencies) => {
         origin, refreshToken, clientId: await resolveGitLabClientId(origin, readSettingsFromDisk),
       }),
     });
-    // A GitHub account is either one OpenChamber stores or the gh CLI login
+    // A GitHub account is either one Multichamber stores or the gh CLI login
     // the user switched to; reads already accept both, so Git transport
     // (fork PR worktrees, clones) must too.
     const resolveSourceControlAccount = async ({ provider, instance, accountId, credentialRevision }) => {
@@ -444,7 +444,7 @@ export const createFeatureRoutesRuntime = (dependencies) => {
       fsImpl: fsPromises,
     });
     // What a repository's own `.git/config` names for pushing and pulling
-    // follows its grants: OpenChamber's credential helper for an account, the
+    // follows its grants: Multichamber's credential helper for an account, the
     // SSH wrapper with the key for a managed key, nothing for System Git.
     const syncRepositoryTransport = async (directory, read) => {
       if (typeof directory !== 'string' || !directory.trim() || !gitRepositoryCredentialRuntime) return;
@@ -500,7 +500,7 @@ export const createFeatureRoutesRuntime = (dependencies) => {
     // Live state of the linked pull requests, merge requests and issues the
     // clients show, refreshed here and pushed over the event stream.
     const findEventClient = (connectionId) => {
-      for (const client of getOpenChamberEventClients()) {
+      for (const client of getMultichamberEventClients()) {
         if (client.openchamberConnectionId === connectionId) return client;
       }
       return null;
@@ -516,7 +516,7 @@ export const createFeatureRoutesRuntime = (dependencies) => {
           writeSseEvent(client, event);
           return true;
         } catch {
-          getOpenChamberEventClients().delete(client);
+          getMultichamberEventClients().delete(client);
           return false;
         }
       },
@@ -531,7 +531,7 @@ export const createFeatureRoutesRuntime = (dependencies) => {
       if (settlingDirectories.has(directory)) return;
       settlingDirectories.set(directory, setTimeout(() => {
         settlingDirectories.delete(directory);
-        const clients = getOpenChamberEventClients();
+        const clients = getMultichamberEventClients();
         for (const client of clients) {
           try {
             writeSseEvent(client, { type: 'openchamber:source-control.activity', properties: { directory } });
@@ -673,7 +673,7 @@ export const createFeatureRoutesRuntime = (dependencies) => {
       buildOpenCodeUrl,
       getOpenCodeAuthHeaders,
       emitWorktreeChanged: ({ directories, at }) => {
-        const clients = getOpenChamberEventClients();
+        const clients = getMultichamberEventClients();
         for (const client of clients) {
           try {
             writeSseEvent(client, {
@@ -718,7 +718,7 @@ export const createFeatureRoutesRuntime = (dependencies) => {
       // Folders are shared by every client of this server; each one reads
       // them again when told they changed.
       onChanged: (updatedAt) => {
-        const clients = getOpenChamberEventClients();
+        const clients = getMultichamberEventClients();
         for (const client of clients) {
           try {
             writeSseEvent(client, { type: 'openchamber:session-folders-changed', properties: { updatedAt } });

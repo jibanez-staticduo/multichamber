@@ -1,3 +1,5 @@
+import { getRuntimeKey } from '@/lib/runtime-switch';
+import { requestSessionCreation } from '@/lib/sessionCreation';
 import React from 'react';
 
 import { isCapacitorApp } from '@/lib/platform';
@@ -54,18 +56,20 @@ let pending: NavigationIntent | null = null;
  * the default draft with the message added to its composer, unsent: the user picks the place.
  */
 const openShortcutSession = (intent: ShortcutNewSessionIntent): void => {
-  const store = useSessionUIStore.getState();
-  const project = intent.projectId
-    ? useProjectsStore.getState().projects.find((entry) => entry.id === intent.projectId) ?? null
-    : null;
-  store.openNewSessionDraft(project ? { selectedProjectId: project.id } : undefined);
-  const text = intent.text?.trim();
-  if (!text) return;
-  if (intent.projectId && !project) {
-    useInputStore.getState().setPendingInputText(text, 'append');
-    return;
-  }
-  useInputStore.getState().requestDraftSubmit(useSessionUIStore.getState().newSessionDraft.draftId, text);
+  const runtimeKey = getRuntimeKey();
+  const project = intent.projectId ? useProjectsStore.getState().projects.find((entry) => entry.id === intent.projectId) ?? null : null;
+  void requestSessionCreation(project ? { selectedProjectId: project.id } : undefined).then(() => {
+    if (runtimeKey !== getRuntimeKey()) return;
+    const text = intent.text?.trim();
+    if (!text) return;
+    const state = useSessionUIStore.getState();
+    if (state.newSessionDraft.harness && state.newSessionDraft.harness !== 'opencode') {
+      useInputStore.getState().setPendingInputText(text, 'append');
+      return;
+    }
+    if (intent.projectId && !project) { useInputStore.getState().setPendingInputText(text, 'append'); return; }
+    useInputStore.getState().requestDraftSubmit(state.newSessionDraft.draftId, text);
+  }).catch((error) => { if (!(error instanceof DOMException && error.name === 'AbortError')) console.warn(error); });
 };
 
 const execute = (intent: NavigationIntent): boolean => {
@@ -85,15 +89,7 @@ const execute = (intent: NavigationIntent): boolean => {
       return true;
 
     case 'new-session': {
-      const store = useSessionUIStore.getState();
-      store.openNewSessionDraft();
-      if (intent.directory || intent.projectId) {
-        store.setNewSessionDraftTarget({
-          directoryOverride: intent.directory ?? null,
-          projectId: intent.projectId ?? null,
-          selectedProjectId: intent.projectId ?? null,
-        });
-      }
+      void requestSessionCreation({ directoryOverride: intent.directory ?? null, selectedProjectId: intent.projectId ?? null, target: intent.directory || intent.projectId ? 'project' : 'chat' }).catch((error) => { if (!(error instanceof DOMException && error.name === 'AbortError')) console.warn(error); });
       return true;
     }
 

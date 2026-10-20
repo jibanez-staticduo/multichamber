@@ -4,7 +4,7 @@ export const createNotificationEmitterRuntime = (dependencies) => {
     getDesktopNotifyEnabled,
     desktopNotifyPrefix,
     getUiNotificationClients,
-    getOpenChamberEventClients = () => new Set(),
+    getMultichamberEventClients = () => new Set(),
     getBroadcastGlobalUiEvent,
     // Optional: in-process desktop shells (Electron main) inject a callback so
     // notifications are delivered as a direct function call instead of a stdout
@@ -81,7 +81,7 @@ export const createNotificationEmitterRuntime = (dependencies) => {
 
     // New clients share the control SSE; older clients retain their dedicated
     // notification SSE. The global broadcaster still owns WebSocket delivery.
-    const controlClients = getOpenChamberEventClients();
+    const controlClients = getMultichamberEventClients();
     if (controlClients.size > 0) {
       const serializedPayload = JSON.stringify(syntheticPayload);
       for (const client of controlClients) {

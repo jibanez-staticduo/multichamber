@@ -952,7 +952,7 @@ const installAnchorHooks = (purifier: DOMPurifyInstance): void => {
     // DOMPurify's default URI policy strips custom application schemes
     // (obsidian://, vscode://, ...). Keep them for anchors; dangerous schemes
     // stay excluded via isAppLinkUrl and clicks go through confirmation.
-    // OpenChamber's own scheme is kept only for session links, which the chat
+    // Multichamber's own scheme is kept only for session links, which the chat
     // opens in place; pairing and other privileged routes stay stripped. VS
     // Code keeps them as text: its sessions live on its own OpenCode.
     const keepSessionLink = isSessionDeepLink(data.attrValue) && !isVSCodeRuntime();

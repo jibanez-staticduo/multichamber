@@ -1,3 +1,4 @@
+import { useSessionEngineById } from '@/hooks/useSessionEngine';
 import React from 'react';
 import {
     Dialog,
@@ -108,6 +109,7 @@ const TimelineDialogBody: React.FC<TimelineDialogBodyProps> = ({
 }) => {
     const { t } = useI18n();
     const messages = useSessionMessageRecords(currentSessionId, currentSessionDirectory);
+    const engine = useSessionEngineById(currentSessionId);
     const revertToMessage = useSessionUIStore((state) => state.revertToMessage);
     const forkFromMessage = useSessionUIStore((state) => state.forkFromMessage);
     const { isMobile, isTablet } = useDeviceInfo();
@@ -409,7 +411,7 @@ const TimelineDialogBody: React.FC<TimelineDialogBodyProps> = ({
                                                             className="h-5 w-5 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                                                             onClick={async (e) => {
                                                                 e.stopPropagation();
-                                                                await revertToMessage(currentSessionId, message.info.id);
+                                                                if (engine.capabilities.revert) await revertToMessage(currentSessionId, message.info.id);
                                                                 onOpenChange(false);
                                                             }}
                                                         >
@@ -428,7 +430,7 @@ const TimelineDialogBody: React.FC<TimelineDialogBodyProps> = ({
                                                                 e.stopPropagation();
                                                                 handleFork(message.info.id);
                                                             }}
-                                                            disabled={forkingMessageId === message.info.id}
+                                                            disabled={!engine.capabilities.forkAtMessage || forkingMessageId === message.info.id}
                                                         >
                                                             {forkingMessageId === message.info.id ? (
                                                                 <Icon name="loader-4" className="h-4 w-4 animate-spin" />

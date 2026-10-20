@@ -5,7 +5,7 @@ import { createSessionWorktreeMover } from './worktree-move.js';
 const ROOT = '/repo/app';
 const SOURCE = '/repo/app';
 const WORKTREE = { name: 'fix-login', branch: 'fix-login', path: '/repo/worktrees/fix-login' };
-const STASH = { ref: 'stash@{0}', message: 'On main: OpenChamber: session ses_1 moved to worktree fix-login', hash: 'abc123' };
+const STASH = { ref: 'stash@{0}', message: 'On main: Multichamber: session ses_1 moved to worktree fix-login', hash: 'abc123' };
 
 /**
  * A git that records what happened: one stash list shared by every worktree,
@@ -254,7 +254,7 @@ describe('moving a session into a new worktree', () => {
 
     await expect(failingMover.move({ sessionId: 'ses_1', directory: SOURCE, name: 'fix-login', carry: ['src/a.ts'] })).rejects.toMatchObject({
       statusCode: 500,
-      message: 'The stash list could not be read after stashing the uncommitted changes: index.lock exists. If git stash list shows "OpenChamber: session ses_1 moved to worktree fix-login", the changes are there',
+      message: 'The stash list could not be read after stashing the uncommitted changes: index.lock exists. If git stash list shows "Multichamber: session ses_1 moved to worktree fix-login", the changes are there',
     });
   });
 

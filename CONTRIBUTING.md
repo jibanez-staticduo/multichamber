@@ -1,60 +1,35 @@
-# Contributing to OpenChamber
+# Contributing to Multichamber
+
+Multichamber derives from [OpenChamber](https://github.com/openchamber/openchamber)
+and the native-engine work in [pocharlies-org/openchamber](https://github.com/pocharlies-org/openchamber).
+Preserve that attribution and the existing license notices. Fork-specific changes
+belong in this repository.
 
 ## Before you start
 
-Bug fixes and small improvements: just open the PR. That's most of what gets
-merged, and a typical merged PR is around 200 lines.
+Bug fixes can go directly into a focused pull request. For a new feature or a
+change to user-visible behavior, agree on the behavior before implementing it.
+People working with the maintainer can settle that in their working session;
+outside contributors should start with a proposal in this fork's
+[issue tracker](https://github.com/jibanez-staticduo/multichamber/issues).
 
-New features, changes to how something behaves for users, or reworks of how a
-module is put together: start an
-[Ideas discussion](https://github.com/openchamber/openchamber/discussions/categories/ideas)
-first, and start it before the code. Say what you were trying to do, what got
-in your way, and what you'd want instead, in your own words. A screenshot or a
-rough mockup helps more than a specification.
+A product decision includes a new control, a changed default, different grouping
+or wording, and removal of behavior that was deliberate. A crash, incorrect data
+or behavior that contradicts its stated purpose is a bug. Ask when the boundary
+is unclear.
 
-A post describing something you already built is a report, not a discussion:
-the decision is made by then, and it gets closed along with the PR behind it.
-Not because it was drafted by an AI, we all use AI, but because it arrives
-after the only moment when talking would have changed anything. If you have an
-idea of how you'd implement it, or a branch already sketched out, bring it as a
-question: here's how I'd do it, does that shape work? A branch you're willing
-to change is a proposal. Once the shape is agreed, build it and link the
-discussion from the PR.
-
-Wait for the answer before you build. A pull request that carries a product
-decision, with no discussion behind it and no maintainer go-ahead, is not
-getting reviewed, whatever shape the code is in. That "yes, go ahead" is the
-thing that makes it worth your evening.
-
-**What counts as a product decision?** Anything where two reasonable people
-could disagree about whether it should exist or how it should behave. In
-practice: a new button, panel, setting or command; a changed default; a
-shortcut or gesture that now does something else; different wording, ordering
-or grouping in the UI; anything that turns existing behavior on or off for
-everyone. Also removing or working around behavior the code marks as
-deliberate: if a comment says something is skipped on purpose, then "is that
-actually a bug?" is a product question, and it comes first.
-
-Not a product decision: a crash, wrong data, something that doesn't work the
-way it plainly says it does, a performance fix that keeps behavior identical.
-Those are bugs. Just open the PR.
-
-Not sure? Ask in the discussion first. It costs you one paragraph and saves
-you the whole pull request.
-
-A large PR with no discussion behind it gets a `needs-discussion` label and a
-comment asking for one. It stays parked until the discussion exists. Nobody is
-shooing you away, we just can't review a product decision inside a 3,000-line
-diff.
-
-The single maintainer reviews everything by hand. Small, focused PRs get
-reviewed first; a PR that mixes unrelated fixes waits for the largest of them.
+Keep changes small and separate unrelated work. State which engines and runtimes
+are affected. OpenCode configuration must not silently apply to Claude Code or
+Codex, and unsupported native operations must never fall through to OpenCode.
+Tests and review evidence should cover the owning engine and preserve the
+behavior of the others. Read [AGENTS.md](AGENTS.md) and the relevant module
+instructions before editing.
 
 ## Getting Started
 
 ```bash
-git clone https://github.com/openchamber/openchamber.git
-cd openchamber
+git clone https://github.com/jibanez-staticduo/multichamber.git
+cd multichamber
 bun install
 ```
 
@@ -76,7 +51,7 @@ Run commands from the project root unless a section says otherwise.
 | `bun run dev:web:hmr` | Vite dev server + Express API. **Open the Vite URL for HMR**, not the backend. | `5180` (Vite HMR), `3902` (API) |
 | `bun run start:web` | Start the packaged web server. | `3000` by default |
 
-Both are configurable via env vars: `OPENCHAMBER_PORT`, `OPENCHAMBER_HMR_UI_PORT`, `OPENCHAMBER_HMR_API_PORT`.
+Both are configurable via env vars: `MULTICHAMBER_PORT`, `MULTICHAMBER_HMR_UI_PORT`, `MULTICHAMBER_HMR_API_PORT`.
 
 ### Desktop (Electron)
 
@@ -96,21 +71,9 @@ Linux builds produce an AppImage, a `.deb` and an `.rpm` for the native x64 or a
 
 For desktop-specific details, see [`packages/electron/README.md`](./packages/electron/README.md).
 
-### VS Code Extension
-
-```bash
-bun run vscode:dev      # Watch mode + Extension Development Host
-bun run vscode:build    # Build extension + webview
-bun run vscode:package  # Create a local .vsix package
-```
-
-`bun run vscode:dev` opens an Extension Development Host automatically. You can override the editor or workspace with `OPENCHAMBER_VSCODE_BIN` and `OPENCHAMBER_VSCODE_DEV_WORKSPACE`.
-
-Example: `OPENCHAMBER_VSCODE_BIN=cursor bun run vscode:dev`.
-
 ### Shared UI (`packages/ui`)
 
-No standalone app server. This is a source-level library used by Web, Desktop, and VS Code.
+No standalone app server. This is a source-level library used by Web, Desktop, and mobile.
 
 Useful package commands:
 
@@ -129,9 +92,7 @@ bun run lint:ui
 | `bun run build:ui` | Build only `packages/ui` |
 | `bun run build:electron` | Run Electron package build script without full packaging |
 | `bun run electron:build` | Build packaged desktop app for the current OS |
-| `bun run vscode:build` | Build the VS Code extension |
-| `bun run vscode:package` | Package the VS Code extension as `.vsix` |
-| `bun run pack:web` | Create a package archive for `@openchamber/web` |
+| `bun run pack:web` | Create a package archive for `@multichamber/web` |
 
 ## Platform Build Notes
 
@@ -154,9 +115,9 @@ bun run electron:build
 Linux x64 and arm64 packages are built natively on the matching host architecture. Use Bun for dependency installation and packaging orchestration:
 
 ```bash
-OPENCHAMBER_TARGET_ARCH=x64 bun run electron:build
+MULTICHAMBER_TARGET_ARCH=x64 bun run electron:build
 # On an arm64 host:
-OPENCHAMBER_TARGET_ARCH=arm64 bun run electron:build
+MULTICHAMBER_TARGET_ARCH=arm64 bun run electron:build
 
 bun run --cwd packages/electron verify:linux-appimage
 ```
@@ -172,8 +133,8 @@ bun run test         # Must pass
 bun run build        # Must succeed
 ```
 
-`bun run test` runs every suite in the repository: shared UI, VS Code, Electron,
-web/server, and the root scripts. The UI, VS Code, and Electron suites keep
+`bun run test` runs every suite in the repository: shared UI, Electron,
+web/server, and the root scripts. The UI and Electron suites keep
 module-level singletons, so `scripts/run-isolated-tests.mjs` gives each test file
 its own process instead of letting load order decide the result. Run a single
 file directly while iterating (`bun test <file>`).
@@ -207,7 +168,7 @@ without reconstructing the contributor's work.
 Before opening a pull request:
 
 1. For anything that is not a bug fix or a small improvement, make sure the
-   [Ideas discussion](https://github.com/openchamber/openchamber/discussions/categories/ideas)
+   [Ideas discussion](https://github.com/jibanez-staticduo/multichamber/discussions)
    happened first, that a maintainer said go ahead, and link it. Opening one
    after the implementation, to describe what you already built, closes the
    post and this pull request with it; opening the pull request without the
@@ -231,7 +192,7 @@ Every pull request must explain:
   a line.
 - **Affected surfaces:** packages, persisted/external contracts, and
   user-visible states affected by the change, plus one line per runtime (web,
-  desktop, VS Code, hosted mobile, Capacitor mobile) saying what the change
+  desktop, hosted mobile, Capacitor mobile) saying what the change
   does there. "Not applicable" is an answer; a blank row is not. Write that
   list while deciding what to build, not after: it is the same list the pull
   request template asks for.
@@ -243,7 +204,7 @@ Every pull request must explain:
   This is in addition to any screenshot, recording, or measurement the change
   needs, never instead of one: a screenshot shows what a surface looks like,
   a live run says a person reached it in a running build.
-  Name the runtime you used (web, desktop, VS Code, hosted mobile, or Capacitor
+  Name the runtime you used (web, desktop, hosted mobile, or Capacitor
   mobile), the operating system, and what you saw. Reading the diff, passing
   types, and green CI are not a live run. If you genuinely cannot run it, say
   so and explain why; an honest gap is reviewable, a claim we later find hollow
@@ -352,7 +313,6 @@ packages/
   ui/        Shared React components, hooks, stores, and theme system
   web/       Web server (Express) + frontend (Vite) + CLI
   electron/  Electron desktop shell
-  vscode/    VS Code extension (extension host + webview)
 ```
 
 See [AGENTS.md](./AGENTS.md) for detailed architecture reference.
@@ -363,9 +323,9 @@ You can still help:
 
 - Report bugs. Even "this felt confusing" is useful. Write issues in English (machine translation is fine); reports in other languages wait until someone translates them
 - Test on different devices, browsers, or OS versions
-- Suggest features in [Ideas discussions](https://github.com/openchamber/openchamber/discussions/categories/ideas). The issue tracker is for bugs only
-- Answer questions in [Q&A discussions](https://github.com/openchamber/openchamber/discussions/categories/q-a)
+- Suggest features in [Ideas discussions](https://github.com/jibanez-staticduo/multichamber/discussions). The issue tracker is for bugs only
+- Answer questions in [Q&A discussions](https://github.com/jibanez-staticduo/multichamber/discussions)
 
 ## Questions?
 
-Open a [Q&A discussion](https://github.com/openchamber/openchamber/discussions/categories/q-a).
+Open a [Q&A discussion](https://github.com/jibanez-staticduo/multichamber/discussions).

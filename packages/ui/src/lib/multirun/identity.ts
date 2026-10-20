@@ -9,6 +9,8 @@ const groupSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('legacy'), scope: identifier }),
 ]);
 const autoFusionSchema = z.object({
+  harness: z.enum(['opencode', 'claude', 'codex']).optional(),
+  mode: identifier.optional(),
   providerID: identifier,
   modelID: identifier,
   variant: identifier.optional(),
@@ -22,6 +24,9 @@ const membershipSchema = z.object({
   group: groupSchema,
   groupSlug: identifier,
   runGroup: z.string().regex(/^g[1-9]\d*$/).optional(),
+  harness: z.enum(['opencode', 'claude', 'codex']).optional(),
+  mode: identifier.optional(),
+  variant: identifier.optional(),
   providerID: identifier,
   modelID: identifier,
   index: z.number().int().positive().safe().optional(),
@@ -54,9 +59,9 @@ export function getMultiRunIdentity(session: Session, legacyDirectory = session.
   if (openchamber && Object.hasOwn(openchamber, 'multirun')) {
     const membership = getMultiRunMembership(session);
     if (!membership) return null;
-    const { group, groupSlug, runGroup, providerID, modelID, index, role, title, autoFusion } = membership;
+    const { group, groupSlug, runGroup, providerID, modelID, index, role, title, autoFusion, harness, mode, variant } = membership;
     return {
-      group, groupSlug, runGroup, providerID, modelID, index, role, title, autoFusion,
+      group, groupSlug, runGroup, providerID, modelID, index, role, title, autoFusion, harness, mode, variant,
       key: multiRunGroupKey(group, groupSlug),
     };
   }
@@ -91,12 +96,17 @@ const membershipMetadata = (membership: MultiRunMembership): Metadata => {
     modelID: value.modelID,
     role: value.role,
   };
+  if (value.variant !== undefined) marker.variant = value.variant;
+  if (value.harness !== undefined) marker.harness = value.harness;
+  if (value.mode !== undefined) marker.mode = value.mode;
   if (value.runGroup !== undefined) marker.runGroup = value.runGroup;
   if (value.index !== undefined) marker.index = value.index;
   if (value.title !== undefined) marker.title = value.title;
   if (value.autoFusion !== undefined) {
-    const { providerID, modelID, variant, agent, launcherId } = value.autoFusion;
+    const { providerID, modelID, variant, agent, launcherId, harness, mode } = value.autoFusion;
     const autoFusion: Metadata = { providerID, modelID, launcherId };
+    if (harness !== undefined) autoFusion.harness = harness;
+    if (mode !== undefined) autoFusion.mode = mode;
     if (variant !== undefined) autoFusion.variant = variant;
     if (agent !== undefined) autoFusion.agent = agent;
     marker.autoFusion = autoFusion;
@@ -115,7 +125,7 @@ export function withMultiRunMembership(session: Pick<Session, 'metadata'>, membe
 
 /**
  * The marker on its own, shaped as an RFC 7386 merge patch for
- * `/api/openchamber/sessions/:id/metadata`. Nested keys merge, so writing the
+ * `/api/multichamber/sessions/:id/metadata`. Nested keys merge, so writing the
  * membership cannot erase what another feature stored under `openchamber`.
  */
 export const multiRunMembershipPatch = (membership: MultiRunMembership): Metadata => ({
@@ -128,7 +138,7 @@ export function sameMultiRunIdentity(a: Session, b: Session): boolean {
   const left = getMultiRunIdentity(a);
   const right = getMultiRunIdentity(b);
   if (!left || !right) return left === right;
-  return left.key === right.key && left.runGroup === right.runGroup && left.role === right.role
+  return left.variant === right.variant && left.harness === right.harness && left.mode === right.mode && left.key === right.key && left.runGroup === right.runGroup && left.role === right.role
     && left.groupSlug === right.groupSlug && left.providerID === right.providerID
     && left.modelID === right.modelID && left.index === right.index && left.title === right.title;
 }

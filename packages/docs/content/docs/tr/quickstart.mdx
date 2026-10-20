@@ -1,26 +1,21 @@
 ---
-title: Hızlı Başlangıç
-description: OpenChamber'ı hızlıca başlatın ve iş için doğru uygulamayı seçin.
+title: Hızlı başlangıç
+description: Multichamber sunucusunu başlatın ve yerel oturum motorunu seçin.
 ---
 
-# Hızlı Başlangıç
+# Hızlı başlangıç
 
-## En hızlı yol
+Sunucuya OpenCode ve Node.js 24.14 veya yenisini kurun. Kullanacaksanız Claude Code veya Codex’i aynı sunucuya kurup kimlik doğrulayın. Ardından aşağıdaki komutla Multichamber’ı kurun.
 
-1. [OpenCode](https://opencode.ai) yükleyin.
-2. OpenChamber CLI'yı yükleyin. Tek satırlık komut için [Install](/install/) sayfasına bakın.
-3. `openchamber --ui-password be-creative-here` komutunu çalıştırın.
-4. CLI'nın yazdırdığı URL'yi açın. Genellikle `http://localhost:3000` olur.
-5. Telefonunuzdan kullanmak için bir [tunnel](/tunnels/) başlatın ve QR kodu tarayın.
+```bash
+curl -fsSL https://raw.githubusercontent.com/jibanez-staticduo/multichamber/main/scripts/install.sh | bash
+multichamber --ui-password be-creative-here
+```
 
-Tarayıcınızda OpenChamber oturum listesini görmelisiniz. Yüklendiyse çalışıyordur.
+Yazdırılan adresi açın; genellikle `http://localhost:3000` olur. Yeni oturum için kullanılabilir motoru seçin. Ayarlar her motorun model ve izin varsayılanlarını ayrı saklar.
 
-Güçlü bir UI şifresi kullanın, özellikle instance'ı internete açmayı düşünüyorsanız.
+Uzaktan erişime izin vermeden önce güçlü bir arayüz parolası kullanın.
 
-Sayfa yüklenmezse [Troubleshooting](/troubleshooting/) bölümüne bakın.
+macOS, Windows veya Linux masaüstü uygulamasını kullanın ya da web/PWA sunucusunu çalıştırın. iOS ve Android derlemeleri mevcut bir sunucuya bağlanır. Bu çatallanma VS Code uzantısı sunmaz.
 
-## Hangi uygulamayı kullanmalıyım?
-
-- macOS, Windows ya da Linux'ta günlük iş için **desktop** kullanın
-- uzaktan erişim ve telefondan inceleme için **web** kullanın
-- kodunuzun hemen yanında oturumlar için **VS Code** kullanın
+[Kurulum](/install/)

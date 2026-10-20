@@ -124,9 +124,9 @@ const phaseLabelKey = (phase?: string): I18nKey => {
     case 'remote_probe':
       return 'settings.remoteInstances.page.phase.probingRemote';
     case 'installing':
-      return 'settings.remoteInstances.page.phase.installingOpenChamber';
+      return 'settings.remoteInstances.page.phase.installingMultichamber';
     case 'updating':
-      return 'settings.remoteInstances.page.phase.updatingOpenChamber';
+      return 'settings.remoteInstances.page.phase.updatingMultichamber';
     case 'server_detecting':
       return 'settings.remoteInstances.page.phase.detectingServer';
     case 'server_starting':
@@ -538,7 +538,7 @@ export const RemoteInstancesPage: React.FC = () => {
       return t('settings.remoteInstances.clientAuth.addDevice.transport.lanHint');
     }
     if (lanBlockedByEnterprise) {
-      return t('settings.openchamber.desktopNetwork.field.enterpriseBlocked');
+      return t('settings.multichamber.desktopNetwork.field.enterpriseBlocked');
     }
     return t('settings.remoteInstances.clientAuth.addDevice.transport.lanUnavailableDesktopHint');
   })();
@@ -632,9 +632,9 @@ export const RemoteInstancesPage: React.FC = () => {
     const redeemBody = JSON.stringify({
       pairingId: payload.pairingId,
       secret: payload.secret,
-      clientLabel: payload.label || 'OpenChamber Desktop',
+      clientLabel: payload.label || 'Multichamber Desktop',
       clientKind: 'desktop',
-      deviceName: 'OpenChamber Desktop',
+      deviceName: 'Multichamber Desktop',
       devicePlatform: desktopPlatformName(),
       ...(installId ? { dedupeKey: `desktop:${installId}` } : {}),
     });

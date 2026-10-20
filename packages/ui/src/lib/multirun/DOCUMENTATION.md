@@ -11,7 +11,7 @@ overview screen, one header tab.
 Each launch gets a UUID group identity; its prompt variants keep their `g1`,
 `g2` names (`runGroup`, shown as A, B). Provider/model IDs and display labels
 are data, not keys. Members carry a `run` or `fusion` role and their owning
-`sessionID`. Optional fields: `title` (the run's display title) and
+`sessionID`. Optional fields: `harness`, `mode`, `variant`, `title` (the run's display title) and
 `autoFusion` (judge model plus the launching page id). Older markers lack them
 and stay valid; a missing title falls back to the group slug.
 
@@ -19,13 +19,13 @@ OpenCode copies metadata when forking, sometimes without a `parentID`. A marker
 belongs only to the matching session ID. A copied, pending, malformed or future
 marker is ineligible and never falls back to a title. Metadata is not an access
 grant; all reads, writes and deletions still go through the authenticated SDK
-and OpenChamber server routes.
+and Multichamber server routes.
 
 `createSession.ts` creates a pending marker with `sessionID: null`, then binds
 the server-assigned ID with a second write. Callers register and dispatch only
 after the returned metadata confirms binding. OpenCode 2.x accepts `metadata`
-only at creation, so the binding write goes to OpenChamber's own metadata route
-(`/api/openchamber/sessions/:id/metadata`, see `sync/session-archive-batch.ts`).
+only at creation, so the binding write goes to Multichamber's own metadata route
+(`/api/multichamber/sessions/:id/metadata`, see `sync/session-archive-batch.ts`).
 That route applies an RFC 7386 merge patch, so only the marker travels and
 whatever another feature stored under `openchamber` in the meantime survives.
 Renaming a run patches `multirun.title` alone on every member; a member whose
@@ -33,6 +33,16 @@ write fails keeps the old title and is reported.
 
 The run's model and agent are set on the session at creation (`selection`),
 because v2 pins a session to a model instead of taking one per prompt.
+
+Each model selection carries an explicit `harness`: `opencode`, `claude`, or
+`codex`. A missing value in an older selection or marker means OpenCode.
+Provider IDs never determine the harness. Native lanes and fusion judges carry
+`metadata.backend` and their model/effort/mode under that engine's metadata;
+OpenCode agent names are omitted for native sessions. An omitted native mode
+uses the server's saved default. The picker reads each native catalog from the
+current runtime and rejects a catalog response from a previous host. Native
+failures leave unrelated lanes available. Model and effort changes apply to the
+new lane; they do not mutate an existing session used as a source.
 
 A failed binding attempts to delete only that newly created session. Worktrees
 are retained because setup may already have written files. A lane, added lane
@@ -68,7 +78,7 @@ project's session knowledge. The Auto routing model is never a lane.
 `runActions.askOtherModels` turns a chat into a run by writing membership onto
 it and adding lanes that re-send its first prompt; it refuses any turn but the
 first, because new lanes would start without the conversation that followed.
-Launching is desktop, web and VS Code only; mobile shows runs but does not
+Launching is desktop and web only; mobile shows runs but does not
 launch them.
 
 ## Keep

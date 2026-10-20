@@ -1,6 +1,6 @@
-# OpenChamber Docs Source
+# Multichamber Docs Source
 
-This package is the source-of-truth for OpenChamber public docs content.
+This package is the source-of-truth for Multichamber public docs content.
 
 ## Layout
 
@@ -28,6 +28,10 @@ This validates:
 
 This repo owns docs content.
 
-Website rendering/deployment happens in `openchamber-website` (`apps/docs`).
+This repository does not configure a hosted documentation site by default. A
+separate website may consume these sources when its repository and dispatch
+credential are explicitly configured; see [DEPLOYMENT.md](DEPLOYMENT.md).
 
-Use `.github/workflows/docs-source.yml` to package docs source on release or manual trigger.
+Use [docs-source.yml](../../.github/workflows/docs-source.yml) to validate and
+package `multichamber-docs-source-<sha>.tar.gz` on docs pushes, releases or manual
+triggers. Packaging an artifact does not publish a website.

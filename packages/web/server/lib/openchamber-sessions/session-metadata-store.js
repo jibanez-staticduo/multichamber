@@ -1,5 +1,5 @@
 /**
- * OpenChamber per-session metadata, held by OpenCode.
+ * Multichamber per-session metadata, held by OpenCode.
  *
  * Goal mode, session assist, obligatory context re-injection and pinned
  * notes/plans keep their per-session state in the session's `metadata`, under
@@ -84,7 +84,7 @@ export const createOpenCodeSessionMetadata = ({
 
 /**
  * @param {object} options
- * @param {string} options.dataDir OpenChamber data directory; holds the legacy file.
+ * @param {string} options.dataDir Multichamber data directory; holds the legacy file.
  * @param {{ read: Function, write: Function }} options.openCode See {@link createOpenCodeSessionMetadata}.
  * @param {typeof fsDefault.promises} [options.fsPromises]
  * @param {typeof pathDefault} [options.path]
@@ -93,11 +93,18 @@ export const createOpenCodeSessionMetadata = ({
 export const createSessionMetadataStore = ({
   dataDir,
   openCode,
+  // Sessions of another engine (Claude Code) keep their metadata in
+  // Multichamber's own file (engine-metadata-store.js), not on OpenCode, which
+  // does not know them. Same read/write contract.
+  engineMetadata = null,
   fsPromises = fsDefault.promises,
   path = pathDefault,
   now = Date.now,
 }) => {
   const legacyPath = path.join(dataDir, LEGACY_FILE_NAME);
+
+  /** Where a session's metadata lives: its engine's own store, or OpenCode. */
+  const backendFor = (id) => (engineMetadata?.owns(id) ? engineMetadata : openCode);
 
   /** sessionID → metadata from the legacy file that OpenCode does not hold yet. */
   const unmigrated = new Map();
@@ -206,7 +213,7 @@ export const createSessionMetadataStore = ({
     if (!id) return {};
     await loadLegacy();
     if (unmigrated.has(id)) return unmigrated.get(id);
-    return (await openCode.read(id, { directory })) ?? {};
+    return (await backendFor(id).read(id, { directory })) ?? {};
   };
 
   /**
@@ -222,10 +229,11 @@ export const createSessionMetadataStore = ({
 
     return runForSession(id, async () => {
       const fromLegacy = unmigrated.has(id);
-      const current = fromLegacy ? unmigrated.get(id) : await openCode.read(id, { directory });
+      const backend = backendFor(id);
+      const current = fromLegacy ? unmigrated.get(id) : await backend.read(id, { directory });
       if (current === null) throw new Error(`session ${id} was not found`);
       const merged = mergeMetadataPatch(current, patch);
-      await openCode.write(id, merged, { directory });
+      await backend.write(id, merged, { directory });
       if (fromLegacy) await forgetLegacy(id);
       return merged;
     });
@@ -272,7 +280,7 @@ export const createSessionMetadataStore = ({
       // A write that ran first already migrated it.
       if (!unmigrated.has(id)) return;
       try {
-        await openCode.write(id, unmigrated.get(id));
+        await backendFor(id).write(id, unmigrated.get(id));
       } catch (error) {
         if (!isSessionNotFound(error)) {
           console.warn(`[openchamber-sessions] could not migrate metadata for ${id}:`, error?.message ?? error);

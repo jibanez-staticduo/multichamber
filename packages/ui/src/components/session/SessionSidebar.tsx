@@ -43,7 +43,7 @@ import { runBackgroundNetworkTask } from '@/lib/background-network';
 import { buildKnownSessionDirectories } from './sidebar/list/sessionListDirectories';
 import { sortProjectsByOrder } from './sidebar/list/projectSort';
 import { z } from 'zod';
-import { subscribeOpenchamberEvents } from '@/lib/openchamberEvents';
+import { subscribeOpenchamberEvents } from '@/lib/multichamberEvents';
 import {
   commitDiscoveredRawWorktreesByProject,
   ensureRawWorktreesByProjectScope,

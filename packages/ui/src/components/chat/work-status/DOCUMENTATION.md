@@ -172,6 +172,12 @@ tools, errors, synthetic text or ignored text. This measures text delivery from
 stored timestamps, not provider-side decode speed. The header shows only this
 rate; unavailable response timing never falls back to whole-turn speed.
 
+Codex `metadata.codex.usageScope: 'turn'` identifies usage aggregated across
+the turn and stored on its last assistant item. It cannot measure that item's
+response speed, so the response rate stays unknown. Older Codex records with
+`usageAvailable: true` and no scope receive the same treatment. Whole-turn
+speed remains available when its token totals and measured window are valid.
+
 Whole-turn speed uses output plus reasoning tokens from every step, divided by
 elapsed assistant time minus the union of completed and failed tool intervals.
 Waiting for each model response remains included. Invalid or missing inputs
@@ -430,6 +436,12 @@ no data still follows the presence reports and collapses as before.
 The scroll offset resets on session change: restoring one session's offset into
 another's shorter panel lands somewhere arbitrary.
 
+Untitled Codex children display their native nickname and agent path, or the
+available path, nickname or role. Explicit session titles and root-session
+names stay unchanged. The sidebar uses the same display fallback. Selecting a
+subagent keeps its session ID and opens its own directory, including when it
+differs from the parent's worktree.
+
 The Subagents section opens itself when subagents appear where there were none,
 on that edge only: re-expanding on every count change would fight a user who
 just collapsed it.
@@ -534,7 +546,7 @@ issue or PR in `NewWorktreeDialog`, and an agent calling the `openchamber`
 tool's `session.link`. There is no manual "link this" control: attaching a
 thread to the work *is* the act of linking it. A message's references are
 written in one server operation (`sessionActions.addLinkedIssues`): each
-operation sends the items to link, and the OpenChamber server decides the new
+operation sends the items to link, and the Multichamber server decides the new
 list from a fresh read inside the session's write queue, so a link an agent
 made while the request was in flight survives it.
 
@@ -610,7 +622,7 @@ the quota loader treats a working proxy as a transient disconnected runtime
 and skips the initial load.
 
 Quotas, MCP status, skills, agent memory and the Linear/GitHub logins are all
-served by whichever OpenChamber instance is connected, and each was cached
+served by whichever Multichamber instance is connected, and each was cached
 globally or by directory alone — which two instances can share. A switch left
 the previous instance's answers on screen, and its Linear login usable against
 a runtime that has no Linear. `apps/runtimeEndpointReset.ts` now drops all of
@@ -646,3 +658,14 @@ animation frame.
 
 - Test/build/dev-server status and LSP diagnostics — a separate track. Note
   that `state.lsp` already exists in the sync state.
+
+
+## Engine-owned context sources
+
+The MCP controls and skill/MCP counts describe OpenCode's directory stores.
+They render and fetch only for OpenCode sessions or OpenCode drafts. Native
+Claude Code and Codex sessions keep their own tool configuration; these sections
+do not present OpenCode's cached counts as native context or mutate its servers.
+The current native adapters expose no equivalent configuration catalog here.
+Shared pinned notes, plans, memory and linked tracker items remain available
+through their engine-aware context APIs.

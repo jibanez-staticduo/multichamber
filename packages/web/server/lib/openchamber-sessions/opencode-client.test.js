@@ -8,7 +8,7 @@ const client = () => createOpenCodeClient({ baseUrl: 'http://opencode.test', hea
 
 describe('server-owned OpenCode dispatch responses', () => {
   it.each(['prompt', 'command'])('rejects an HTML %s acknowledgement through the real v2 client', async (operation) => {
-    globalThis.fetch = vi.fn(async () => new Response('<!doctype html><title>OpenChamber</title>', {
+    globalThis.fetch = vi.fn(async () => new Response('<!doctype html><title>Multichamber</title>', {
       status: 200, headers: { 'content-type': 'text/html' },
     }));
     const sdk = client();

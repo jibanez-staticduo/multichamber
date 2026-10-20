@@ -1,3 +1,4 @@
+import { withSessionHarnesses } from '../harnesses/session-client.js';
 import { OpenCode } from '@opencode/client';
 import { DateTime } from 'luxon';
 import { CronExpressionParser } from 'cron-parser';
@@ -257,7 +258,7 @@ export const createScheduledTasksRuntime = (deps) => {
     emitTaskRunEvent,
     setSessionAutoAccept,
     sessionKnowledgeRuntime = null,
-    // The goal record lives in OpenChamber's metadata store (OpenCode 2.x takes
+    // The goal record lives in Multichamber's metadata store (OpenCode 2.x takes
     // session metadata only at create time); without it goal mode cannot run.
     persistSessionGoal = null,
     // Chats scope (see chats-scope.js): scheduled like a project, but each run
@@ -278,7 +279,7 @@ export const createScheduledTasksRuntime = (deps) => {
   // Every OpenCode route lives under /api in v2 and the client appends it, so
   // the client only wants the origin. Directory scoping is a request header.
   const openCodeOrigin = () => new URL(buildOpenCodeUrl('/api/info', '')).origin;
-  const createScopedClient = (directory) => OpenCode.make({
+  const createScopedClient = (directory) => withSessionHarnesses(OpenCode.make({
     baseUrl: openCodeOrigin(),
     headers: {
       ...getOpenCodeAuthHeaders(),
@@ -289,7 +290,7 @@ export const createScheduledTasksRuntime = (deps) => {
       assertOpenCodeApiResponse(response);
       return response;
     },
-  });
+  }));
 
   const existingSessionTasks = messageQueueRuntime ? createExistingSessionTasks({
     projectConfigRuntime, messageQueueRuntime, createClient: createScopedClient,

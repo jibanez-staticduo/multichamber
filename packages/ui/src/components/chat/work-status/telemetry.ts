@@ -1,6 +1,9 @@
 import type { Message, Part } from '@/lib/opencode/model';
 import { isConversationRole } from '@/lib/opencode/model';
 import { computeCacheHitRate } from '@/stores/utils/tokenUtils';
+import { z } from 'zod';
+
+const codexUsageScopeSchema = z.object({ codex: z.object({ usageScope: z.string().optional(), usageAvailable: z.boolean().optional() }) });
 
 type SessionMessageRecord = {
   info: Message;
@@ -143,6 +146,11 @@ const tokenRate = (tokens: number, durationMs: number): number | null => {
 function calculateResponseTokenRate(record: SessionMessageRecord): number | null {
   const { info, parts } = record;
   if (info.role !== 'assistant' || info.error || parts.some((part) => part.type === 'tool')) return null;
+  const nativeUsage = codexUsageScopeSchema.safeParse(info.metadata);
+  // Codex history assigns the whole turn's usage to its final assistant item.
+  // Legacy usageAvailable records carry the same aggregate without a scope marker.
+  if (nativeUsage.success && (nativeUsage.data.codex.usageScope === 'turn'
+    || (nativeUsage.data.codex.usageScope === undefined && nativeUsage.data.codex.usageAvailable === true))) return null;
   const output = nonnegative(info.tokens?.output);
   const { created, completed } = info.time;
   if (output === null || completed === undefined || nonnegative(created) === null || nonnegative(completed) === null) return null;

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { Window } from 'happy-dom';
+import type { SessionEngine } from '@/lib/sessionEngine';
 import { SessionTimelineRowBody } from './SessionTimelineRowBody';
 
 let browser: Window;
@@ -28,14 +29,15 @@ afterEach(async () => {
 
 const title = 'درخواست پاسخ فارسی با React';
 
-const renderRow = (compact: boolean, projectLine = false) => root.render(<SessionTimelineRowBody
+const renderRow = (compact: boolean, projectLine = false, engine?: SessionEngine, branchLabel: string | null = null) => root.render(<SessionTimelineRowBody
   compact={compact}
   project={null}
   projectLabel={projectLine ? 'openchamber' : null}
   projectLine={projectLine}
   title={title}
   titleClassName=""
-  branchLabel={null}
+  engine={engine}
+  branchLabel={branchLabel}
   statusDot={null}
   pinnedMarker={null}
   timeSlot="1m"
@@ -62,5 +64,43 @@ for (const [compact, projectLine] of [[true, false], [false, false], [false, tru
 test('a project line puts the project and time above the title', async () => {
   await act(async () => renderRow(false, true));
   const lines = Array.from(document.querySelector('.flex-col')?.children ?? []).map((line) => line.textContent);
-  expect(lines).toEqual(['openchamber1m', title, '']);
+  expect(lines).toEqual(['openchamber1m', title]);
+});
+
+
+for (const engine of ['opencode', 'claude', 'codex'] as const) {
+  test(`${engine} stays with title and time without creating an empty detail line`, async () => {
+    await act(async () => renderRow(false, false, engine));
+    const body = document.querySelector('.flex-col');
+    expect(body?.children).toHaveLength(1);
+    const titleLine = body?.firstElementChild;
+    expect(titleLine?.textContent).toContain(title);
+    expect(titleLine?.textContent).toContain('1m');
+    expect(titleLine?.querySelector('[role="img"]')?.getAttribute('aria-label')).toBe(engine === 'opencode' ? 'OpenCode' : engine === 'claude' ? 'Claude Code' : 'Codex');
+  });
+}
+
+test('a real branch remains on its own detail line', async () => {
+  await act(async () => renderRow(false, false, 'codex', 'main'));
+  const lines = [...(document.querySelector('.flex-col')?.children ?? [])];
+  expect(lines).toHaveLength(2);
+  expect(lines[0].textContent).toContain(title);
+  expect(lines[1].textContent).toBe('main');
+  expect(lines[1].querySelector('[role="img"]')).toBeNull();
+});
+
+
+test('run lane detail and state badges remain visible without reserving a logo-only line', async () => {
+  await act(async () => root.render(<SessionTimelineRowBody
+    project={null} projectLabel={null} title="Run" titleClassName="" branchLabel={null}
+    metaLineLead={<span>3 lanes</span>} statusDot={null} pinnedMarker={null} timeSlot="1m"
+    directoryIndicator={null} prBadge={<span>PR 7</span>} zombieIndicator={null}
+    goal={<span>Goal</span>} badges={<span>Pending</span>} engine="codex" hideMetaOnHoverClass=""
+  />));
+  const lines = [...(document.querySelector('.flex-col')?.children ?? [])];
+  expect(lines).toHaveLength(2);
+  expect(lines[0].textContent).toContain('PR 7');
+  expect(lines[0].textContent).toContain('Goal');
+  expect(lines[0].textContent).toContain('Pending');
+  expect(lines[1].textContent).toBe('3 lanes');
 });

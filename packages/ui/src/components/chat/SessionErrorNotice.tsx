@@ -1,3 +1,4 @@
+import { useSessionEngine } from '@/hooks/useSessionEngine';
 import React from 'react';
 import { Icon } from '@/components/icon/Icon';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,6 @@ interface SessionErrorNoticeProps {
 
 // How long a user message may sit unanswered on an idle session before the
 // notice calls it a reply that never began.
-const UNANSWERED_AFTER_MS = 5_000;
 
 /**
  * What the stored history says about a session whose last turn stopped.
@@ -136,6 +136,7 @@ const useLastMessageState = (sessionId: string, directory?: string): LastMessage
  */
 export const SessionErrorNotice: React.FC<SessionErrorNoticeProps> = ({ sessionId, directory }) => {
   const { t } = useI18n();
+  const engine = useSessionEngine(sessionId, directory);
   // Only MainLayout mounts the dialog the status link opens.
   const diagnosticDialogAvailable = React.useContext(DiagnosticDialogAvailableContext);
   const latestError = useLatestSessionError(sessionId);
@@ -170,12 +171,12 @@ export const SessionErrorNotice: React.FC<SessionErrorNoticeProps> = ({ sessionI
   const [now, setNow] = React.useState(() => Date.now());
   React.useEffect(() => {
     if (unansweredSince === null) return undefined;
-    const remaining = UNANSWERED_AFTER_MS - (Date.now() - unansweredSince);
+    const remaining = engine.unansweredAfterMs - (Date.now() - unansweredSince);
     if (remaining <= 0) return undefined;
     const timer = window.setTimeout(() => setNow(Date.now()), remaining + 50);
     return () => window.clearTimeout(timer);
-  }, [unansweredSince]);
-  const unansweredDue = unansweredSince !== null && Math.max(now, Date.now()) - unansweredSince >= UNANSWERED_AFTER_MS;
+  }, [unansweredSince, engine.unansweredAfterMs]);
+  const unansweredDue = unansweredSince !== null && Math.max(now, Date.now()) - unansweredSince >= engine.unansweredAfterMs;
   // Looking unanswered is only a guess: the live stream may have dropped the
   // reply. Re-read the session first and show the notice only once a read has
   // settled with the prompt still last. The key ties that verdict to this
@@ -199,24 +200,24 @@ export const SessionErrorNotice: React.FC<SessionErrorNoticeProps> = ({ sessionI
   let hasDetails = true;
   let responseBody: string | null = null;
   if (reportedError) {
-    title = t('chat.sessionError.title');
+    title = t('chat.engineError.title', { engine: engine.label });
     hasDetails = Boolean(reportedError.error?.message);
     const message = reportedError.error?.message ?? t('chat.sessionError.noDetails');
     detail = reportedError.error?.name ? `${reportedError.error.name}: ${message}` : message;
     responseBody = reportedError.error?.responseBody ?? null;
   } else if (storedFailureApplies && storedFailure.recordedError) {
-    title = t('chat.sessionError.title');
+    title = t('chat.engineError.title', { engine: engine.label });
     const recorded = summarizeOpenCodeError(storedFailure.recordedError);
     hasDetails = Boolean(recorded.message);
     const message = recorded.message ?? t('chat.sessionError.noDetails');
     detail = recorded.name ? `${recorded.name}: ${message}` : message;
     responseBody = responseBodyOf(storedFailure.recordedError);
   } else if (storedFailureApplies) {
-    title = storedFailure.outcome === 'interrupted' ? t('chat.sessionError.interrupted') : t('chat.sessionError.title');
+    title = storedFailure.outcome === 'interrupted' ? t('chat.engineError.interrupted', { engine: engine.label }) : t('chat.engineError.title', { engine: engine.label });
     hasDetails = storedFailure.parentToolError !== null;
     detail = storedFailure.parentToolError ?? t('chat.sessionError.noDetails');
   } else {
-    title = t('chat.sessionError.noReply');
+    title = t('chat.engineError.noReply', { engine: engine.label });
     hasDetails = false;
     detail = t('chat.sessionError.noDetails');
   }
@@ -236,7 +237,7 @@ export const SessionErrorNotice: React.FC<SessionErrorNoticeProps> = ({ sessionI
             <div className="mt-1 ps-[1.375rem] typography-meta text-muted-foreground break-words">{visibleText}</div>
           )}
         </LongErrorText>
-        {!hasDetails && diagnosticDialogAvailable ? (
+        {!hasDetails && diagnosticDialogAvailable && engine.hasOpenCodeStatus ? (
           <div className="ps-[1.375rem]">
             <Button
               variant="link"

@@ -17,7 +17,8 @@ import { getDisambiguatingFolders } from '@/lib/path-utils';
 const GitView = lazyWithChunkRecovery(() => import('@/components/views/GitView').then((m) => ({ default: m.GitView })));
 // The Linear rail icon stays hidden until a workspace is connected, so most
 // users never render this panel; keep it out of the main bundle.
-import { areTitleMapsEqual, buildSessionTitleMap, EMPTY_SESSION_TITLE_MAP, getSessionIDFromDedupeKey } from './contextPanelSessionTitles';
+import { areTitleMapsEqual, buildSessionTitleMap, EMPTY_SESSION_TITLE_MAP, getSessionIDFromDedupeKey, refreshChatTabTitles } from './contextPanelSessionTitles';
+import { useGlobalSessionsStore } from '@/stores/useGlobalSessionsStore';
 import { ProjectContextPanel } from './RightSidebarTabs';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { useRepositoryReferenceProvider } from '@/components/references/referenceSources';
@@ -290,7 +291,10 @@ const browserFaviconFor = (url: string, faviconByOrigin: Record<string, string>)
 // session from another project; an inactive tab whose directory is not
 // loaded keeps its sessionTitleFallback.
 const useSessionTitleMap = (sessionIDs: readonly string[]): ReadonlyMap<string, string> => {
+  const { t } = useI18n();
+  const untitled = t('sessions.sidebar.session.untitled');
   const childStores = useChildStoreManager();
+  const globalEntities = useGlobalSessionsStore((state) => state.entityById);
   const snapshotRef = React.useRef<ReadonlyMap<string, string>>(EMPTY_SESSION_TITLE_MAP);
   const sessionIDsRef = React.useRef<readonly string[]>(sessionIDs);
 
@@ -304,14 +308,14 @@ const useSessionTitleMap = (sessionIDs: readonly string[]): ReadonlyMap<string, 
       [childStores, wanted],
     ),
     React.useCallback(() => {
-      const liveStates = Array.from(childStores.children.values(), (store) => store.getState());
-      const next = buildSessionTitleMap(liveStates, sessionIDsRef.current);
+      const liveStates = [{ session: Array.from(globalEntities.values()) }, ...Array.from(childStores.children.values(), (store) => store.getState())];
+      const next = buildSessionTitleMap(liveStates, sessionIDsRef.current, untitled);
       if (areTitleMapsEqual(snapshotRef.current, next)) {
         return snapshotRef.current;
       }
       snapshotRef.current = next;
       return next;
-    }, [childStores]),
+    }, [childStores, globalEntities, untitled]),
     () => EMPTY_SESSION_TITLE_MAP,
   );
 };
@@ -533,6 +537,18 @@ export const ContextPanel: React.FC<{ zone?: ContextZone }> = ({ zone = 'right' 
     return ids;
   }, [showsChatTabs, tabs]);
   const sessionTitleById = useSessionTitleMap(chatSessionIDs);
+  React.useEffect(() => {
+    if (sessionTitleById.size === 0) return;
+    useUIStore.setState((state) => {
+      let changed = false;
+      const contextPanelByDirectory = { ...state.contextPanelByDirectory };
+      for (const [key, panel] of Object.entries(contextPanelByDirectory)) {
+        const tabs = refreshChatTabTitles(panel.tabs, sessionTitleById);
+        if (tabs !== panel.tabs) { changed = true; contextPanelByDirectory[key] = { ...panel, tabs }; }
+      }
+      return changed ? { contextPanelByDirectory } : state;
+    });
+  }, [sessionTitleById]);
 
   const [isResizing, setIsResizing] = React.useState(false);
   const startPointerRef = React.useRef(0);

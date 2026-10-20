@@ -193,7 +193,7 @@ export const encodePairingConnectionPayload = (payload: PairingConnectionPayload
   const params = new URLSearchParams();
   params.set('v', '2');
   params.set('p', base64UrlEncode(JSON.stringify(normalized)));
-  return `openchamber://connect?${params.toString()}`;
+  return `multichamber://connect?${params.toString()}`;
 };
 
 export const parsePairingConnectionPayload = (value: string): PairingConnectionPayload | null => {
@@ -201,7 +201,7 @@ export const parsePairingConnectionPayload = (value: string): PairingConnectionP
   if (!trimmed || trimmed.length > MAX_PAIRING_PAYLOAD_LENGTH) return null;
   try {
     const url = new URL(trimmed);
-    if (url.protocol !== 'openchamber:' || url.hostname !== 'connect') return null;
+    if (!['multichamber:', 'openchamber:'].includes(url.protocol) || url.hostname !== 'connect') return null;
     if (url.searchParams.get('v') !== '2') return null;
     const encoded = url.searchParams.get('p') || '';
     if (!encoded || encoded.length > MAX_PAIRING_PAYLOAD_LENGTH) return null;
@@ -224,7 +224,7 @@ export const parsePairingConnectionPayloadString = (value: string): PairingConne
   const trimmed = value.trim();
   if (!trimmed || trimmed.length > MAX_PAIRING_PAYLOAD_LENGTH) return null;
   const question = trimmed.indexOf('?');
-  if (question === -1 || !/^openchamber:\/\/connect\/?$/i.test(trimmed.slice(0, question))) return null;
+  if (question === -1 || !/^(?:multichamber|openchamber):\/\/connect\/?$/i.test(trimmed.slice(0, question))) return null;
   let version: string | null = null;
   let encoded: string | null = null;
   for (const part of trimmed.slice(question + 1).split('&')) {

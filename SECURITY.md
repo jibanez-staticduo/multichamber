@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in OpenChamber, please report it responsibly.
+If you discover a security vulnerability in Multichamber, please report it responsibly.
 
 **Email:** [security@openchamber.dev](mailto:security@openchamber.dev)
 
@@ -18,7 +18,7 @@ I'll acknowledge receipt within 48 hours and aim to provide a fix or mitigation 
 
 ## Scope
 
-OpenChamber handles sensitive context including:
+Multichamber handles sensitive context including:
 - UI authentication (password-protected sessions, JWT tokens)
 - Cloudflare tunnel access (remote connectivity)
 - Terminal access (PTY sessions)
@@ -29,7 +29,7 @@ Security reports related to any of these areas are especially appreciated.
 
 ## Threat model
 
-Signing in to OpenChamber gives you the same access as the user running it: a terminal, an agent with a shell, and file access anywhere that user can read or write. Checks inside a signed-in session, such as the workspace limits on file routes or how symlinks resolve, keep the interface predictable. They are not a security boundary, and bypassing them is not a vulnerability.
+Signing in to Multichamber gives you the same access as the user running it: a terminal, an agent with a shell, and file access anywhere that user can read or write. Checks inside a signed-in session, such as the workspace limits on file routes or how symlinks resolve, keep the interface predictable. They are not a security boundary, and bypassing them is not a vulnerability.
 
 What I treat as a vulnerability:
 - reaching any of that without signing in: authentication bypass, exposure on the network, tunnel, relay or pairing flaws, requests from other websites acting with your session;

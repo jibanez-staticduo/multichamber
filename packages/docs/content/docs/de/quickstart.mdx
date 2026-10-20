@@ -1,26 +1,21 @@
 ---
 title: Schnellstart
-description: Starte OpenChamber schnell und wähle die richtige App für die Aufgabe.
+description: Einen Multichamber-Server starten und eine native Sitzungs-Engine wählen.
 ---
 
 # Schnellstart
 
-## Schnellster Weg
+Installieren Sie OpenCode und Node.js 24.14 oder neuer auf dem Server. Installieren und authentifizieren Sie dort bei Bedarf Claude Code oder Codex. Installieren Sie anschließend Multichamber mit dem folgenden Befehl.
 
-1. Installiere [OpenCode](https://opencode.ai).
-2. Installiere das OpenChamber-CLI (siehe [Installieren](/install/) für den Einzeilenbefehl).
-3. Führe `openchamber --ui-password be-creative-here` aus.
-4. Öffne die URL, die das CLI ausgibt (normalerweise `http://localhost:3000`).
-5. Um es auf deinem Handy zu nutzen, starte einen [Tunnel](/tunnels/) und scanne den QR-Code.
+```bash
+curl -fsSL https://raw.githubusercontent.com/jibanez-staticduo/multichamber/main/scripts/install.sh | bash
+multichamber --ui-password be-creative-here
+```
 
-Du solltest die OpenChamber-Session-Liste in deinem Browser sehen. Wenn sie geladen wird, bist du startklar.
+Öffnen Sie die angezeigte URL, gewöhnlich `http://localhost:3000`. Wählen Sie eine verfügbare Engine für eine neue Sitzung. Die Einstellungen behalten getrennte Modell- und Berechtigungsvorgaben pro Engine.
 
-Verwende ein starkes UI-Passwort, besonders wenn du die Instanz ins Internet öffnen willst.
+Verwenden Sie vor dem Fernzugriff ein starkes UI-Passwort.
 
-Wenn die Seite nicht lädt, sieh unter [Troubleshooting](/troubleshooting/) nach.
+Nutzen Sie die Desktop-App auf macOS, Windows oder Linux oder starten Sie den Web/PWA-Server. iOS- und Android-Builds verbinden sich mit einem bestehenden Server. Dieser Fork enthält keine VS-Code-Erweiterung.
 
-## Welche App soll ich verwenden?
-
-- verwende **Desktop** für die tägliche Arbeit auf macOS, Windows oder Linux
-- verwende **Web** für den Remote-Zugriff und zum Prüfen vom Handy aus
-- verwende **VS Code** für Sessions direkt neben deinem Code
+[Installation](/install/)

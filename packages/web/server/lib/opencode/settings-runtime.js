@@ -40,7 +40,7 @@ const ensureNotificationTemplateShape = (templates) => {
   return { templates: next, changed };
 };
 
-/** Settings that decide which OpenChamber plugins the managed OpenCode loads. */
+/** Settings that decide which Multichamber plugins the managed OpenCode loads. */
 const MANAGED_PLUGIN_SETTINGS_KEYS = new Set([
   'agentControlToolEnabled',
   'agentScheduleToolEnabled',
@@ -1161,7 +1161,7 @@ export const createSettingsRuntime = (deps) => {
 
       const changedKeys = Object.keys(sanitized);
       await writeSettingsToDisk(next, { surface, changedKeys });
-      // OpenChamber's own OpenCode plugins live in a config file OpenCode
+      // Multichamber's own OpenCode plugins live in a config file OpenCode
       // watches, so flipping one of these switches takes effect in the running
       // process instead of waiting for a restart.
       if (changedKeys.some((key) => MANAGED_PLUGIN_SETTINGS_KEYS.has(key))) {

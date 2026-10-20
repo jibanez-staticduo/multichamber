@@ -1,3 +1,5 @@
+import { resolveSessionEngine } from '@/lib/sessionEngine';
+import { nativeSessionLabel } from '@/lib/nativeSessionLabel';
 import { DirectoryActionIndicator } from './DirectoryActionIndicator';
 import { useSessionTurnActivity } from '@/sync/global-session-status';
 import { getSessionActivityTime } from '@/sync/session-ordering';
@@ -663,7 +665,7 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
   // session the host's OpenCode runs (a space's sessions run on its own).
   const perSessionWarming = useSessionWarmingStore((state) => state.enabled);
   const isWarmed = useSessionWarmUntil(session.id) !== undefined;
-  const canKeepWarm = perSessionWarming && !archivedBucket && !node.session.parentID
+  const canKeepWarm = resolveSessionEngine(resolvedSession) === 'opencode' && perSessionWarming && !archivedBucket && !node.session.parentID
     && Boolean(sessionDirectory) && !isSpaceDirectory(sessionDirectory);
   const toggleSessionWarm = async () => {
     if (!sessionDirectory) return;
@@ -682,7 +684,7 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
       </span>
     </RowMarkTooltip>
   ) : null;
-  const sessionTitle = resolvedSession.title || t('sessions.sidebar.session.untitled');
+  const sessionTitle = nativeSessionLabel(resolvedSession, t('sessions.sidebar.session.untitled'));
   // Rows with the tree slot open to their subsessions, the Tree view's
   // Chats, Pinned and In work rows included. List is a flat list: a node that
   // still carries children renders as a leaf, without a chevron and without
@@ -970,6 +972,7 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
             project={timelineProject}
             projectLabel={tooltipProjectLabel}
             projectLine={hasProjectLine}
+            engine={resolveSessionEngine(resolvedSession)}
             title={renameForm}
             titleClassName="text-foreground"
             branchLabel={tooltipBranchLabel}
@@ -1735,7 +1738,7 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
       goal={sessionGoalGlyph}
       badges={rowBadges}
       doneHint={doneHintBadge()}
-      providerId={isTimelineRow ? resolvedSession.model?.providerID ?? null : null}
+      engine={resolveSessionEngine(resolvedSession)}
       // Grouped rows reserve room for permanent actions on their button.
       metaPaddingClass={isTimelineRow && alwaysShowActions
         ? (showQuickArchiveAction ? 'pe-13' : 'pe-7')

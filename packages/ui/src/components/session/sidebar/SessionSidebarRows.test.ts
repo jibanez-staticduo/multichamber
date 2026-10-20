@@ -6,6 +6,7 @@ import {
   mergeSessionSidebarVirtualIndexes,
   sectionSpacingAfter,
   sessionSidebarRowVirtualKey,
+  sessionSidebarRowSizeKey,
 } from './sessionSidebarVirtualization';
 import type { Session } from '@/lib/opencode/model';
 import type { SessionNode } from './types';
@@ -93,4 +94,12 @@ describe('SessionSidebarRows section spacing', () => {
     expect(closed.key).toBe(open.key);
     expect(closed.virtualKey).not.toBe(open.virtualKey);
   });
+});
+
+
+test('measured row heights and virtualizer identities separate compact and rich timeline variants', () => {
+  const plain: SessionSidebarRow = { kind: 'empty', key: 'same-row', estimateSize: 35, emptyKind: 'sidebar' };
+  const rich = { ...plain, estimateSize: 52 };
+  expect(sessionSidebarRowSizeKey(plain)).not.toBe(sessionSidebarRowSizeKey(rich));
+  expect(sessionSidebarRowVirtualKey(plain, undefined)).not.toBe(sessionSidebarRowVirtualKey(rich, undefined));
 });

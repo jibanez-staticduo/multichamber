@@ -79,7 +79,7 @@ export const getToolIcon = (toolName: string, presentation?: GuestToolRule | nul
         return <Icon name="ai-agent" className={iconClass} />;
     }
     if (tool === 'openchamber') {
-        return <Icon name="openchamber" className={iconClass} />;
+        return <Icon name="multichamber" className={iconClass} />;
     }
     if (tool === 'linear' || tool.startsWith('linear_')) {
         return <Icon name="linear" className={iconClass} />;

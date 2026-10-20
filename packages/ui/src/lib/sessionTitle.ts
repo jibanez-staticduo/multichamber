@@ -7,7 +7,7 @@ import { runtimeFetch } from './runtime-fetch';
 type MessageRecord = { info: Message; parts: Part[] };
 type TitleTurn = {
   user: MessageRecord;
-  /** Context items OpenChamber attached ahead of this prompt. */
+  /** Context items Multichamber attached ahead of this prompt. */
   context: SyntheticMessage[];
   assistant: { info: AssistantMessage; parts: Part[] };
 };

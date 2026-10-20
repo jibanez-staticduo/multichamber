@@ -4,8 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
-import { createOpenChamberControlService } from './service.js';
-import { OpenChamberControlError } from './error.js';
+import { createMultichamberControlService } from './service.js';
+import { MultichamberControlError } from './error.js';
 
 const createService = (overrides = {}) => {
   const client = {
@@ -21,7 +21,7 @@ const createService = (overrides = {}) => {
     create: vi.fn(async () => ({ sessionId: 'ses_1', directory: '/repo', promptDispatched: false })),
     resolveDirectory: vi.fn(async ({ projectId }) => {
       if (projectId === 'project-1') return '/repo';
-      throw new OpenChamberControlError('Project not found', 404);
+      throw new MultichamberControlError('Project not found', 404);
     }),
     send: vi.fn(),
     fork: vi.fn(),
@@ -35,7 +35,7 @@ const createService = (overrides = {}) => {
     remove: vi.fn(),
     setEnabled: vi.fn(),
   };
-  const service = createOpenChamberControlService({
+  const service = createMultichamberControlService({
     readSettingsFromDiskMigrated: vi.fn(async () => ({
       projects: [{ id: 'project-1', path: '/repo', label: 'Repo' }],
       defaultModel: 'provider/model',
@@ -54,7 +54,7 @@ const createService = (overrides = {}) => {
   return { service, client, sessionService, scheduledTaskService };
 };
 
-describe('OpenChamber control service', () => {
+describe('Multichamber control service', () => {
   it('creates a target task with inherited selection and accepts retargeting on update', async () => {
     const { service, scheduledTaskService } = createService();
     scheduledTaskService.upsert.mockImplementation(async (_project, task) => ({ task }));
@@ -401,7 +401,7 @@ describe('OpenChamber control service', () => {
     expect(client.session.active).toHaveBeenCalledTimes(2);
   });
 
-  it('filters sessions archived in OpenChamber state and adds global statuses', async () => {
+  it('filters sessions archived in Multichamber state and adds global statuses', async () => {
     const { service, client } = createService({
       // Async like the real store (`openchamber-sessions/archive-store.js`).
       archiveStore: { archivedAt: async (id) => (id === 'ses_archived' ? 100 : null) },
@@ -608,7 +608,7 @@ describe('OpenChamber control service', () => {
 
   it('rejects actions outside the fixed contract', async () => {
     const { service } = createService();
-    await expect(service.execute('session.delete')).rejects.toThrow('Unsupported OpenChamber action');
+    await expect(service.execute('session.delete')).rejects.toThrow('Unsupported Multichamber action');
   });
 });
 

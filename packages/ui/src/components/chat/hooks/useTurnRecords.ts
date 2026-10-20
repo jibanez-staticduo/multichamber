@@ -6,6 +6,7 @@ import { streamPerfMeasure } from '@/stores/utils/streamDebug';
 
 interface UseTurnRecordsOptions {
     sessionKey?: string;
+    allowOrphanAssistantMessages?: boolean;
     showTurnChangedFiles: boolean;
 }
 
@@ -48,7 +49,7 @@ export const useTurnRecords = (
             sessionKey,
             messages,
             options.showTurnChangedFiles,
-            'merge',
+            options.allowOrphanAssistantMessages ? 'merge:orphans' : 'merge',
         );
         const cached = getCachedProjection(cacheKey);
         if (cached) {
@@ -61,6 +62,7 @@ export const useTurnRecords = (
                 previousProjection: previousProjectionRef.current,
                 showTurnChangedFiles: options.showTurnChangedFiles,
                 mergeHiddenUserTurns: true,
+                allowOrphanAssistantMessages: options.allowOrphanAssistantMessages,
             });
             previousProjectionRef.current = nextProjection;
 
@@ -68,7 +70,7 @@ export const useTurnRecords = (
 
             return nextProjection;
         });
-    }, [messages, options.showTurnChangedFiles, options.sessionKey]);
+    }, [messages, options.showTurnChangedFiles, options.sessionKey, options.allowOrphanAssistantMessages]);
 
     // The last turn is the live tail only while nothing follows it. A notice
     // that lands after it (a shell run) ends the turn, so the

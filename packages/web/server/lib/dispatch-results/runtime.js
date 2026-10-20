@@ -141,7 +141,7 @@ const OUTCOME_STATES = { succeeded: 'completed', failed: 'error', interrupted: '
  * The answer is the newest assistant reply of that turn.
  *
  * "Since the dispatch" is decided by record order against `afterIdleId`, the
- * newest idle record before the prompt went out, so OpenChamber's clock never
+ * newest idle record before the prompt went out, so Multichamber's clock never
  * meets OpenCode's: a remote OpenCode whose clock lags would otherwise make a
  * finished turn look older than its own dispatch. Only an entry stored
  * without that baseline (`afterIdleId` undefined) falls back to `dispatchedAt`.
@@ -202,7 +202,7 @@ export function createDispatchResultsRuntime({
   buildOpenCodeUrl,
   getOpenCodeAuthHeaders,
   dataDir,
-  // Archive is OpenChamber's: an archived parent records the answer but is not woken.
+  // Archive is Multichamber's: an archived parent records the answer but is not woken.
   isSessionArchived = async () => false,
   fetchImpl = fetch,
   now = Date.now,

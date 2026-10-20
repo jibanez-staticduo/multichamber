@@ -1,3 +1,5 @@
+import { EngineUnsupportedError } from '@/lib/sessionEngine';
+import { engineInfoForSession } from '@/stores/useEngineStore';
 import type { Session } from '@/lib/opencode/model';
 import type { I18nKey } from '@/lib/i18n';
 import { toast } from '@/components/ui';
@@ -359,6 +361,8 @@ const moveSessionTreeToQuickWorktree = async (input: {
 };
 
 const executeSessionTreeMove = (intent: SessionTreeMoveIntent): void => {
+  const engine = engineInfoForSession(intent.root)
+  if (!engine.capabilities.move) throw new EngineUnsupportedError(engine, "move")
   const movePromise = intent.kind === 'existing'
     ? moveSessionTreeToExistingWorktree({
         root: intent.root,

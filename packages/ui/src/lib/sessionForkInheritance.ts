@@ -4,7 +4,7 @@ import { getSessionGoal } from '@/lib/sessionGoalMetadata';
 
 /**
  * What a user fork (fork from message, fork after answer, `/fork`) keeps from
- * its source session's OpenChamber metadata.
+ * its source session's Multichamber metadata.
  *
  * OpenCode 2.x copies the source's `metadata` wholesale into the fork, so the
  * goal already arrives with it. Two things still need repair:

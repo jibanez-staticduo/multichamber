@@ -13,7 +13,7 @@ const DEFAULT_LOCAL_BIND_HOST = '127.0.0.1';
 // Global npm prefixes are root-owned on most distributions, so `npm install -g`
 // fails with EACCES for a normal SSH user. Everything we install goes to a
 // prefix inside the user's home instead.
-const REMOTE_USER_PREFIX = '$HOME/.openchamber/npm-global';
+const REMOTE_USER_PREFIX = '$HOME/.multichamber/npm-global';
 const REMOTE_BUN_CANDIDATE = '"${BUN_INSTALL:-$HOME/.bun}/bin/bun"';
 // nvm puts node on PATH only from an interactive ~/.bashrc, which the SSH
 // login shell never runs. Use its newest installed node; with no nvm the path
@@ -27,14 +27,14 @@ const REMOTE_OPENCODE_CANDIDATES = [
   '"${BUN_INSTALL:-$HOME/.bun}/bin/opencode"',
   '"${XDG_CACHE_HOME:-$HOME/.cache}/.bun/bin/opencode"',
   '"$HOME/.local/bin/opencode"',
-  '"$HOME/.openchamber/npm-global/bin/opencode"',
+  '"$HOME/.multichamber/npm-global/bin/opencode"',
   `"${REMOTE_NVM_BIN}/opencode"`,
 ];
-const REMOTE_PATH_PREFIX = `$HOME/.opencode/bin:\${BUN_INSTALL:-$HOME/.bun}/bin:\${XDG_CACHE_HOME:-$HOME/.cache}/.bun/bin:$HOME/.local/bin:$HOME/.openchamber/npm-global/bin:${REMOTE_NVM_BIN}`;
+const REMOTE_PATH_PREFIX = `$HOME/.opencode/bin:\${BUN_INSTALL:-$HOME/.bun}/bin:\${XDG_CACHE_HOME:-$HOME/.cache}/.bun/bin:$HOME/.local/bin:$HOME/.multichamber/npm-global/bin:${REMOTE_NVM_BIN}`;
 const REMOTE_BIN_CANDIDATES = [
-  '"$HOME/.openchamber/npm-global/bin/openchamber"',
-  '"${BUN_INSTALL:-$HOME/.bun}/bin/openchamber"',
-  '"${XDG_CACHE_HOME:-$HOME/.cache}/.bun/bin/openchamber"',
+  '"$HOME/.multichamber/npm-global/bin/multichamber"',
+  '"${BUN_INSTALL:-$HOME/.bun}/bin/multichamber"',
+  '"${XDG_CACHE_HOME:-$HOME/.cache}/.bun/bin/multichamber"',
 ];
 const DEFAULT_CONTROL_PERSIST_SEC = 300;
 const DEFAULT_READY_TIMEOUT_SEC = 30;
@@ -388,7 +388,7 @@ const waitLocalForwardReady = async (localPort) => {
     await new Promise((resolve) => setTimeout(resolve, pollMs));
     pollMs = Math.min(pollMs * 2, 2000);
   }
-  throw new Error('Timed out waiting for forwarded OpenChamber health');
+  throw new Error('Timed out waiting for forwarded Multichamber health');
 };
 
 const parseVersionToken = (raw) => {
@@ -925,11 +925,11 @@ export class ElectronSshManager {
         password,
         trustDevice: true,
         issueClientToken: true,
-        clientLabel: 'OpenChamber Desktop SSH',
+        clientLabel: 'Multichamber Desktop SSH',
       }),
     });
     if (!loginResponse.ok) {
-      throw new Error(`Configured OpenChamber UI password was rejected by forwarded server (status ${loginResponse.status})`);
+      throw new Error(`Configured Multichamber UI password was rejected by forwarded server (status ${loginResponse.status})`);
     }
 
     const payload = await loginResponse.json().catch(() => null);
@@ -947,7 +947,7 @@ export class ElectronSshManager {
         'Content-Type': 'application/json',
         Cookie: cookie,
       },
-      body: JSON.stringify({ label: 'OpenChamber Desktop SSH' }),
+      body: JSON.stringify({ label: 'Multichamber Desktop SSH' }),
     });
     if (!tokenResponse.ok) return '';
     const tokenPayload = await tokenResponse.json().catch(() => null);
@@ -1044,7 +1044,7 @@ export class ElectronSshManager {
     throw new Error('SSH ControlMaster connection timed out');
   }
 
-  configuredOpenChamberPassword(instance) {
+  configuredMultichamberPassword(instance) {
     const secret = instance?.auth?.openchamberPassword;
     return secret?.enabled && typeof secret.value === 'string' && secret.value.trim() ? secret.value.trim() : null;
   }
@@ -1071,12 +1071,12 @@ export class ElectronSshManager {
     }
   }
 
-  // Every place OpenChamber may live on the remote host, with the version each
+  // Every place Multichamber may live on the remote host, with the version each
   // one reports. Installs land in the user prefix while an older copy can still
   // sit on PATH, so the caller picks by version instead of trusting PATH order.
-  async remoteOpenChamberCandidates(parsed, controlPath) {
+  async remoteMultichamberCandidates(parsed, controlPath) {
     const script = [
-      `for candidate in ${REMOTE_BIN_CANDIDATES.join(' ')} "$(command -v openchamber 2>/dev/null)"; do`,
+      `for candidate in ${REMOTE_BIN_CANDIDATES.join(' ')} "$(command -v multichamber 2>/dev/null)"; do`,
       '  [ -n "$candidate" ] || continue;',
       '  [ -x "$candidate" ] || continue;',
       `  printf '%s\t%s\n' "$candidate" "$("$candidate" --version 2>/dev/null | head -n 1)";`,
@@ -1095,14 +1095,16 @@ export class ElectronSshManager {
     for (const line of output.split(/\r?\n/)) {
       const [binPath, versionRaw] = line.split('\t');
       const trimmed = (binPath || '').trim();
-      if (!trimmed || seen.has(trimmed)) continue;
+      if (!trimmed || path.posix.basename(trimmed) !== 'multichamber' || seen.has(trimmed)) continue;
       seen.add(trimmed);
       candidates.push({ binPath: trimmed, version: parseVersionToken(versionRaw || '') });
     }
     return candidates;
   }
 
-  async installOpenChamberManaged(parsed, controlPath, version, preferred) {
+  async installMultichamberManaged(parsed, controlPath, version, preferred) {
+    if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version)) throw new Error('Invalid Multichamber release version');
+    const archive = shellQuote(`https://github.com/jibanez-staticduo/multichamber/releases/download/v${version}/multichamber-web-${version}.tgz`);
     const bunPath = await this.resolveRemoteTool(parsed, controlPath, 'bun', [
       REMOTE_BUN_CANDIDATE,
       '"${XDG_CACHE_HOME:-$HOME/.cache}/.bun/bin/bun"',
@@ -1111,10 +1113,10 @@ export class ElectronSshManager {
 
     // bun's global install targets `~/.bun` or `${XDG_CACHE_HOME:-~/.cache}/.bun` (bun 1.3.x XDG-aware);
     // npm is pinned to a prefix in the user's home so it never touches the root-owned global directory.
-    const bunCommand = bunPath ? `${shellQuote(bunPath)} add -g @openchamber/web@${version}` : null;
+    const bunCommand = bunPath ? `${shellQuote(bunPath)} add -g ${archive}` : null;
     const npmCommand = npmPath
       // npm is a node script: an nvm npm finds its node only next to itself.
-      ? `mkdir -p "${REMOTE_USER_PREFIX}" && PATH="$(dirname ${shellQuote(npmPath)}):$PATH" ${shellQuote(npmPath)} install -g --prefix "${REMOTE_USER_PREFIX}" @openchamber/web@${version}`
+      ? `mkdir -p "${REMOTE_USER_PREFIX}" && PATH="$(dirname ${shellQuote(npmPath)}):$PATH" ${shellQuote(npmPath)} install -g --prefix "${REMOTE_USER_PREFIX}" ${archive}`
       : null;
 
     const commands = [];
@@ -1139,7 +1141,7 @@ export class ElectronSshManager {
         lastError = error;
       }
     }
-    throw lastError || new Error('Failed to install OpenChamber on remote host');
+    throw lastError || new Error('Failed to install Multichamber on remote host');
   }
 
   async probeRemoteSystemInfo(parsed, controlPath, port, openchamberPassword) {
@@ -1163,15 +1165,15 @@ export class ElectronSshManager {
     if (isLivenessHttpStatus(infoStatus)) {
       if (isAuthHttpStatus(infoStatus)) {
         if (openchamberPassword && authStatus !== 200) {
-          throw new Error(`Remote OpenChamber requires UI authentication and configured password was rejected (auth status ${authStatus})`);
+          throw new Error(`Remote Multichamber requires UI authentication and configured password was rejected (auth status ${authStatus})`);
         }
         if (isLivenessHttpStatus(healthStatus)) return { info: {}, passwordAccepted, authStatus };
-        throw new Error('Remote OpenChamber requires UI authentication on /api/system/info; configure OpenChamber UI password');
+        throw new Error('Remote Multichamber requires UI authentication on /api/system/info; configure Multichamber UI password');
       }
     } else if (isLivenessHttpStatus(healthStatus)) {
       return { info: {}, passwordAccepted, authStatus };
     } else {
-      throw new Error(`Remote OpenChamber probe failed (info status ${infoStatus}, health status ${healthStatus})`);
+      throw new Error(`Remote Multichamber probe failed (info status ${infoStatus}, health status ${healthStatus})`);
     }
 
     try {
@@ -1196,7 +1198,7 @@ export class ElectronSshManager {
       throw new Error('The opencode CLI is not installed on the remote machine. Install it there, then connect again');
     }
 
-    const secret = this.configuredOpenChamberPassword(instance);
+    const secret = this.configuredMultichamberPassword(instance);
     const remoteBindHost = instance.remoteOpenchamber?.bindHost === '0.0.0.0' ? '0.0.0.0' : '127.0.0.1';
     // Binding the remote server to every interface publishes its UI to the
     // remote machine's whole network, so it may not run without a password.
@@ -1295,7 +1297,7 @@ export class ElectronSshManager {
   // `daemon` marks a server the remote CLI started in the background, the only
   // kind this manager may stop.
   async adoptRunningRemoteServer(instance, parsed, controlPath, binPath) {
-    const password = this.configuredOpenChamberPassword(instance);
+    const password = this.configuredMultichamberPassword(instance);
     const preferredPort = instance.remoteOpenchamber.preferredPort || null;
     const wantsNetwork = instance.remoteOpenchamber.bindHost === '0.0.0.0';
 
@@ -1304,7 +1306,7 @@ export class ElectronSshManager {
       servers = await this.listRemoteServers(parsed, controlPath, binPath);
     } catch (error) {
       // Not knowing what runs there is not the same as nothing running there.
-      this.appendLogWithLevel(instance.id, 'WARN', `Could not list OpenChamber servers on the remote host; an already running one will not be reused: ${error instanceof Error ? error.message : String(error)}`);
+      this.appendLogWithLevel(instance.id, 'WARN', `Could not list Multichamber servers on the remote host; an already running one will not be reused: ${error instanceof Error ? error.message : String(error)}`);
     }
     if (preferredPort) {
       // A pinned port is reused even when the registry does not know the server on it.
@@ -1345,7 +1347,7 @@ export class ElectronSshManager {
         this.appendLogWithLevel(instance.id, 'INFO', `Not reusing the server on remote port ${server.port}: it runs in the foreground with another version or bind address and is left to its process manager`);
         continue;
       }
-      this.appendLogWithLevel(instance.id, 'INFO', `Replacing the managed server on remote port ${server.port}: ${otherVersion ? `it runs OpenChamber ${runningVersion}` : `it is bound to ${server.bindHost}`}`);
+      this.appendLogWithLevel(instance.id, 'INFO', `Replacing the managed server on remote port ${server.port}: ${otherVersion ? `it runs Multichamber ${runningVersion}` : `it is bound to ${server.bindHost}`}`);
       await this.stopRemoteServerBestEffort(parsed, controlPath, server.port, binPath);
       if (await this.remoteServerRunning(parsed, controlPath, server.port, password)) {
         this.appendLogWithLevel(instance.id, 'WARN', `The managed server on remote port ${server.port} did not stop and keeps running`);
@@ -1359,46 +1361,46 @@ export class ElectronSshManager {
   async ensureRemoteServer(instance, parsed, controlPath) {
     if (instance.remoteOpenchamber.mode === 'external') {
       if (!instance.remoteOpenchamber.preferredPort) {
-        throw new Error('External mode requires a preferred remote OpenChamber port');
+        throw new Error('External mode requires a preferred remote Multichamber port');
       }
       const port = instance.remoteOpenchamber.preferredPort;
-      this.setStatus(instance.id, 'server_detecting', 'Probing external OpenChamber server', null, null, port, false, 0, false);
-      await this.probeRemoteSystemInfo(parsed, controlPath, port, this.configuredOpenChamberPassword(instance));
+      this.setStatus(instance.id, 'server_detecting', 'Probing external Multichamber server', null, null, port, false, 0, false);
+      await this.probeRemoteSystemInfo(parsed, controlPath, port, this.configuredMultichamberPassword(instance));
       return { remotePort: port, startedByUs: false, ownsRemoteServer: false, remoteBinPath: null };
     }
 
-    this.setStatus(instance.id, 'remote_probe', 'Checking remote OpenChamber installation');
-    const installed = await this.remoteOpenChamberCandidates(parsed, controlPath);
+    this.setStatus(instance.id, 'remote_probe', 'Checking remote Multichamber installation');
+    const installed = await this.remoteMultichamberCandidates(parsed, controlPath);
     let binary = installed.find((candidate) => candidate.version === this.appVersion) || null;
 
     if (!binary) {
       const existing = installed[0] || null;
       if (existing) {
-        this.setStatus(instance.id, 'updating', `Updating remote OpenChamber from ${existing.version || 'unknown'} to ${this.appVersion}`);
+        this.setStatus(instance.id, 'updating', `Updating remote Multichamber from ${existing.version || 'unknown'} to ${this.appVersion}`);
       } else {
-        this.setStatus(instance.id, 'installing', 'Installing OpenChamber on remote host');
+        this.setStatus(instance.id, 'installing', 'Installing Multichamber on remote host');
       }
-      await this.installOpenChamberManaged(parsed, controlPath, this.appVersion, instance.remoteOpenchamber.installMethod);
+      await this.installMultichamberManaged(parsed, controlPath, this.appVersion, instance.remoteOpenchamber.installMethod);
 
-      const afterInstall = await this.remoteOpenChamberCandidates(parsed, controlPath);
-      binary = afterInstall.find((candidate) => candidate.version === this.appVersion) || afterInstall[0] || existing;
+      const afterInstall = await this.remoteMultichamberCandidates(parsed, controlPath);
+      binary = afterInstall.find((candidate) => candidate.version === this.appVersion);
       if (!binary) {
-        throw new Error('OpenChamber was installed on the remote host but no openchamber binary could be found');
+        throw new Error('Multichamber was installed on the remote host but no matching multichamber binary could be found');
       }
     }
 
-    this.setStatus(instance.id, 'server_detecting', 'Detecting managed OpenChamber server');
+    this.setStatus(instance.id, 'server_detecting', 'Detecting managed Multichamber server');
     const adopted = await this.adoptRunningRemoteServer(instance, parsed, controlPath, binary.binPath);
     let remotePort = adopted?.port || null;
     let startedByUs = false;
     if (!remotePort) {
-      this.setStatus(instance.id, 'server_starting', 'Starting managed OpenChamber server');
+      this.setStatus(instance.id, 'server_starting', 'Starting managed Multichamber server');
       const desiredPort = instance.remoteOpenchamber.preferredPort || randomPortCandidate(instance.id);
       remotePort = await this.startRemoteServerManaged(parsed, controlPath, instance, desiredPort, binary.binPath);
       startedByUs = true;
     }
-    if (!(await this.remoteServerRunning(parsed, controlPath, remotePort, this.configuredOpenChamberPassword(instance)))) {
-      throw new Error('Managed OpenChamber server failed to become reachable');
+    if (!(await this.remoteServerRunning(parsed, controlPath, remotePort, this.configuredMultichamberPassword(instance)))) {
+      throw new Error('Managed Multichamber server failed to become reachable');
     }
     // An adopted daemon is as much this instance's server as one it just
     // started: with keepRunning off, disconnecting stops either.
@@ -1541,7 +1543,7 @@ export class ElectronSshManager {
 
     const localUrl = `http://127.0.0.1:${localPort}`;
     const label = instance.nickname?.trim() || parsed.destination || id;
-    const clientToken = await this.issueClientToken(localUrl, this.configuredOpenChamberPassword(instance));
+    const clientToken = await this.issueClientToken(localUrl, this.configuredMultichamberPassword(instance));
     await this.updateHostRuntime(id, label, localUrl, clientToken);
     if (instance.localForward?.preferredLocalPort !== localPort) {
       await this.persistLocalPort(id, localPort);

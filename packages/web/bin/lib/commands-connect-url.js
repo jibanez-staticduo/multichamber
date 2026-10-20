@@ -66,7 +66,7 @@ function createSettingsAccessors() {
   return createSettingsAccessorsModule({
     fsPromises: fs.promises,
     path,
-    dataDir: getOpenChamberDataDir(),
+    dataDir: getMultichamberDataDir(),
     settingsFileName: 'settings.json',
   });
 }
@@ -84,7 +84,7 @@ async function buildRelayPairingCandidate() {
   const relayKeyStore = createRelayKeyStore({
     fsPromises: fs.promises,
     path,
-    dataDir: getOpenChamberDataDir(),
+    dataDir: getMultichamberDataDir(),
     ...accessors,
   });
   const identityRuntime = createRelayIdentityRuntime({ crypto, relayKeyStore });
@@ -107,7 +107,7 @@ async function buildRelayPairingCandidate() {
 // session created here is redeemable by the live server. createPairingSession
 // only writes the store (no server needed to mint); redeem is served by the host.
 function createCliPairingRuntime() {
-  const dataDir = getOpenChamberDataDir();
+  const dataDir = getMultichamberDataDir();
   const remoteClientAuthRuntime = createRemoteClientAuthRuntime({
     fsPromises: fs.promises,
     path,
@@ -123,7 +123,7 @@ function createCliPairingRuntime() {
   });
 }
 
-// Mirror of encodePairingConnectionPayload in @openchamber/ui (the bin cannot
+// Mirror of encodePairingConnectionPayload in @multichamber/ui (the bin cannot
 // import the UI package). Keep in sync: v2 payload → base64url(JSON) in the URL
 // query, so the one-time secret rides the link, never the network.
 function encodePairingConnectUrl(payload) {
@@ -212,7 +212,7 @@ function normalizeServerUrlForConnection(value) {
   }
 }
 
-function getOpenChamberDataDir() {
+function getMultichamberDataDir() {
   return process.env.OPENCHAMBER_DATA_DIR
     ? path.resolve(process.env.OPENCHAMBER_DATA_DIR)
     : path.join(os.homedir(), '.config', 'openchamber');
@@ -231,7 +231,7 @@ async function displayTunnelQrCode(url) {
 
 function createConnectUrlCommand({ serveCommand }) {
   return async function connectUrlCommand(options = {}) {
-    assertSafeBrowserPort(options.port, { context: 'OpenChamber connect-url' });
+    assertSafeBrowserPort(options.port, { context: 'Multichamber connect-url' });
     const explicitServerUrl = options.server ? normalizeServerUrlForConnection(options.server) : null;
     if (options.server && !explicitServerUrl) {
       throw new TunnelCliError('Invalid --server URL. Use an http:// or https:// URL.', EXIT_CODE.USAGE_ERROR);
@@ -296,9 +296,9 @@ function createConnectUrlCommand({ serveCommand }) {
       return;
     }
 
-    clackIntro('OpenChamber pairing link');
+    clackIntro('Multichamber pairing link');
     if (serverState.autoStarted) {
-      logStatus('success', `started OpenChamber on port ${options.port}`);
+      logStatus('success', `started Multichamber on port ${options.port}`);
     }
     logStatus('success', connectUrl);
     clackLog.info(`Server URL: ${serverUrl}`);
@@ -312,15 +312,15 @@ function createConnectUrlCommand({ serveCommand }) {
       clackLog.info(`Fingerprint: ${pairing.fingerprint}`);
     }
     if (resolvedServerUrl.source === 'lan-detected') {
-      clackLog.info('Detected a LAN address because OpenChamber is bound to all interfaces. Use --server to override it.');
+      clackLog.info('Detected a LAN address because Multichamber is bound to all interfaces. Use --server to override it.');
     } else if (resolvedServerUrl.source === 'loopback-fallback') {
-      clackLog.warn('OpenChamber is bound to all interfaces, but no LAN address was detected. Use --server to provide a reachable URL.');
+      clackLog.warn('Multichamber is bound to all interfaces, but no LAN address was detected. Use --server to provide a reachable URL.');
     } else if (isLoopbackServerUrl(serverUrl)) {
       // The advertised address does not establish how the server is bound.
       // Localhost can also be intentional, including Windows-to-WSL forwarding.
       logStatus('info', '[LOOPBACK_URL]', 'This link uses localhost for direct connections. For another device, use --server with a reachable address or include --relay.');
     }
-    clackLog.info('Scan or paste this link into another OpenChamber client. It is single-use and expires.');
+    clackLog.info('Scan or paste this link into another Multichamber client. It is single-use and expires.');
     if (options.qr === true) {
       await displayTunnelQrCode(connectUrl);
     }

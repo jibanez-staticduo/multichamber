@@ -2,7 +2,7 @@ import React from 'react';
 
 import { DEFAULT_CONTEXT_LIMIT } from '@/components/chat/work-status/contextUsage';
 import { useSubagentCostRollup } from '@/components/chat/work-status/useSubagentCostRollup';
-import { useContextWindowLimits } from '@/hooks/useContextWindowLimits';
+import { useNativeContextFill, useContextWindowLimits } from '@/hooks/useContextWindowLimits';
 import { useI18n } from '@/lib/i18n';
 import type { Message } from '@/lib/opencode/model';
 import { formatMoney } from '@/lib/money';
@@ -11,18 +11,18 @@ import { findLatestContextFill } from '@/stores/utils/tokenUtils';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessionMessagesSelector } from '@/sync/sync-context';
 
-type ContextFillReading = { state: 'measured'; totalTokens: number } | { state: 'compacted' } | null;
+type ContextFillReading = { state: 'measured'; totalTokens: number; native?: boolean; window?: number | null } | { state: 'compacted' } | null;
 
 const selectContextFill = (messages: Message[]): ContextFillReading => {
   const fill = findLatestContextFill(messages);
   if (!fill) return null;
-  return fill.state === 'measured' ? { state: 'measured', totalTokens: fill.totalTokens } : { state: 'compacted' };
+  return fill.state === 'measured' ? { state: 'measured', totalTokens: fill.totalTokens, native: fill.native, window: fill.contextWindow } : { state: 'compacted' };
 };
 
 const isSameContextFill = (a: ContextFillReading, b: ContextFillReading): boolean => {
   if (a === null || b === null) return a === b;
   if (a.state !== b.state) return false;
-  return a.state === 'compacted' || (b.state === 'measured' && a.totalTokens === b.totalTokens);
+  return a.state === 'compacted' || (b.state === 'measured' && a.totalTokens === b.totalTokens && a.window === b.window && a.native === b.native);
 };
 
 /**
@@ -33,9 +33,11 @@ const isSameContextFill = (a: ContextFillReading, b: ContextFillReading): boolea
 const useCurrentContextReading = () => {
   const sessionId = useSessionUIStore((state) => state.currentSessionId);
   const directory = useSessionUIStore((state) => state.currentSessionDirectory) ?? undefined;
-  const fill = useSessionMessagesSelector(sessionId ?? '', directory, selectContextFill, isSameContextFill);
+  const messageFill = useSessionMessagesSelector(sessionId ?? '', directory, selectContextFill, isSameContextFill);
   const { context } = useContextWindowLimits(sessionId, directory);
-  const limit = context > 0 ? context : DEFAULT_CONTEXT_LIMIT;
+  const nativeContext = useNativeContextFill(sessionId, directory);
+  const fill = nativeContext ? nativeContext.state === 'compacted' ? { state: 'compacted' as const } : { state: 'measured' as const, totalTokens: nativeContext.tokens } : messageFill;
+  const limit = nativeContext ? nativeContext.window ?? 0 : messageFill?.state === 'measured' && messageFill.native ? messageFill.window ?? 0 : context > 0 ? context : DEFAULT_CONTEXT_LIMIT;
   return { sessionId, fill, limit };
 };
 
@@ -58,7 +60,7 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
  */
 export const ContextUsageRingIcon: React.FC<{ className?: string }> = ({ className }) => {
   const { fill, limit } = useCurrentContextReading();
-  const percent = fill?.state === 'measured' ? Math.min(100, (fill.totalTokens / limit) * 100) : 0;
+  const percent = fill?.state === 'measured' && limit > 0 ? Math.min(100, (fill.totalTokens / limit) * 100) : 0;
 
   return (
     <svg viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`} className={cn('shrink-0', className)} aria-hidden="true">
@@ -104,7 +106,7 @@ export const ContextRailTooltipDetails: React.FC = () => {
     fill.state === 'measured'
       ? t('contextUsage.tooltip.usedTokens', { tokens: formatTokens(fill.totalTokens) })
       : t('contextUsage.compacted.description'),
-    t('contextUsage.tooltip.contextLimit', { tokens: formatTokens(limit) }),
+    ...(limit > 0 ? [t('contextUsage.tooltip.contextLimit', { tokens: formatTokens(limit) })] : []),
     ...(totalCost !== null && totalCost > 0 ? [t('contextUsage.tooltip.cost', { cost: formatMoney(totalCost) })] : []),
   ];
 

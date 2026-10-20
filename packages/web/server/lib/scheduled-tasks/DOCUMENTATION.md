@@ -1,13 +1,13 @@
 # Scheduled Tasks module
 
-Server-owned scheduled task runtime and routes for OpenChamber-only automation.
+Server-owned scheduled task runtime and routes for Multichamber-only automation.
 
 ## Scope
 
 - Per-project scheduled task persistence is owned by `packages/web/server/lib/projects/project-config.js`.
 - Markdown loop discovery/parsing is owned by `packages/web/server/lib/scheduled-tasks/loops.js`.
 - Runtime orchestration and execution is owned by `packages/web/server/lib/scheduled-tasks/runtime.js`.
-- This module is OpenChamber feature logic; it is intentionally separate from OpenCode proxy/runtime internals.
+- This module is Multichamber feature logic; it is intentionally separate from OpenCode proxy/runtime internals.
 - The chats scope is owned by `packages/web/server/lib/scheduled-tasks/chats-scope.js`.
 
 ## Chats scope
@@ -33,12 +33,12 @@ scheduled like one more project, with three differences:
   directory inside the chats root to the chats scope, after checking registered
   projects, so an agent working in a chat schedules into chats.
 
-The chats root is `OPENCHAMBER_CHATS_DIR` (default `<config root>/chats`). The
+The chats root is `MULTICHAMBER_CHATS_DIR` (default `<config root>/chats`). The
 VS Code extension has no chats, so its UI does not offer the scope.
 
 ## Cross-instance occurrence claiming
 
-Multiple OpenChamber server processes can share the same on-disk project config
+Multiple Multichamber server processes can share the same on-disk project config
 (for example CLI `serve` on port 3000 and the Electron desktop server on port
 57123). Each process keeps its own timers, so without coordination a daily (or
 weekly / cron / once) slot would dispatch twice.
@@ -58,7 +58,7 @@ in shared project config under the project write lock:
   other project's tasks are still scheduled. Only `listProjects` failing
   aborts the sync as a whole. `syncProject` for one project still throws, so
   a route for that project reports the failure.
-- The sharing processes may run different OpenChamber versions. Normalization
+- The sharing processes may run different Multichamber versions. Normalization
   keeps only the fields a build knows, so every writer persists tasks it did
   not change verbatim from disk and swaps only `state` onto a task whose state
   it updated; a task goes out normalized only when it was deliberately
@@ -166,7 +166,7 @@ stored next to `useDefaults` is kept only for when the task is pinned again.
   - Timer scheduling and queueing
   - Concurrency controls
   - Session create + prompt_async execution
-  - Emits OpenChamber task-run events
+  - Emits Multichamber task-run events
 
 - `packages/web/server/lib/scheduled-tasks/loops.js`
   - Discovery of `.agents/loops/*.md` (project scope, ancestors up to the worktree root) and `~/.agents/loops/*.md` (user scope)
@@ -178,7 +178,7 @@ stored next to `useDefaults` is kept only for when the task is pinned again.
   - Listing tasks reconciles loop files first, so opening the Scheduled Tasks UI discovers file additions, edits, and removals without a server restart
   - Loop-file endpoints toggle `enabled` in frontmatter or delete the authoritative markdown file, then reconcile the project
   - Manual run endpoint
-  - OpenChamber events SSE stream endpoint
+  - Multichamber events SSE stream endpoint
 
 ## Loop file format
 

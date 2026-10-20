@@ -1,3 +1,5 @@
+import './lib/multichamber-env.js';
+import { canonicalMultichamberApi } from './lib/multichamber-routes.js';
 import { installOpenCodeV2, supportsOpenCodeV2Install } from './lib/opencode/v2-install.js';
 import { describeOpenCodeCompatibility, readOpenCodeCliVersion, readExternalOpenCodeVersion } from './lib/opencode/compatibility.js';
 import 'reflect-metadata';
@@ -73,7 +75,16 @@ import {
   registerCommonRequestMiddleware,
   registerServerStatusRoutes,
 } from './lib/opencode/core-routes.js';
-import { registerOpenChamberRoutes } from './lib/opencode/openchamber-routes.js';
+import { registerMultichamberRoutes } from './lib/opencode/multichamber-routes.js';
+import { registerForkUpdateRoutes } from './lib/fork-update/routes.js';
+import { createHarnessManager } from './lib/harnesses/runtime.js';
+import { createDefaultsValidator, registerHarnessRoutes } from './lib/harnesses/routes.js';
+import { configureSessionHarnesses } from './lib/harnesses/session-client.js';
+import { createClaudeSurface, isClaudeSessionId } from './lib/claude/routes.js';
+import { createCodexSurface, isCodexSessionId } from './lib/codex/routes.js';
+import { createLiveSessionRegistry } from './lib/claude/live-sessions.js';
+import { createRemoteAttachments } from './lib/claude/remote-attach.js';
+import { createEngineSessionMetadata } from './lib/openchamber-sessions/engine-metadata-store.js';
 import { createServerUtilsRuntime } from './lib/opencode/server-utils-runtime.js';
 import { createStaticRoutesRuntime } from './lib/opencode/static-routes-runtime.js';
 import { createSettingsRuntime } from './lib/opencode/settings-runtime.js';
@@ -119,7 +130,7 @@ import { guestServiceRegistryDir } from './lib/guests/service-registry.js';
 import { findInstalledGuest } from './lib/guests/catalog.js';
 import { extensionsPersistPath } from './lib/guests/persist.js';
 import { createGuestSurfaceRuntime } from './lib/guests/surface.js';
-import { BROWSER_PROVIDER_IDLE_MS } from '@openchamber/sdk';
+import { BROWSER_PROVIDER_IDLE_MS } from '@multichamber/sdk';
 import { createProjectConfigRuntime } from './lib/projects/project-config.js';
 import { ensureChatsDir, migrateLegacyUserDirs } from './lib/data-dir-migration.js';
 import { createProjectContextRuntime } from './lib/project-context/runtime.js';
@@ -154,13 +165,13 @@ import { createDevTunnelRuntime } from './lib/dev-tunnel/runtime.js';
 import { registerBrowserControlRoutes } from './lib/browser-control/routes.js';
 import { createManagedConfigRuntime } from './lib/opencode/managed-config-file.js';
 import { prepareInstanceDir } from './lib/opencode/instance-dir.js';
-import { createOpenChamberSessionService } from './lib/openchamber-sessions/routes.js';
+import { createMultichamberSessionService } from './lib/openchamber-sessions/routes.js';
 import { createSessionMetadataStore, createOpenCodeSessionMetadata } from './lib/openchamber-sessions/session-metadata-store.js';
 import { createOpenCodeClient } from './lib/openchamber-sessions/opencode-client.js';
 import { createScheduledTaskService } from './lib/scheduled-tasks/service.js';
-import { createOpenChamberControlService } from './lib/openchamber-control/service.js';
+import { createMultichamberControlService } from './lib/openchamber-control/service.js';
 import { createPluginNotificationEmitter } from './lib/notifications/emit-route.js';
-import { OpenChamberControlError } from './lib/openchamber-control/error.js';
+import { MultichamberControlError } from './lib/openchamber-control/error.js';
 import { createSessionLinker } from './lib/openchamber-sessions/session-link.js';
 import { createFileOpenRequester } from './lib/openchamber-control/file-open.js';
 import { applyConnectAttemptTimeout } from './lib/network-defaults.js';
@@ -174,10 +185,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DEFAULT_PORT = 3000;
-const DESKTOP_NOTIFY_PREFIX = '[OpenChamberDesktopNotify] ';
+const DESKTOP_NOTIFY_PREFIX = '[MultichamberDesktopNotify] ';
 const uiNotificationClients = new Set();
 const uiNotificationWsClients = new Set();
-const uiOpenChamberEventClients = new Set();
+const uiMultichamberEventClients = new Set();
 const HEALTH_CHECK_INTERVAL = 15000;
 const SHUTDOWN_TIMEOUT = 10000;
 const MODELS_DEV_API_URL = 'https://models.dev/api.json';
@@ -313,14 +324,15 @@ const sanitizeModelRefs = (...args) => settingsNormalizationRuntime.sanitizeMode
 const sanitizeSkillCatalogs = (...args) => settingsNormalizationRuntime.sanitizeSkillCatalogs(...args);
 const sanitizeProjects = (...args) => settingsNormalizationRuntime.sanitizeProjects(...args);
 
-// Every OpenChamber-owned file and folder hangs off one root: the default
-// `~/.config/openchamber`, or `OPENCHAMBER_DATA_DIR` when set. The user
+// Every Multichamber-owned file and folder hangs off one root: the default
+// `~/.config/multichamber`, or an explicitly selected data directory. The user
 // folders (`projects/`, `themes/`, `speech-models/`) are copied into a custom
 // root once at startup (`migrateLegacyUserDirs`), because they used to ignore
 // the variable.
-const OPENCHAMBER_DEFAULT_CONFIG_ROOT = path.join(os.homedir(), '.config', 'openchamber');
-const OPENCHAMBER_USER_CONFIG_ROOT = process.env.OPENCHAMBER_DATA_DIR
-  ? path.resolve(process.env.OPENCHAMBER_DATA_DIR)
+const OPENCHAMBER_DEFAULT_CONFIG_ROOT = path.join(os.homedir(), '.config', 'multichamber');
+const selectedDataDirectory = process.env.MULTICHAMBER_DATA_DIR || process.env.OPENCHAMBER_DATA_DIR;
+const OPENCHAMBER_USER_CONFIG_ROOT = selectedDataDirectory
+  ? path.resolve(selectedDataDirectory)
   : OPENCHAMBER_DEFAULT_CONFIG_ROOT;
 const OPENCHAMBER_USER_THEMES_DIR = path.join(OPENCHAMBER_USER_CONFIG_ROOT, 'themes');
 const OPENCHAMBER_PROJECTS_CONFIG_DIR = path.join(OPENCHAMBER_USER_CONFIG_ROOT, 'projects');
@@ -540,7 +552,7 @@ const notificationEmitterRuntime = createNotificationEmitterRuntime({
   getDesktopNotifyEnabled: () => ENV_DESKTOP_NOTIFY,
   desktopNotifyPrefix: DESKTOP_NOTIFY_PREFIX,
   getUiNotificationClients: () => uiNotificationClients,
-  getOpenChamberEventClients: () => uiOpenChamberEventClients,
+  getMultichamberEventClients: () => uiMultichamberEventClients,
   getBroadcastGlobalUiEvent: () => broadcastGlobalUiEvent,
 });
 
@@ -553,22 +565,29 @@ const broadcastGlobalUiEvent = createGlobalUiEventBroadcaster({
 });
 const broadcastUiNotification = (...args) => notificationEmitterRuntime.broadcastUiNotification(...args);
 
-// OpenChamber-owned events (queue changes, archive state) travel on the shared
+// Multichamber-owned events (queue changes, archive state) travel on the shared
 // control stream, not on OpenCode's event proxy. One broadcaster so every owner
 // reaches the same clients.
-const broadcastOpenChamberUiEvent = createGlobalUiEventBroadcaster({
-  sseClients: uiOpenChamberEventClients,
+const broadcastMultichamberUiEvent = createGlobalUiEventBroadcaster({
+  sseClients: uiMultichamberEventClients,
   wsClients: uiNotificationWsClients,
   writeSseEvent,
 });
 
 /**
- * Per-session OpenChamber state (goal progress, the assist recap, the
+ * Per-session Multichamber state (goal progress, the assist recap, the
  * obligatory-context cursor, pinned notes) lives in OpenCode's session
  * metadata. The store merge-patches it there and migrates what older
- * OpenChamber versions kept in `sessions-metadata.json`.
+ * Multichamber versions kept in `sessions-metadata.json`.
  */
+const engineSessionMetadata = createEngineSessionMetadata({
+  dataDir: OPENCHAMBER_DATA_DIR,
+  owns: (id) => isClaudeSessionId(id) || isCodexSessionId(id),
+});
+void engineSessionMetadata.load().catch((error) => console.warn('[engines] Metadata unavailable:', error.message));
+
 const sessionMetadataStore = createSessionMetadataStore({
+  engineMetadata: engineSessionMetadata,
   dataDir: OPENCHAMBER_DATA_DIR,
   // Called, not captured: the OpenCode URL and auth helpers are declared
   // further down and only ever used once a request arrives.
@@ -584,10 +603,13 @@ const persistSessionMetadataPatch = async (sessionID, patch, { directory = '' } 
   const metadata = await sessionMetadataStore.setSessionMetadata(sessionID, patch, { directory });
   // The full merged object, so a client that missed an earlier patch does not
   // have to reconstruct it.
-  broadcastOpenChamberUiEvent({
+  broadcastMultichamberUiEvent({
     type: 'openchamber:session-metadata',
     properties: { sessionID, metadata },
   });
+  if (isClaudeSessionId(sessionID) || isCodexSessionId(sessionID)) {
+    void (isCodexSessionId(sessionID) ? codexSurface : claudeSurface).announceSession(sessionID).catch((error) => console.warn('[engines] Metadata announcement failed:', error.message));
+  }
   // The write itself arms the goal loop: it is the authoritative signal and
   // does not depend on the event stream being connected.
   // Called, not captured: the runtime is declared further down.
@@ -602,7 +624,7 @@ const persistSessionMetadataPatch = async (sessionID, patch, { directory = '' } 
 const updateSessionMetadataWith = async (sessionID, decide, { directory = '' } = {}) => {
   const result = await sessionMetadataStore.updateSessionMetadata(sessionID, decide, { directory });
   if (result.changed) {
-    broadcastOpenChamberUiEvent({
+    broadcastMultichamberUiEvent({
       type: 'openchamber:session-metadata',
       properties: { sessionID, metadata: result.metadata },
     });
@@ -646,7 +668,7 @@ const projectContextRuntime = createProjectContextRuntime({
   path,
   projectsDirPath: OPENCHAMBER_PROJECTS_CONFIG_DIR,
   resolveSharedPlansDir: (projectId) => projectConfigRuntime.resolveSharedPlansDir(projectId),
-  onChanged: (projectId) => broadcastOpenChamberUiEvent({
+  onChanged: (projectId) => broadcastMultichamberUiEvent({
     type: 'openchamber:project-context-changed',
     properties: { projectId },
   }),
@@ -968,12 +990,12 @@ const sessionAssistRuntime = createSessionAssistRuntime({
   persistSessionAssist: (sessionID, directory, assist) =>
     persistSessionMetadataPatch(sessionID, { openchamber: { assist } }, { directory }),
   // Declared further down; only ever called after startup.
-  isSessionArchived: (sessionID) => openChamberSessionService.archiveStore.isArchived(sessionID),
+  isSessionArchived: (sessionID) => multichamberSessionService.archiveStore.isArchived(sessionID),
   // Declared further down; only ever called after startup.
   evaluateTurn: (input) => sessionWorkRuntime.evaluateTurnEnd(input),
   lineage: sessionLineage,
   // Clients hold a left chat's OpenCode location until its assist is done.
-  onPendingChange: ({ sessionId, directory, pending }) => broadcastOpenChamberUiEvent({
+  onPendingChange: ({ sessionId, directory, pending }) => broadcastMultichamberUiEvent({
     type: 'openchamber:session-assist',
     properties: { sessionID: sessionId, directory: directory || null, pending },
   }),
@@ -1056,13 +1078,17 @@ const sessionKnowledgeRuntime = createSessionKnowledgeRuntime({
     return settings?.agentRenderToolEnabled !== false;
   },
   readSessionMetadata: readStoredSessionMetadata,
-  // Pins are read from and written to OpenChamber's own store.
+  // Pins are read from and written to Multichamber's own store.
   persistSessionMetadata: (sessionID, directory, patch) => persistSessionMetadataPatch(sessionID, patch, { directory }),
   instructionEntries: {
-    put: (sessionID, directory, key, value) => openCodeSessionClient(directory)
-      .session.instructions.entry.put({ sessionID, key, value }),
-    remove: (sessionID, directory, key) => openCodeSessionClient(directory)
-      .session.instructions.entry.remove({ sessionID, key }),
+    put: (sessionID, directory, key, value) => {
+      const owner = nativeSurfaceFor(sessionID);
+      return owner ? owner.sessionClient.putInstruction(sessionID, key, value) : openCodeSessionClient(directory).session.instructions.entry.put({ sessionID, key, value });
+    },
+    remove: (sessionID, directory, key) => {
+      const owner = nativeSurfaceFor(sessionID);
+      return owner ? owner.sessionClient.removeInstruction(sessionID, key) : openCodeSessionClient(directory).session.instructions.entry.remove({ sessionID, key });
+    },
   },
 });
 
@@ -1079,7 +1105,7 @@ const sessionWarmingRuntime = createSessionWarmingRuntime({
   dataDir: OPENCHAMBER_DATA_DIR,
   buildOpenCodeUrl,
   getOpenCodeAuthHeaders,
-  broadcast: broadcastOpenChamberUiEvent,
+  broadcast: broadcastMultichamberUiEvent,
 });
 sessionWarmingRuntime.start();
 
@@ -1098,7 +1124,7 @@ const routingRuntime = createRoutingRuntime({
   dataDir: OPENCHAMBER_DATA_DIR,
   buildOpenCodeUrl,
   getOpenCodeAuthHeaders,
-  broadcastGlobalUiEvent: broadcastOpenChamberUiEvent,
+  broadcastGlobalUiEvent: broadcastMultichamberUiEvent,
   isSessionWarm: (sessionId, cacheLifetimeMs) => sessionWarmingRuntime.isSessionWarm(sessionId, cacheLifetimeMs),
 });
 
@@ -1111,7 +1137,7 @@ const sessionWorkRuntime = createSessionWorkRuntime({
   jev: createJevClient(),
   readMetadata: (sessionID, directory) => sessionMetadataStore.get(sessionID, { directory }),
   updateMetadata: updateSessionMetadataWith,
-  isSessionArchived: (sessionID) => openChamberSessionService.archiveStore.isArchived(sessionID),
+  isSessionArchived: (sessionID) => multichamberSessionService.archiveStore.isArchived(sessionID),
   chatRoots: [path.join(OPENCHAMBER_USER_CONFIG_ROOT, 'chats'), OPENCHAMBER_CHATS_DIR],
   lineage: sessionLineage,
 });
@@ -1141,13 +1167,17 @@ notificationTriggerRuntime.setGetIsSessionAutoAccepting(
 // Queued follow-up messages are delivered by the server so a closed tab or a
 // dropped connection no longer strands them (VS Code keeps its UI-side queue).
 const messageQueueRuntime = createMessageQueueRuntime({
+  getEngineTransport: (id) => {
+    try { return isCodexSessionId(id) ? codexSurface.queueTransport : isClaudeSessionId(id) ? claudeSurface.queueTransport : null; }
+    catch { return null; }
+  },
   globalEventHub: globalMessageStreamHub,
   buildOpenCodeUrl,
   getOpenCodeAuthHeaders,
   sessionKnowledgeRuntime,
-  // OpenCode's event SSE proxy cannot carry OpenChamber-owned events. Use the
+  // OpenCode's event SSE proxy cannot carry Multichamber-owned events. Use the
   // shared control stream for SSE clients and the existing WS fan-out.
-  broadcastGlobalUiEvent: broadcastOpenChamberUiEvent,
+  broadcastGlobalUiEvent: broadcastMultichamberUiEvent,
   resolveAutoSelection: (send) => routingRuntime.resolveAutoSelection(send),
   persistSessionGoal: (sessionID, directory, goal) =>
     persistSessionMetadataPatch(sessionID, { openchamber: { goal } }, { directory }),
@@ -1167,7 +1197,7 @@ const dispatchResultsRuntime = createDispatchResultsRuntime({
   getOpenCodeAuthHeaders,
   dataDir: OPENCHAMBER_DATA_DIR,
   // Declared further down; only ever called after startup.
-  isSessionArchived: (sessionID) => openChamberSessionService.archiveStore.isArchived(sessionID),
+  isSessionArchived: (sessionID) => multichamberSessionService.archiveStore.isArchived(sessionID),
 });
 dispatchResultsRuntime.start();
 
@@ -1208,7 +1238,7 @@ globalMessageStreamHub.subscribeEvent((event) => {
   // The hub translates v2 wire events into the server's vocabulary once; these
   // consumers were written against it and stay unaware of the wire shape.
   for (const payload of event?.translated?.() ?? []) {
-    // The user cancelled the turn: stop the OpenChamber tool actions that
+    // The user cancelled the turn: stop the Multichamber tool actions that
     // turn still has running (a browser action, a memory write). OpenCode 2
     // gives the plugin no abort signal, so this is where the cancel lands.
     if (payload.type === 'session.idle' && payload.properties?.aborted === true) {
@@ -1217,16 +1247,17 @@ globalMessageStreamHub.subscribeEvent((event) => {
     sessionLineage.observe(payload);
     sessionAssistRuntime.processPayload(payload, directory || payload.properties?.directory || '');
     sessionWorkRuntime.processPayload(payload, directory || payload.properties?.directory || '');
+    const nativeSessionId = payload.properties?.sessionID || payload.properties?.info?.sessionID;
     sessionGoalRuntime.processPayload(payload, directory || payload.properties?.directory || '');
     contextObligatoryRuntime.processPayload(payload, directory || payload.properties?.directory || '');
-    sessionWarmingRuntime.processPayload(payload);
+    if (!isClaudeSessionId(nativeSessionId) && !isCodexSessionId(nativeSessionId)) sessionWarmingRuntime.processPayload(payload);
     linearSessionStatusRuntime.processPayload(payload);
   }
 });
 
 /**
  * Browser bridges hand us the raw v2 wire payload (they forward it untouched to
- * the client). The synthetic OpenChamber frames the UI also expects are derived
+ * the client). The synthetic Multichamber frames the UI also expects are derived
  * from the translated event, so the translation happens here.
  */
 const processForwardedEventPayload = (payload, emitSyntheticEvent, { spaceId = null } = {}) => {
@@ -1289,10 +1320,113 @@ const processForwardedServerEvent = (payload, emitSyntheticEvent, spaceId = null
 };
 
 
+const claudeSurface = createClaudeSurface({
+  crypto,
+  fsPromises: fs.promises,
+  // The sidebar groups a session under a registered project (settings.json);
+  // a Claude transcript is attributed to the project that contains it.
+  readProjects: async () => {
+    const settings = await readSettingsFromDisk();
+    return (Array.isArray(settings?.projects) ? settings.projects : [])
+      .map((project, index) => ({
+        id: typeof project?.id === 'string' && project.id ? project.id : `project-${index}`,
+        worktree: typeof project?.path === 'string' ? project.path.trim().replace(/\/$/, '') : '',
+      }))
+      .filter((project) => project.worktree);
+  },
+  // Multichamber's own settings, so its Defaults for a Claude session (model,
+  // thinking level, mode) outrank Claude Code's ~/.claude/settings.json.
+  readAppSettings: async () => readSettingsFromDisk(),
+  // Archive state and titles staged before a session's first turn: Claude Code
+  // owns the transcripts, Multichamber owns this overlay.
+  overlayFilePath: path.join(OPENCHAMBER_DATA_DIR, 'claude-sessions.json'),
+  // Archiving from the UI writes Multichamber's archive store; read lazily, the
+  // store is created with the session service further down.
+  getArchivedSessions: () => multichamberSessionService.archiveStore.getAll(),
+  // Multichamber's own per-session metadata (pins, /btw links, knowledge
+  // cursor) for Claude sessions, laid over each record this surface serves.
+  getStoredMetadata: async (publicId) => engineSessionMetadata.read(publicId),
+  peekStoredMetadata: (publicId) => engineSessionMetadata.peek(publicId),
+  forgetStoredMetadata: (publicId) => engineSessionMetadata.remove(publicId),
+  // Opt-in: link every Claude process Multichamber starts to claude.ai / the
+  // Claude app. The base URL override is for hosts whose settings route the
+  // CLI through a local proxy, which Remote Control refuses.
+  // Claude Code's own registry of running CLI processes: a session live in
+  // one of them is followed read-only and must be taken over to be written.
+  liveRegistry: createLiveSessionRegistry({
+    fsPromises: fs.promises,
+    sessionsDir: path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'), 'sessions'),
+  }),
+  // A session live elsewhere and linked to claude.ai is written through its
+  // Remote Control bridge, as Claude Desktop does, with the CLI's own login.
+  remoteAttach: createRemoteAttachments({
+    readAccessToken: async () => {
+      const credentials = path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'), '.credentials.json');
+      try {
+        return JSON.parse(await fs.promises.readFile(credentials, 'utf8'))?.claudeAiOauth?.accessToken || '';
+      } catch {
+        return '';
+      }
+    },
+  }),
+  remoteControl: {
+    enabled: ['1', 'true'].includes(String(process.env.OPENCHAMBER_CLAUDE_REMOTE_CONTROL || '').toLowerCase()),
+    baseUrl: process.env.OPENCHAMBER_CLAUDE_BASE_URL?.trim() || undefined,
+  },
+  // A session set to auto-accept answers Claude Code's permission prompts too,
+  // through the same safety net: the auto-accept runtime only watches
+  // OpenCode's stream, and the UI hides requests of an auto-accepting session.
+  isAutoAccepting: (sessionId, directory) => permissionAutoAcceptRuntime.isSessionAutoAccepting(sessionId, directory),
+  evaluatePermission: (permission, directory) => routingRuntime.evaluatePermission(permission, directory),
+  publishEvent: ({ payload, directory, eventId }) => {
+    broadcastGlobalUiEvent(payload, {
+      ...(directory ? { directory } : {}),
+      ...(typeof eventId === 'string' ? { eventId } : {}),
+    });
+    // The queue drains on a session's idle status. OpenCode's reach it through
+    // the event hub; a Claude session's are these, in the same wire shape, so
+    // they go through the same translation to the same consumer.
+    globalMessageStreamHub.injectEvent({ payload, directory });
+  },
+
+});
+
+const codexSurface = createCodexSurface({
+  isAutoAccepting: (id, directory) => permissionAutoAcceptRuntime.isSessionAutoAccepting(id, directory),
+  evaluatePermission: (permission, directory) => routingRuntime.evaluatePermission(permission, directory),
+  readAppSettings: readSettingsFromDisk,
+  readProjects: async () => {
+    const settings = await readSettingsFromDisk();
+    return sanitizeProjects(settings?.projects || []).map((project) => ({
+      id: project.id,
+      worktree: project.path.replace(/\/$/, ''),
+    }));
+  },
+  getStoredMetadata: (id) => engineSessionMetadata.read(id),
+  peekStoredMetadata: (id) => engineSessionMetadata.peek(id),
+  updateStoredMetadata: async (id, patch) => {
+    return sessionMetadataStore.setSessionMetadata(id, patch);
+  },
+  forgetStoredMetadata: (id) => engineSessionMetadata.remove(id),
+  getArchivedSessions: () => multichamberSessionService.archiveStore.getAll(),
+  publishEvent: ({ payload, directory, eventId }) => {
+    const options = { eventId };
+    if (directory) options.directory = directory;
+    broadcastGlobalUiEvent(payload, options);
+    globalMessageStreamHub.injectEvent({ payload, directory });
+  },
+});
+
+const nativeSurfaceFor = (id) => isCodexSessionId(id) ? codexSurface : isClaudeSessionId(id) ? claudeSurface : null;
+configureSessionHarnesses(nativeSurfaceFor, async () => [...await claudeSurface.listClaudeSessions(), ...await codexSurface.listCodexSessions()]);
+
 const serverUtilsRuntime = createServerUtilsRuntime({
+  claudeSurface,
+  codexSurface,
+  isCodexEnabled: () => !isEnterpriseMode() && process.env.OPENCHAMBER_CODEX_DISABLED !== '1',
   // Read lazily: the archive store is created with the session service further
   // down, while the proxy is registered later still.
-  getArchivedSessions: () => openChamberSessionService.archiveStore.getAll(),
+  getArchivedSessions: () => multichamberSessionService.archiveStore.getAll(),
   getStoredSessionMetadata: () => sessionMetadataStore.listUnmigrated(),
   // Isolated spaces: with the switch on, the session list carries every space's sessions and
   // the global SSE stream their events. Called, not captured: the host is made in `main`.
@@ -1344,7 +1478,7 @@ const waitForOpenCodePort = (...args) => serverUtilsRuntime.waitForOpenCodePort(
 const buildAugmentedPath = (...args) => serverUtilsRuntime.buildAugmentedPath(...args);
 const buildManagedOpenCodePath = (...args) => serverUtilsRuntime.buildManagedOpenCodePath(...args);
 
-// Variables from Settings for the processes OpenChamber starts: the managed
+// Variables from Settings for the processes Multichamber starts: the managed
 // OpenCode, Git, the terminal and command execution (lib/environment).
 const environmentStore = createEnvironmentStore({
   filePath: path.join(OPENCHAMBER_USER_CONFIG_ROOT, 'environment.json'),
@@ -1403,7 +1537,7 @@ const bootstrapRuntime = createBootstrapRuntime({
   registerAuthAndAccessRoutes,
   registerTtsRoutes,
   registerNotificationRoutes,
-  registerOpenChamberRoutes,
+  registerMultichamberRoutes,
   registerAgentToolRoutes: (app, options) => options.agentToolRuntime.registerRoutes(app, options.express),
   express,
 });
@@ -1606,6 +1740,17 @@ const getOpenCodeUpgradeCapability = () => {
   });
 };
 
+const harnessManager = createHarnessManager({
+  claudeSurface, codexSurface, readSettings: readSettingsFromDisk,
+  env: { ...getLoginShellEnvSnapshot(), ...process.env, PATH: buildAugmentedPath() },
+  openCode: {
+    describe: async () => ({ ...await getOpenCodeCompatibility(), running: isOpenCodeReady }),
+    capability: getOpenCodeUpgradeCapability,
+    isBusy: async () => getActiveSessionCount() > 0,
+    update: () => runOpenCodeCliUpgrade(resolveManagedOpenCodeLaunchSpec(lastOpenCodeLaunchDiagnostics?.sourceBinary || resolvedOpencodeBinary), { env: { ...getLoginShellEnvSnapshot(), ...process.env, PATH: buildManagedOpenCodePath() }, cwd: os.homedir() }),
+  },
+});
+
 const restartOpenCode = (...args) => openCodeLifecycleRuntime.restartOpenCode(...args);
 const waitForOpenCodeReady = (...args) => openCodeLifecycleRuntime.waitForOpenCodeReady(...args);
 const waitForAgentPresence = (...args) => openCodeLifecycleRuntime.waitForAgentPresence(...args);
@@ -1618,7 +1763,7 @@ const scheduledTasksRuntime = createScheduledTasksRuntime({
   chatsScope: scheduledChatsScope,
   messageQueueRuntime,
   resolvePrimaryWorktreeRoot,
-  isSessionArchived: (sessionID) => openChamberSessionService.archiveStore.isArchived(sessionID),
+  isSessionArchived: (sessionID) => multichamberSessionService.archiveStore.isArchived(sessionID),
   readSessionDefaults: async (projectID) => {
     const settings = await readSettingsFromDiskMigrated();
     const project = sanitizeProjects(settings?.projects || []).find((entry) => entry.id === projectID) ?? null;
@@ -1636,7 +1781,7 @@ const scheduledTasksRuntime = createScheduledTasksRuntime({
     persistSessionMetadataPatch(sessionID, { openchamber: { goal } }, { directory }),
   setSessionAutoAccept: (sessionId, enabled, directory) => permissionAutoAcceptRuntime.setSessionPolicy(sessionId, enabled, directory),
   emitTaskRunEvent: (event) => {
-    for (const client of uiOpenChamberEventClients) {
+    for (const client of uiMultichamberEventClients) {
       try {
         writeSseEvent(client, {
           type: 'openchamber:scheduled-task-ran',
@@ -1649,14 +1794,14 @@ const scheduledTasksRuntime = createScheduledTasksRuntime({
           },
         });
       } catch {
-        uiOpenChamberEventClients.delete(client);
+        uiMultichamberEventClients.delete(client);
       }
     }
   },
   logger: console,
 });
 const emitSessionCreatedEvent = (event) => {
-  for (const client of uiOpenChamberEventClients) {
+  for (const client of uiMultichamberEventClients) {
     try {
       writeSseEvent(client, {
         type: 'openchamber:session-created',
@@ -1671,7 +1816,7 @@ const emitSessionCreatedEvent = (event) => {
         },
       });
     } catch {
-      uiOpenChamberEventClients.delete(client);
+      uiMultichamberEventClients.delete(client);
     }
   }
 };
@@ -1693,7 +1838,7 @@ const resolveMemoryProjectId = createMemoryProjectResolver({
  * stored is visible without reopening anything.
  */
 const emitAgentMemoryChangedEvent = (event) => {
-  for (const client of uiOpenChamberEventClients) {
+  for (const client of uiMultichamberEventClients) {
     try {
       writeSseEvent(client, {
         // The UI listens for exactly this name (`lib/openchamberEvents.ts`);
@@ -1705,7 +1850,7 @@ const emitAgentMemoryChangedEvent = (event) => {
         },
       });
     } catch {
-      uiOpenChamberEventClients.delete(client);
+      uiMultichamberEventClients.delete(client);
     }
   }
 };
@@ -1716,7 +1861,8 @@ const scheduledTaskService = createScheduledTaskService({
   scheduledTasksRuntime,
   chatsScope: scheduledChatsScope,
 });
-const openChamberSessionService = createOpenChamberSessionService({
+const multichamberSessionService = createMultichamberSessionService({
+  getEngineArchiveTransport: (id) => isCodexSessionId(id) ? codexSurface : null,
   readSettingsFromDiskMigrated,
   sanitizeProjects,
   validateDirectoryPath,
@@ -1728,17 +1874,17 @@ const openChamberSessionService = createOpenChamberSessionService({
   worktreeBootstrapStore,
   hydrateWorktreeCheckout: featureRoutesRuntime.hydrateBoundCheckout,
   createChangeRequestWorktree: featureRoutesRuntime.createChangeRequestWorktree,
-  // OpenCode 2.x has no archive route, so the state is OpenChamber's own and
+  // OpenCode 2.x has no archive route, so the state is Multichamber's own and
   // lives beside the instance it describes.
   dataDir: OPENCHAMBER_DATA_DIR,
   sessionMetadataStore,
   persistSessionMetadata: persistSessionMetadataPatch,
   updateSessionMetadata: updateSessionMetadataWith,
-  broadcastGlobalUiEvent: broadcastOpenChamberUiEvent,
+  broadcastGlobalUiEvent: broadcastMultichamberUiEvent,
   resolveAutoSelection: (input) => routingRuntime.resolveAutoSelection(input),
   isAutoReady: async () => (await routingRuntime.describe()).autoReady,
 });
-// Browser actions are published to whichever OpenChamber clients are connected;
+// Browser actions are published to whichever Multichamber clients are connected;
 // the one owning the browser panel answers. `emitRequest` returns the number of
 // clients reached so the broker can fail fast when nobody is listening.
 const browserControlBroker = createBrowserControlBroker({
@@ -1749,7 +1895,7 @@ const browserControlBroker = createBrowserControlBroker({
     // lets the broker say "not here" instead of timing out.
     const needsBrowserView = request.action !== 'browser.open';
     let delivered = 0;
-    for (const client of uiOpenChamberEventClients) {
+    for (const client of uiMultichamberEventClients) {
       if (needsBrowserView && client.openchamberBrowserCapable !== true) continue;
       try {
         writeSseEvent(client, {
@@ -1763,7 +1909,7 @@ const browserControlBroker = createBrowserControlBroker({
         });
         delivered += 1;
       } catch {
-        uiOpenChamberEventClients.delete(client);
+        uiMultichamberEventClients.delete(client);
       }
     }
     return delivered;
@@ -1775,19 +1921,19 @@ const browserControlBroker = createBrowserControlBroker({
  * in-app browser, so Settings shows the change and the user hears why.
  */
 const emitBrowserProviderResetEvent = ({ guestId, guestName }) => {
-  for (const client of uiOpenChamberEventClients) {
+  for (const client of uiMultichamberEventClients) {
     try {
       writeSseEvent(client, {
         type: 'openchamber:browser-provider-reset',
         properties: { guestId, guestName },
       });
     } catch {
-      uiOpenChamberEventClients.delete(client);
+      uiMultichamberEventClients.delete(client);
     }
   }
 };
 // Every browser action passes through here: the in-app view by default, or an
-// extension service chosen in Settings → OpenChamber Tools.
+// extension service chosen in Settings → Multichamber Tools.
 const browserControlRouter = createBrowserControlRouter({
   broker: browserControlBroker,
   readSettings: () => readSettingsFromDiskMigrated(),
@@ -1808,12 +1954,12 @@ const browserControlRouter = createBrowserControlRouter({
 const fileOpenRequester = createFileOpenRequester({
   emit: (request) => {
     let delivered = 0;
-    for (const client of uiOpenChamberEventClients) {
+    for (const client of uiMultichamberEventClients) {
       try {
         writeSseEvent(client, { type: 'openchamber:file-open-request', properties: request });
         delivered += 1;
       } catch {
-        uiOpenChamberEventClients.delete(client);
+        uiMultichamberEventClients.delete(client);
       }
     }
     return delivered;
@@ -1826,13 +1972,13 @@ const pluginNotificationEmitter = createPluginNotificationEmitter({
   broadcastUiNotification,
 });
 
-const openChamberControlService = createOpenChamberControlService({
+const multichamberControlService = createMultichamberControlService({
   readSettingsFromDiskMigrated,
   sanitizeProjects,
   buildOpenCodeUrl,
   getOpenCodeAuthHeaders,
   waitForOpenCodeReady,
-  sessionService: openChamberSessionService,
+  sessionService: multichamberSessionService,
   scheduledTaskService,
   browserControl: browserControlRouter,
   fileOpen: fileOpenRequester,
@@ -1846,12 +1992,12 @@ const openChamberControlService = createOpenChamberControlService({
   // project open the plan.
   showPlan: (request) => {
     let delivered = 0;
-    for (const client of uiOpenChamberEventClients) {
+    for (const client of uiMultichamberEventClients) {
       try {
         writeSseEvent(client, { type: 'openchamber:plan-open-request', properties: request });
         delivered += 1;
       } catch {
-        uiOpenChamberEventClients.delete(client);
+        uiMultichamberEventClients.delete(client);
       }
     }
     return delivered;
@@ -1875,11 +2021,11 @@ const openChamberControlService = createOpenChamberControlService({
         type: 'openchamber:page-waiting',
         properties: { sessionID: change.sessionId, directory: change.directory, page: { id: change.callId, title: change.title } },
       };
-      broadcastOpenChamberUiEvent(payload);
+      broadcastMultichamberUiEvent(payload);
       void maybeSendPushForTrigger(payload);
       return;
     }
-    broadcastOpenChamberUiEvent({
+    broadcastMultichamberUiEvent({
       type: 'openchamber:page-settled',
       properties: { sessionID: change.sessionId, pageID: change.callId },
     });
@@ -1889,23 +2035,23 @@ const openChamberControlService = createOpenChamberControlService({
   notifyUser: async (input) => {
     const settings = await readSettingsFromDiskMigrated().catch(() => null);
     if (settings?.agentNotifyToolEnabled !== true) {
-      return { status: 403, body: { error: 'The notify tool is turned off in OpenChamber settings' } };
+      return { status: 403, body: { error: 'The notify tool is turned off in Multichamber settings' } };
     }
     return pluginNotificationEmitter.emit(input);
   },
   agentMemoryActions: createAgentMemoryActions({
     agentMemoryRuntime,
-    createError: (message, status) => new OpenChamberControlError(message, status),
+    createError: (message, status) => new MultichamberControlError(message, status),
     onMemoryChanged: emitAgentMemoryChangedEvent,
     isAgentMemoryEnabled,
     resolveProjectId: resolveMemoryProjectId,
   }),
   sessionLinks: createSessionLinker({
     updateMetadata: updateSessionMetadataWith,
-    createError: (message, status) => new OpenChamberControlError(message, status),
+    createError: (message, status) => new MultichamberControlError(message, status),
   }),
   dispatchResults: dispatchResultsRuntime,
-  archiveStore: openChamberSessionService.archiveStore,
+  archiveStore: multichamberSessionService.archiveStore,
 });
 
 const ensureGlobalWatcherStarted = async () => {
@@ -1958,6 +2104,7 @@ const gracefulShutdownRuntime = createGracefulShutdownRuntime({
   contextObligatoryRuntime,
   sessionWarmingRuntime,
   messageQueueRuntime,
+  codexSurface,
   dispatchResultsRuntime,
   messageSearchRuntime,
   sessionRuntime,
@@ -2020,9 +2167,9 @@ async function main(options = {}) {
     path,
     instanceDir,
     env: process.env,
-    executeAction: (...args) => openChamberControlService.execute(...args),
+    executeAction: (...args) => multichamberControlService.execute(...args),
     // A v2 tool call carries no directory, only the session it runs in.
-    resolveSessionDirectory: (sessionID) => openChamberControlService.resolveSessionDirectory(sessionID),
+    resolveSessionDirectory: (sessionID) => multichamberControlService.resolveSessionDirectory(sessionID),
     getActivePort: () => {
       const address = server?.address?.();
       return typeof address === 'object' && address ? address.port : null;
@@ -2184,7 +2331,7 @@ async function main(options = {}) {
     ? options.desktopUpdater
     : null;
 
-  console.log(`Starting OpenChamber on port ${port === 0 ? 'auto' : port}`);
+  console.log(`Starting Multichamber on port ${port === 0 ? 'auto' : port}`);
 
   // Voice enumeration is independent from route registration. Start it now,
   // but do not hold server listen or managed OpenCode startup on `say -v "?"`.
@@ -2229,7 +2376,7 @@ async function main(options = {}) {
     readPermissionDefault: async () => permissionDefaultOf((await readSettingsFromDiskMigrated())?.permissionDefaultMode),
     archive: spaceArchive,
     // What the host says to the login issuer when it renews a browser login for a space.
-    userAgent: `OpenChamber/${OPENCHAMBER_VERSION}`,
+    userAgent: `Multichamber/${OPENCHAMBER_VERSION}`,
   });
   const startupSettings = await readSettingsFromDiskMigrated().catch(() => null);
   if (startupSettings?.isolatedSpacesEnabled === true) {
@@ -2243,6 +2390,7 @@ async function main(options = {}) {
   }
 
   const app = express();
+  app.use(canonicalMultichamberApi);
   const serverStartedAt = new Date().toISOString();
   const packagedClientOrigins = new Set([
     'openchamber-ui://app',
@@ -2292,7 +2440,7 @@ async function main(options = {}) {
       // The packaged desktop UI (openchamber-ui://) and the dev UI sit on a
       // different origin, so every custom request header must be listed here or
       // the browser refuses the request at preflight, before it reaches a route.
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,Accept,X-Requested-With,Cache-Control,X-OpenCode-Directory,X-OpenCode-Directory-Encoding,Ngrok-Skip-Browser-Warning,X-OpenChamber-Surface,X-OpenChamber-Provider,X-OpenChamber-Model,X-OpenChamber-Part-Shells');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,Accept,X-Requested-With,Cache-Control,X-OpenCode-Directory,X-OpenCode-Directory-Encoding,Ngrok-Skip-Browser-Warning,X-Multichamber-Surface,X-Multichamber-Provider,X-Multichamber-Model,X-Multichamber-Part-Shells');
       res.setHeader('Access-Control-Expose-Headers', 'x-next-cursor');
       res.setHeader('Vary', 'Origin');
       if (req.method === 'OPTIONS') {
@@ -2397,9 +2545,9 @@ async function main(options = {}) {
     getServerLabel: () => {
       try {
         const name = os.hostname();
-        return typeof name === 'string' && name.trim().length > 0 ? name.trim() : 'OpenChamber';
+        return typeof name === 'string' && name.trim().length > 0 ? name.trim() : 'Multichamber';
       } catch {
-        return 'OpenChamber';
+        return 'Multichamber';
       }
     },
     readSettingsFromDiskMigrated,
@@ -2438,6 +2586,14 @@ async function main(options = {}) {
     skipBodyParsing: (req) => spacesHost?.skipsBodyParsing(req) === true,
   });
   uiAuthController = bootstrapResult.uiAuthController;
+  registerForkUpdateRoutes(app, { express });
+  registerHarnessRoutes(app, {
+    manager: harnessManager, express, validateDefaults: createDefaultsValidator({ claudeSurface, codexSurface, readSettings: readSettingsFromDisk }),
+    nativeSurfaces: {
+      claude: { list: claudeSurface.listClaudeSessions, active: claudeSurface.listClaudeActive, pending: claudeSurface.listClaudePending },
+      codex: { list: codexSurface.listCodexSessions, active: codexSurface.listCodexActive, pending: codexSurface.listCodexPending },
+    },
+  });
   // After the API auth gate, before every route that reads a directory, before the OpenCode proxy.
   // The slot is mounted once and reads the host at call time, so the switch can turn the feature
   // on and off live: with no host it passes every request on and no upgrade is taken.
@@ -2451,7 +2607,7 @@ async function main(options = {}) {
     host.prepareUpgrades({ uiAuthController, isRequestOriginAllowed });
     // Every space's events join the host's hub, and the host asks each space for its live status;
     // each space's queue changes and permission modes reach the browsers on the streams the host's own use.
-    void host.startEvents(globalMessageStreamHub, { broadcastUiEvent: broadcastOpenChamberUiEvent, broadcastGlobalUiEvent }).catch((error) => {
+    void host.startEvents(globalMessageStreamHub, { broadcastUiEvent: broadcastMultichamberUiEvent, broadcastGlobalUiEvent }).catch((error) => {
       console.warn(`[spaces] could not follow the spaces: ${error?.message ?? error}`);
     });
   };
@@ -2608,7 +2764,7 @@ async function main(options = {}) {
     buildOpenCodeUrl,
     getOpenCodeAuthHeaders,
     getOpenCodePort: () => openCodePort,
-    // Dev-server discovery must not offer OpenChamber's own listeners back to
+    // Dev-server discovery must not offer Multichamber's own listeners back to
     // the user as something to preview.
     getOwnPorts: () => [port, openCodePort].filter((value) => Number.isInteger(value) && value > 0),
     getActivePort: () => {
@@ -2626,11 +2782,11 @@ async function main(options = {}) {
     sessionKnowledgeRuntime,
     scheduledTasksRuntime,
     scheduledTaskService,
-    openChamberSessionService,
-    openChamberControlService,
+    multichamberSessionService,
+    multichamberControlService,
     waitForOpenCodeReady,
     emitSessionCreatedEvent,
-    getOpenChamberEventClients: () => uiOpenChamberEventClients,
+    getMultichamberEventClients: () => uiMultichamberEventClients,
     writeSseEvent,
     globalEventHub: globalMessageStreamHub,
     permissionAutoAcceptRuntime,

@@ -3,9 +3,9 @@ import path from 'path';
 import os from 'os';
 import { isPlainObject, readEnv, readFiniteNumber, readTrimmedString } from './parse.js';
 
-const DEFAULT_LINEAR_CLIENT_ID = '91bbe26a69a2c8568d3683f1e01e776c';
+const DEFAULT_LINEAR_CLIENT_ID = '';
 const DEFAULT_LINEAR_SCOPES = 'read,write,comments:create';
-const DEFAULT_LINEAR_BROKER_URL = 'https://api.openchamber.dev/v1/oauth/linear';
+const DEFAULT_LINEAR_BROKER_URL = '';
 const ACCESS_TOKEN_REFRESH_SKEW_MS = 2 * 60_000;
 const LEGACY_WORKSPACE_ID = 'legacy';
 const SESSION_COMMENTS_SETTING_KEY = 'linearSessionComments';
@@ -15,7 +15,7 @@ function resolveDataDir() {
   if (fromEnv) {
     return path.resolve(fromEnv);
   }
-  return path.join(os.homedir(), '.config', 'openchamber');
+  return path.join(os.homedir(), '.config', 'multichamber');
 }
 
 function storageFile() {
@@ -365,7 +365,7 @@ export function isLinearAccessTokenStale(expiresAt, now = Date.now()) {
 
 export function toLinearPublicStatus(auth, workspaces = getLinearAuthWorkspaces()) {
   if (!auth?.accessToken) {
-    return { connected: false };
+    return { connected: false, configured: Boolean(getLinearClientId() && getLinearRedirectUri()) };
   }
   return {
     connected: true,
@@ -411,7 +411,8 @@ export function getLinearRedirectUri() {
   if (fromEnv) return fromEnv;
   const stored = readSettingString('linearRedirectUri');
   if (stored) return stored;
-  return `${getLinearBrokerUrl()}/callback`;
+  const broker = getLinearBrokerUrl();
+  return broker ? `${broker}/callback` : '';
 }
 
 /**

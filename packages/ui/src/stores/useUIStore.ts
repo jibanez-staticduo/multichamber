@@ -1105,7 +1105,7 @@ interface UIStore {
   agentKnowledgeToolEnabled: boolean;
   agentNotifyToolEnabled: boolean;
   agentRenderToolEnabled: boolean;
-  /** Whether OpenChamber's agent tools sit behind OpenCode's Code Mode instead of being direct tools. */
+  /** Whether Multichamber's agent tools sit behind OpenCode's Code Mode instead of being direct tools. */
   agentToolsCodeMode: boolean;
   /** The isolated-spaces switch as saved; the server applies it at its next start. */
   isolatedSpacesEnabled: boolean;

@@ -67,7 +67,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: OpenChamber version
+      label: Multichamber version
       description: Settings > About shows it.
       placeholder: "e.g. 1.23.0"
     validations:

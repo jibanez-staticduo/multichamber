@@ -1,5 +1,5 @@
 /**
- * Client for the OpenChamber routing routes. The server owns the
+ * Client for the Multichamber routing routes. The server owns the
  * configuration and the Jev key (`packages/web/server/lib/routing`); this
  * module speaks HTTP and parses what comes back.
  *

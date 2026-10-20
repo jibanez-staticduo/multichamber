@@ -3090,7 +3090,7 @@ describe.skipIf(WIN)('bringCodeOut from a local stand-in for a space', () => {
     expect(out).toMatchObject({ changedPaths: expect.any(Number), changedBytes: expect.any(Number) });
     expect(g(['rev-parse', RESULT]).trim()).toBe(out.result);
     expect(g(['rev-parse', `${out.result}^`]).trim()).toBe(agentHead);
-    expect(g(['log', '-1', '--format=%an <%ae>%n%s', out.result]).trim()).toBe('OpenChamber <spaces@openchamber.invalid>\nopenchamber: uncommitted changes from the space');
+    expect(g(['log', '-1', '--format=%an <%ae>%n%s', out.result]).trim()).toBe('Multichamber <spaces@openchamber.invalid>\nopenchamber: uncommitted changes from the space');
     expect(blob(g, out.result, 'untracked in the space.txt')).toBe('untracked\n');
     // The agent's working tree and index are as they were.
     expect(gi(['status', '--porcelain=v1', '--untracked-files=all'])).toBe(statusInside);

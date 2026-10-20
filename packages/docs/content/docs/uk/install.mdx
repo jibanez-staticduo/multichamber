@@ -1,38 +1,36 @@
 ---
 title: Встановлення
-description: Встановіть OpenChamber на десктоп, у веб, у VS Code або на телефон.
+description: Встановіть Multichamber для комп’ютера, вебу або телефона.
 ---
 
 # Встановлення
 
-Оберіть застосунок під свій спосіб роботи:
+## Виберіть застосунок
 
-- десктоп-застосунок для macOS, Windows і Linux
-- вебзастосунок на базі CLI, який можна встановити як застосунок на телефоні (PWA)
-- розширення для VS Code, а також для Cursor, Windsurf і Trae
-- мобільні застосунки для iPhone і Android, у публічній беті
+Використовуйте застосунок для macOS, Windows чи Linux або запустіть вебсервер/PWA. Збірки iOS та Android підключаються до наявного сервера. Цей форк не містить розширення VS Code.
 
-## Десктоп
+Настільний застосунок містить OpenCode. Вебсервер потребує OpenCode та Node.js 24.14 або новішого. Для Claude Code або Codex встановіть і автентифікуйте кожну нативну CLI на сервері; OpenCode їх не постачає.
 
-Завантажте найновішу збірку зі [сторінки завантаження](https://openchamber.dev/download/) або з [GitHub Releases](https://github.com/openchamber/openchamber/releases/latest) і відкрийте її. Для Linux є `.deb`, `.rpm` і AppImage.
+[Multichamber](https://github.com/jibanez-staticduo/multichamber/releases)
 
-Десктоп-застосунок має власну копію [OpenCode](https://opencode.ai) (ШІ-агента для коду, на якому працює OpenChamber), тож більше нічого встановлювати не треба.
-
-## Веб + PWA
-
-Для вебзастосунку на машині, де він працює, потрібні [OpenCode](https://opencode.ai) і Node.js 24.14 або новіший.
+## Web / PWA
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/openchamber/openchamber/main/scripts/install.sh | bash
-openchamber --ui-password be-creative-here
+curl -fsSL https://raw.githubusercontent.com/jibanez-staticduo/multichamber/main/scripts/install.sh | bash
+multichamber --ui-password be-creative-here
 ```
 
-Відкрийте URL, який вивів CLI (зазвичай `http://localhost:3000`). Ви маєте побачити список сесій OpenChamber. Щоб він був під рукою, скористайтеся опцією «Install» в адресному рядку браузера й додайте його як застосунок.
+## iOS / Android
 
-## VS Code
+Використовуйте лише файли або посилання розповсюдження, опубліковані для цього форка. iOS потребує підпису та авторизованого розповсюдження через TestFlight або App Store; публічна бета не обіцяється. Android потребує сумісного підписаного APK. Мобільний веб працює без нативної збірки.
 
-Встановіть OpenChamber з [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=fedaykindev.openchamber). Cursor, Windsurf і Trae ставлять його з [Open VSX](https://open-vsx.org/extension/FedaykinDev/openchamber). Розширенню потрібен встановлений [OpenCode](https://opencode.ai); після цього панель OpenChamber з’являється на бічній панелі.
+## Nix
 
-## Мобільні застосунки
+```bash
+nix run github:jibanez-staticduo/multichamber
+nix run github:jibanez-staticduo/multichamber#gui
+```
 
-Встановіть застосунок для iPhone через TestFlight або застосунок для Android з останнього релізу, а потім з’єднайте його з комп’ютером. Сторінка [Мобільні застосунки та PWA](/uk/mobile/) описує обидва кроки.
+`packages.multichamber` · `packages.multichamber-desktop` · `nixosModules.multichamber`
+
+Nix керує оновленнями застосунків у своєму сховищі. Перебудуйте з оновленим flake; оновлювач OpenCode не може змінювати сховище Nix.

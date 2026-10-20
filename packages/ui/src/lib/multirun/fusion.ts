@@ -1,9 +1,10 @@
+import type { SessionEngine } from '@/lib/sessionEngine';
 import { opencodeClient } from '@/lib/opencode/client';
 import type { Session } from '@/lib/opencode/model';
 import type { GitWorktreeSnapshotResult } from '@/lib/api/types';
 import { getGitRangeDiff, snapshotGitWorktree } from '@/lib/gitApi';
 import { renderMagicPrompt } from '@/lib/magicPrompts';
-import { getWorktreeSetupWaitEnabled } from '@/lib/openchamberConfig';
+import { getWorktreeSetupWaitEnabled } from '@/lib/multichamberConfig';
 import { getRuntimeKey } from '@/lib/runtime-switch';
 import { resolveWorktreeSetupCommands } from '@/lib/sharedTrustConfirmation';
 import { waitForWorktreeBootstrap } from '@/lib/worktrees/worktreeBootstrap';
@@ -19,6 +20,8 @@ import { loadLaneDiffStat, loadLaneFirstPrompt, loadLaneLastReply, type LaneDiff
 import { multiRunVariantLabel, type MultiRunSummary } from './runs';
 
 export type FusionJudge = {
+  harness?: SessionEngine;
+  mode?: string;
   providerID: string;
   modelID: string;
   variant?: string;
@@ -236,6 +239,7 @@ export async function startRunFusion(input: {
     title: `${run.title} · ${judge.modelName ?? judge.modelID}`,
     directory,
     identity: {
+      harness: judge.harness, mode: judge.mode, variant: judge.variant,
       group: first.identity.group,
       groupSlug: first.identity.groupSlug,
       providerID: judge.providerID,
@@ -256,7 +260,7 @@ export async function startRunFusion(input: {
     id: fusionSession.id,
     providerID: judge.providerID,
     model: { providerID: judge.providerID, id: judge.modelID, variant: judge.variant },
-    agent: judge.agent,
+    agent: judge.harness && judge.harness !== 'opencode' ? undefined : judge.agent,
     text: visiblePrompt,
     context,
     directory,

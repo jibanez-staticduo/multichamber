@@ -1,5 +1,5 @@
 import React from 'react';
-import { subscribeOpenchamberEvents } from '@/lib/openchamberEvents';
+import { subscribeOpenchamberEvents } from '@/lib/multichamberEvents';
 import { refreshGlobalSessions, refreshGlobalSessionsForDirectories, useGlobalSessionsStore } from '@/stores/useGlobalSessionsStore';
 import { useChildStoreManager } from '@/sync/sync-context';
 import { getAllSyncSessions } from '@/sync/sync-refs';

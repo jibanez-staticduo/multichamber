@@ -16,7 +16,7 @@
 
 import { z } from 'zod';
 import type { SourceControlProvider } from '@/lib/api/types';
-import type { JsonValue } from '@openchamber/sdk';
+import type { JsonValue } from '@multichamber/sdk';
 import type { Metadata } from '@/lib/opencode/model';
 import type { InlineCommentDraft } from '@/stores/useInlineCommentDraftStore';
 import { chatQuoteAnchorSchema, type ChatQuoteAnchor } from '@/lib/chatQuoteAnchor';
@@ -175,7 +175,7 @@ export type ContextPart = {
 
 /**
  * The model-facing text for a context payload. The wording intentionally
- * matches what OpenChamber sent before parts carried metadata, so model
+ * matches what Multichamber sent before parts carried metadata, so model
  * behavior does not change with the transport format.
  */
 export function formatContextText(payload: ContextPartPayload): string {

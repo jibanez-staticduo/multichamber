@@ -12,7 +12,7 @@ import {
   type GuestFileUnsupportedMessage,
   type GuestMessage,
   type HostMessage,
-} from '@openchamber/sdk';
+} from '@multichamber/sdk';
 
 export type GuestFileMessage =
   | GuestFileSnapshotResultMessage

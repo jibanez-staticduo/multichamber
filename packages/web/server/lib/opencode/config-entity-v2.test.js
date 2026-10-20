@@ -85,7 +85,7 @@ describe('entity modules speak OpenCode 2 shapes', () => {
 
     const result = updateAgent('reviewer', { description: 'Careful reviewer' }, projectDir);
 
-    // Same file: OpenChamber never moves an entity between directories.
+    // Same file: Multichamber never moves an entity between directories.
     expect(result.path).toBe(agentPath);
     expect(fs.existsSync(path.join(projectDir, '.opencode', 'agents', 'reviewer.md'))).toBe(false);
 

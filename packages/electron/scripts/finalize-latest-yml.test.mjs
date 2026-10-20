@@ -10,7 +10,7 @@ const script = fileURLToPath(new URL('./finalize-latest-yml.mjs', import.meta.ur
 
 const manifest = (platform, architecture, extension) => `version: 1.2.3
 files:
-  - url: OpenChamber-1.2.3-${platform}-${architecture}.${extension}
+  - url: Multichamber-1.2.3-${platform}-${architecture}.${extension}
     sha512: ${architecture}-checksum
     size: 123
 releaseDate: '2026-07-30T00:00:00.000Z'
@@ -41,7 +41,7 @@ const environment = ({ artifacts, output }) => ({
   ...process.env,
   LATEST_YML_DIR: artifacts,
   RUNNER_TEMP: output,
-  GH_REPO: 'openchamber/openchamber',
+  GH_REPO: 'jibanez-staticduo/multichamber',
   OPENCHAMBER_VERSION: '1.2.3',
 });
 
@@ -100,5 +100,14 @@ test('fails instead of publishing a Mac manifest without the arm64 build', (cont
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /Both x64 and arm64 macOS update manifests are required/);
+  assert.equal(fs.existsSync(path.join(fixture.output, 'latest-mac.yml')), false);
+});
+
+test('Windows-only releases do not require or emit a Mac manifest', (context) => {
+  const fixture = createFixture({ includeMacArm64: false });
+  context.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
+  execFileSync(process.execPath, [script], { env: { ...environment(fixture), SKIP_MAC: '1' } });
+  assert.equal(fs.existsSync(path.join(fixture.output, 'latest.yml')), true);
+  assert.equal(fs.existsSync(path.join(fixture.output, 'latest-arm64.yml')), true);
   assert.equal(fs.existsSync(path.join(fixture.output, 'latest-mac.yml')), false);
 });

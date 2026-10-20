@@ -1,6 +1,6 @@
 // A browser provider with no browser: one in-memory "page" that answers every
 // `browser.*` action the host can send. It exists to show the contract and to
-// test the host's routing (Settings → OpenChamber Tools → Browser provider)
+// test the host's routing (Settings → Multichamber Tools → Browser provider)
 // without Chrome. A real provider replaces `page` with a driven browser.
 import http from 'node:http';
 import { deflateSync } from 'node:zlib';
@@ -28,7 +28,7 @@ import {
   type BrowserViewportSummary,
   type SurfaceController,
   type SurfaceInputEvent,
-} from '@openchamber/sdk';
+} from '@multichamber/sdk';
 
 const port = Number(process.env.OPENCHAMBER_SERVICE_PORT);
 const token = process.env.OPENCHAMBER_SERVICE_TOKEN ?? '';

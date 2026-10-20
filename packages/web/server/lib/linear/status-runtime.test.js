@@ -147,7 +147,7 @@ describe('Linear session status runtime', () => {
       });
       expect(commentCalls).toHaveLength(1);
       const body = JSON.parse(commentCalls[0][1].body).variables.input.body;
-      expect(body).toContain('OpenChamber session failed');
+      expect(body).toContain('Multichamber session failed');
     });
     runtime.stop();
   });

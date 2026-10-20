@@ -4,10 +4,32 @@ import { createExistingSessionTasks } from './existing-session.js';
 import { createScheduledTaskService } from './service.js';
 import { registerScheduledTaskRoutes } from './routes.js';
 import { createScheduledTasksRuntime } from './runtime.js';
+import { configureSessionHarnesses } from '../harnesses/session-client.js';
 
 afterEach(() => {
+  configureSessionHarnesses(() => null);
   vi.unstubAllGlobals();
   vi.useRealTimers();
+});
+
+it('validates and dispatches an existing native session through its owner without calling OpenCode', async () => {
+  const nativeId = 'ses_cdx019a1500-20c1-7000-9000-4296d2ff9517';
+  configureSessionHarnesses((id) => id === nativeId ? { sessionClient: { get: async () => ({ id, location: { directory: '/repo' } }) } } : null);
+  let stored = { ...task, targetSessionId: nativeId };
+  const enqueue = vi.fn(async () => {});
+  const upstream = vi.fn(async () => { throw new Error('Native target reached OpenCode'); });
+  vi.stubGlobal('fetch', upstream);
+  const scheduler = createScheduledTasksRuntime({
+    projectConfigRuntime: { listScheduledTasks: async () => [stored], updateScheduledTaskState: async (_project, _id, patch) => ({ task: stored = { ...stored, state: { ...stored.state, ...patch } } }) },
+    messageQueueRuntime: { enqueue, cancelScheduledTask: async () => {} },
+    chatsScope: { id: 'project-1', root: '/repo', contains: () => true },
+    listProjects: async () => [{ id: 'project-1', path: '/repo' }],
+    buildOpenCodeUrl: (route) => `http://opencode.test${route}`, getOpenCodeAuthHeaders: () => ({}),
+  });
+  await scheduler.syncProject('project-1');
+  expect(await scheduler.runNow('project-1', 'task-1')).toMatchObject({ ok: true, sessionID: nativeId });
+  expect(enqueue).toHaveBeenCalledWith(nativeId, '/repo', expect.objectContaining({ text: 'Follow up' }));
+  expect(upstream).not.toHaveBeenCalled();
 });
 
 const task = {

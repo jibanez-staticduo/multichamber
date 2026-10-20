@@ -168,7 +168,7 @@ export const AgentPermissionsEditor: React.FC<AgentPermissionsEditorProps> = ({
     return () => registerSave(null);
   }, [registerSave, save]);
 
-  // --- Rows: built-in and OpenChamber tools, then one row per MCP server, then
+  // --- Rows: built-in and Multichamber tools, then one row per MCP server, then
   // whatever else the agent already names (custom keys, single MCP tools). ---
   const mcpKeys = React.useMemo(
     () => mcpServers.map((server) => ({ key: `${server.name}_*`, server: server.name })),

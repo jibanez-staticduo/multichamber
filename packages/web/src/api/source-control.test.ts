@@ -10,7 +10,7 @@ import type {
   SourceControlMutationContext,
   SourceControlReadContext,
   UpdateChangeRequestInput,
-} from '@openchamber/ui/lib/api/types';
+} from '@multichamber/ui/lib/api/types';
 import { configureWebTransportBinding, createWebSourceControlAPI, removeWebTransportBinding } from './source-control';
 
 const runtimeFetchMock = vi.fn(async (): Promise<Response> => Response.json({}));

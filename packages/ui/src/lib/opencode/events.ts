@@ -14,6 +14,7 @@
  */
 
 import type { OpenCodeEvent } from "@opencode/client"
+import { z } from 'zod'
 import {
   compact,
   partIds,
@@ -60,6 +61,7 @@ export type SessionPatch = {
 
 /** Fields of a message that change after it appeared. */
 export type MessagePatch = {
+  metadata?: Metadata
   time?: { created?: number; streamed?: number; completed?: number }
   finish?: Extract<Message, { role: "assistant" }>["finish"]
   error?: StructuredError
@@ -69,6 +71,12 @@ export type MessagePatch = {
   retry?: Extract<Message, { role: "assistant" }>["retry"] | null
   /** Shell messages: exit status and captured output. */
   shell?: { status: "running" | "exited" | "timeout" | "killed"; exit?: number; signal?: string; output?: Extract<Message, { role: "shell" }>["output"] }
+}
+
+const nativeStepMetadataSchema = z.object({ metadata: z.record(z.string(), z.json()).optional() })
+const stepMetadata = (data: OpenCodeEvent['data']): Metadata | undefined => {
+  const parsed = nativeStepMetadataSchema.safeParse(data)
+  return parsed.success ? parsed.data.metadata : undefined
 }
 
 /** State transitions of a tool call that need the part's existing state to apply. */
@@ -148,7 +156,7 @@ export type SyncEvent =
    * an explicit reload). Everything read from it is now suspect.
    */
   | { type: "location.shutdown"; properties: Record<never, never> }
-  // OpenChamber's own server frames that ride the same stream.
+  // Multichamber's own server frames that ride the same stream.
   | { type: "openchamber.notification"; properties: OpenchamberNotification }
   // `modes` is the policy; `sessions` is its on/off view for clients from before the modes.
   // `spaceId` marks the policy of that isolated space, forwarded by the host.
@@ -162,7 +170,7 @@ export type SyncEvent =
   /** The server started or stopped waiting to write a session's recap and suggestion. */
   | { type: "openchamber.session-assist"; properties: { sessionID: string; directory: string | null; pending: boolean } }
 
-/** Agent-completion / restart notices the OpenChamber server publishes for non-web runtimes. */
+/** Agent-completion / restart notices the Multichamber server publishes for non-web runtimes. */
 export type OpenchamberNotification = {
   kind?: string
   sessionId?: string
@@ -466,6 +474,7 @@ export function translateWireEvent(event: OpenCodeEvent): SyncEvent[] {
               modelID: event.data.model.id,
               variant: event.data.model.variant,
               snapshot: event.data.snapshot ? { start: event.data.snapshot } : undefined,
+              metadata: stepMetadata(event.data),
             }),
           },
         },
@@ -482,6 +491,7 @@ export function translateWireEvent(event: OpenCodeEvent): SyncEvent[] {
             finish: event.data.finish,
             cost: event.data.cost,
             tokens: event.data.tokens,
+            metadata: stepMetadata(event.data),
             snapshot: event.data.snapshot ? { end: event.data.snapshot, files: event.data.files } : undefined,
             retry: null,
           }),
@@ -819,11 +829,11 @@ export function translateWireEvent(event: OpenCodeEvent): SyncEvent[] {
     // `installation.update-available` is the one the UI acts on.
     case "installation.updated":
       return []
-    // Catalogs OpenChamber does not surface as lists of their own.
+    // Catalogs Multichamber does not surface as lists of their own.
     case "models-dev.refreshed":
     case "reference.updated":
       return []
-    // Resources of an MCP server; OpenChamber shows connection status only
+    // Resources of an MCP server; Multichamber shows connection status only
     // (`mcp.status.changed`).
     case "mcp.resources.changed":
       return []
@@ -831,7 +841,7 @@ export function translateWireEvent(event: OpenCodeEvent): SyncEvent[] {
     // browsers refresh from tool and step results instead (`lib/fileTreeChanges`).
     case "filesystem.changed":
       return []
-    // Worktrees go through OpenChamber's own git API, not OpenCode's.
+    // Worktrees go through Multichamber's own git API, not OpenCode's.
     case "worktree.updated":
     case "worktree.resolved":
       return []

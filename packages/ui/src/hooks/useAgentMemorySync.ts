@@ -13,7 +13,7 @@
 
 import React from 'react';
 
-import { subscribeOpenchamberEvents } from '@/lib/openchamberEvents';
+import { subscribeOpenchamberEvents } from '@/lib/multichamberEvents';
 import { useAgentMemoryStore } from '@/stores/useAgentMemoryStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useProjectContextOwner } from '@/hooks/useProjectContextOwner';

@@ -1,26 +1,21 @@
 ---
 title: Início rápido
-description: Inicie o OpenChamber rapidamente e escolha a plataforma certa para a tarefa.
+description: Inicie um servidor Multichamber e escolha um motor de sessão nativo.
 ---
 
 # Início rápido
 
-## Caminho mais rápido
+Instale OpenCode e Node.js 24.14 ou posterior no servidor. Instale e autentique Claude Code ou Codex se quiser usá-los. Depois instale Multichamber com o comando abaixo.
 
-1. Instale o [OpenCode](https://opencode.ai).
-2. Instale a CLI do OpenChamber (veja [Instalação](/pt-br/install/) para o comando de uma linha).
-3. Execute `openchamber --ui-password be-creative-here`.
-4. Abra a URL que a CLI imprime (geralmente `http://localhost:3000`).
-5. Para usar pelo celular, inicie um [túnel](/pt-br/tunnels/) e escaneie o QR code.
+```bash
+curl -fsSL https://raw.githubusercontent.com/jibanez-staticduo/multichamber/main/scripts/install.sh | bash
+multichamber --ui-password be-creative-here
+```
 
-Você deve ver a lista de sessões do OpenChamber no navegador. Se ela carregar, está tudo funcionando.
+Abra a URL exibida, normalmente `http://localhost:3000`. Escolha um motor disponível para uma nova sessão. As configurações mantêm padrões de modelo e permissões separados por motor.
 
-Use uma senha de UI forte, principalmente se pretende expor a instância à internet.
+Use uma senha forte na interface antes de permitir acesso remoto.
 
-Se a página não carregar, confira a [Solução de problemas](/pt-br/troubleshooting/).
+Use o aplicativo desktop no macOS, Windows ou Linux, ou execute o servidor web/PWA. As versões iOS e Android se conectam a um servidor existente. Este fork não fornece uma extensão do VS Code.
 
-## Qual plataforma devo usar?
-
-- use **desktop** para o uso diário no macOS, Windows ou Linux
-- use **web** para acesso remoto e revisão pelo celular
-- use **VS Code** para sessões ao lado do seu código
+[Instalação](/install/)

@@ -1,9 +1,12 @@
 {
-  "name": "@openchamber/example-browser-provider-stub",
+  "name": "@multichamber/example-browser-provider-stub",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "openchamber": {
+  "dependencies": {
+    "@multichamber/sdk": "workspace:*"
+  },
+  "multichamber": {
     "apiVersion": 1,
     "contributes": {
       "panel": {
@@ -23,8 +26,5 @@
         "surface": true
       }
     }
-  },
-  "dependencies": {
-    "@openchamber/sdk": "workspace:*"
   }
 }

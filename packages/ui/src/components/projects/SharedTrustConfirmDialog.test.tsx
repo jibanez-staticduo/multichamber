@@ -5,7 +5,7 @@ import { createRoot, type Root } from 'react-dom/client';
 
 import { MobileOverlayPanel } from '@/components/ui/MobileOverlayPanel';
 import { I18nProvider } from '@/lib/i18n';
-import type { ProjectSetup } from '@/lib/openchamberConfig';
+import type { ProjectSetup } from '@/lib/multichamberConfig';
 import {
   ensureSharedSetupTrusted,
   getSharedTrustConfirmationSnapshot,

@@ -12,7 +12,7 @@ const originalSystemRoot = process.env.SystemRoot;
 const originalBundledOpencodeCliDir = process.env.OPENCHAMBER_BUNDLED_OPENCODE_CLI_DIR;
 const originalResourcesPath = process.resourcesPath;
 const originalWslBinary = process.env.WSL_BINARY;
-const originalOpenChamberWslBinary = process.env.OPENCHAMBER_WSL_BINARY;
+const originalMultichamberWslBinary = process.env.OPENCHAMBER_WSL_BINARY;
 const originalPlatform = process.platform;
 const originalRuntime = process.env.OPENCHAMBER_RUNTIME;
 const tempDirs = [];
@@ -88,8 +88,8 @@ afterEach(() => {
     delete process.env.WSL_BINARY;
   }
 
-  if (typeof originalOpenChamberWslBinary === 'string') {
-    process.env.OPENCHAMBER_WSL_BINARY = originalOpenChamberWslBinary;
+  if (typeof originalMultichamberWslBinary === 'string') {
+    process.env.OPENCHAMBER_WSL_BINARY = originalMultichamberWslBinary;
   } else {
     delete process.env.OPENCHAMBER_WSL_BINARY;
   }
@@ -210,7 +210,7 @@ describe('OpenCode env runtime', () => {
 
   it('clears AppImage ARGV0 when applying a login-shell env snapshot', () => {
     const previousArgv0 = process.env.ARGV0;
-    process.env.ARGV0 = '/path/to/OpenChamber.AppImage';
+    process.env.ARGV0 = '/path/to/Multichamber.AppImage';
     delete process.env.OPENCHAMBER_ARGV0_TEST_MARKER;
     const { runtime, state } = createRuntime({});
     state.cachedLoginShellEnvSnapshot = {
@@ -285,7 +285,7 @@ describe('OpenCode env runtime', () => {
 
   it('clears AppImage ARGV0 even when no login-shell snapshot is available', () => {
     const previousArgv0 = process.env.ARGV0;
-    process.env.ARGV0 = '/path/to/OpenChamber.AppImage';
+    process.env.ARGV0 = '/path/to/Multichamber.AppImage';
     const { runtime, state } = createRuntime({});
     state.cachedLoginShellEnvSnapshot = null;
 

@@ -2535,13 +2535,13 @@ describe('fs html preview grants', () => {
     expect(sibling.body.toString()).toBe('{}');
     expect(sibling.getHeader('access-control-allow-origin')).toBe('null');
 
-    // OpenChamber's own folder can be embedded but never read from script.
+    // Multichamber's own folder can be embedded but never read from script.
     const managed = await serve(`/api/fs/preview/${grant}/home/user/.config/openchamber/guest-auth.json`);
     expect(managed.statusCode).toBe(200);
     expect(managed.getHeader('access-control-allow-origin')).toBeUndefined();
   });
 
-  it('limits a page inside the OpenChamber folder to reading its own folder', async () => {
+  it('limits a page inside the Multichamber folder to reading its own folder', async () => {
     const { mint, serve } = register();
     const { grant } = (await mint('/home/user/.config/openchamber/projects/p1/canvases/c1/index.html')).body;
 

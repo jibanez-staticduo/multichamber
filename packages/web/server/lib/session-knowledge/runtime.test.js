@@ -403,7 +403,7 @@ describe('pins', () => {
     expect(runtime.readPins({})).toEqual({ notes: [], plans: [] });
   });
 
-  test('pins into OpenChamber\'s own store as a merge patch', async () => {
+  test('pins into Multichamber\'s own store as a merge patch', async () => {
     const store = createMetadataStub({
       ses_a: { openchamber: { project_context_pins: { notes: [], plans: [] } } },
     });

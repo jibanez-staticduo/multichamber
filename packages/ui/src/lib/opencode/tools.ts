@@ -10,7 +10,7 @@
  *
  * Everything outside this module works with the predicates and accessors here,
  * so the next rename is one file. Names that are not in this list (MCP servers,
- * OpenChamber's own plugin tools) still flow through the generic renderers;
+ * Multichamber's own plugin tools) still flow through the generic renderers;
  * every helper answers "no"/"unknown" for them instead of throwing.
  *
  * A call's `input` and `metadata` are free-form JSON the model and the tool
@@ -137,7 +137,7 @@ const inputSchema = z
     url: optionalText,
     code: optionalText,
     questions: z.array(z.unknown()).optional().catch(undefined),
-    // OpenChamber's own tools: one `action` plus its `parameters`.
+    // Multichamber's own tools: one `action` plus its `parameters`.
     action: optionalText,
     parameters: z
       .object({
@@ -216,7 +216,7 @@ const pageAnswerSchema = z.union([
   z.object({ answered: z.literal(false) }),
 ])
 
-const openChamberResultSchema = z
+const multichamberResultSchema = z
   .object({
     openchamber: z.object({
       ok: z.boolean().optional().catch(undefined),
@@ -349,7 +349,7 @@ const pageTitleFromHtml = (html: string): string => (
 ).slice(0, RENDER_PAGE_MAX_TITLE_LENGTH).trim()
 
 /**
- * The page an `openchamber_render` call showed: present once OpenChamber
+ * The page an `openchamber_render` call showed: present once Multichamber
  * accepted the call, so a refused or unfinished call keeps its tool row. A
  * page that waits for the user's answer shows while its call runs, since the
  * call runs until the user answers, and after a call that failed while waiting.
@@ -371,7 +371,7 @@ export function renderedPage(
     if (state.status === "error") return { html, title, ask: { kind: "unanswered" } }
   }
   if (state.status !== "completed") return null
-  const result = openChamberResultSchema.parse(state.metadata ?? {}).openchamber
+  const result = multichamberResultSchema.parse(state.metadata ?? {}).openchamber
   if (result?.ok !== true) return null
   const answer = result.answer
   if (answer?.answered === true) return { html, title, ask: { kind: "answered", summary: answer.summary, data: answer.data } }
@@ -424,15 +424,15 @@ const MAX_TEXT_LENGTH = 120
 
 const OPENCHAMBER_RENDER_TOOL = "openchamber_render"
 
-/** The control, schedule, browser, memory, knowledge, notify and render tools OpenChamber gives every session. */
+/** The control, schedule, browser, memory, knowledge, notify and render tools Multichamber gives every session. */
 const OPENCHAMBER_TOOLS = new Set(["openchamber", "openchamber_schedule", "openchamber_web", "openchamber_memory", "openchamber_knowledge", "openchamber_notify", OPENCHAMBER_RENDER_TOOL])
 
 /**
- * The action an OpenChamber tool call ran and the one detail that tells calls
+ * The action an Multichamber tool call ran and the one detail that tells calls
  * apart: what was linked, created, saved, opened or asked. Notifications have
  * no action, so their title stands alone.
  */
-function describeOpenChamberTool(parsed: ParsedInput): ToolDescription | null {
+function describeMultichamberTool(parsed: ParsedInput): ToolDescription | null {
   const parameters = parsed.parameters
   const link = parameters?.link
   const linked = link ? [link.identifier, link.title].filter(Boolean).join(" ") : undefined
@@ -598,7 +598,7 @@ export function toolDescription(
 
     // MCP and plugin tools: anything they call a description, then a path.
     default:
-      if (OPENCHAMBER_TOOLS.has(name)) return describeOpenChamberTool(parsed)
+      if (OPENCHAMBER_TOOLS.has(name)) return describeMultichamberTool(parsed)
       return text(parsed.description) ?? asPath(parsed.path ?? parsed.filePath ?? parsed.file_path)
   }
 }

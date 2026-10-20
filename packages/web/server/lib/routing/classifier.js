@@ -9,10 +9,10 @@
  * - `openrouter`, `vercel`: the same System One API through OpenRouter or
  *   Vercel AI Gateway, with the key the user saved for that provider in
  *   OpenCode.
- * - `typesafe`: TypeSafe's own API with a key saved in OpenChamber.
+ * - `typesafe`: TypeSafe's own API with a key saved in Multichamber.
  * - `custom`: any endpoint that speaks the System One API (a self-hosted
  *   gateway, a company proxy), with the URL, model and optional key saved in
- *   OpenChamber.
+ *   Multichamber.
  *
  * The user picks one. A pick that cannot be used right now (the promotion
  * ended, the key was removed) falls back to the first usable key, so Jev
@@ -35,7 +35,7 @@ import {
 import { readEnterprisePolicy } from '../enterprise-mode.js';
 
 export const CLASSIFIER_SOURCES = ['off', 'zen-promo', 'zen-key', 'openrouter', 'vercel', 'typesafe', 'custom'];
-// What the user set up in OpenChamber for Jev comes before keys borrowed from OpenCode.
+// What the user set up in Multichamber for Jev comes before keys borrowed from OpenCode.
 const FALLBACK_ORDER = ['typesafe', 'custom', 'openrouter', 'vercel', 'zen-key'];
 
 /**
@@ -142,7 +142,7 @@ export const classifierEndpoint = (source, { typesafeKey, zenKey, openrouterKey,
   if (source === 'vercel') {
     return { url: VERCEL_JEV_API_URL, model: VERCEL_JEV_MODEL, headers: { authorization: `Bearer ${vercelKey}` } };
   }
-  // Every Zen call names OpenChamber, so zen can see or throttle it.
+  // Every Zen call names Multichamber, so zen can see or throttle it.
   if (source === 'zen-key') {
     return { url: ZEN_JEV_API_URL, model: ZEN_JEV_PAID_MODEL, headers: { authorization: `Bearer ${zenKey}`, 'x-opencode-client': ZEN_CLIENT_ID } };
   }

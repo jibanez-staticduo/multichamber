@@ -243,6 +243,7 @@ export function translateWireEvent(payload) {
             agent: trimmed(data.agent) || undefined,
             providerID: trimmed(model.providerID) || undefined,
             modelID: trimmed(model.id) || undefined,
+            metadata: data.metadata,
             time: { created },
           }),
         }),
@@ -267,6 +268,7 @@ export function translateWireEvent(payload) {
           finish: trimmed(data.finish) || undefined,
           cost: data.cost,
           tokens: data.tokens,
+          metadata: data.metadata,
           time: { completed: created },
         }),
       })];

@@ -1,3 +1,4 @@
+import { assertOpenCodeCreationTarget } from '@/lib/sessionCreation';
 // A creation started from the create dialog, carried to its end in this window: the space is asked
 // for, its group appears at once, a new-session draft opens on it, and the first message the user
 // sends waits for the space the way a draft waits for a new worktree (`pendingDraftWorktree.ts`).
@@ -89,6 +90,7 @@ type StartSpaceCreationOptions = {
  * for the dialog to show. Everything after that runs on its own and ends in the space's group.
  */
 export const startSpaceCreation = async ({ projectId, request, setup, access, refusalMessage }: StartSpaceCreationOptions): Promise<SpaceEntry> => {
+  await assertOpenCodeCreationTarget();
   const entry = await createSpace({ ...request, setupCommands: setup.commands, grants: [...access] });
   useSpacesStore.getState().addJourneyEntry(entry);
 

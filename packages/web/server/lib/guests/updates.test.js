@@ -31,7 +31,7 @@ const git = (cwd, args) => {
 };
 
 const manifest = (id, version, extra = {}) => JSON.stringify({
-  name: `@openchamber/${id}`,
+  name: `@multichamber/${id}`,
   version,
   openchamber: {
     apiVersion: 1,
@@ -271,7 +271,7 @@ describe('updateGuest', () => {
 
     // Remote now needs a host this build does not have.
     await fs.writeFile(path.join(work, 'package.json'), JSON.stringify({
-      name: '@openchamber/upd-keep',
+      name: '@multichamber/upd-keep',
       version: '1.1.0',
       openchamber: {
         apiVersion: 1,

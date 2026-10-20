@@ -8,7 +8,7 @@ import request from 'supertest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createAgentToolRuntime } from './runtime.js';
-import { createOpenChamberControlService } from '../openchamber-control/service.js';
+import { createMultichamberControlService } from '../openchamber-control/service.js';
 import { createProjectContextRuntime } from '../project-context/runtime.js';
 import { createProjectIdFromPath } from '../projects/project-id.js';
 import { OPENCHAMBER_AGENT_TOOL_ACTION_DEFINITIONS, OPENCHAMBER_CONTROL_ACTION_DEFINITIONS } from '../openchamber-control/actions.js';
@@ -116,7 +116,7 @@ describe('managed agent tool runtime', () => {
       fsPromises: fs, path, projectsDirPath: path.join(dataDir, 'projects'),
       createId: () => 'note-1', onChanged,
     });
-    const service = createOpenChamberControlService({
+    const service = createMultichamberControlService({
       projectContextRuntime,
       resolveProjectContextId: async (directory) => directory === '/repo' ? owner : '',
       sessionService: { resolveDirectory: async () => '/repo' },
@@ -159,7 +159,7 @@ describe('managed agent tool runtime', () => {
       createId: () => crypto.randomUUID(), onChanged,
       resolveSharedPlansDir: async () => path.join(dataDir, 'shared-plans'),
     });
-    const service = createOpenChamberControlService({
+    const service = createMultichamberControlService({
       projectContextRuntime,
       resolveProjectContextId: async (resolved) => resolved === directory ? owner : '',
       sessionService: { resolveDirectory: async () => directory },
@@ -334,7 +334,7 @@ describe('managed agent tool runtime', () => {
     expect(controlParameters).not.toHaveProperty('timeout');
     expect(controlParameters.returnResult.type).toBe('boolean');
     expect(tool.openchamber.input.properties.parameters.properties.sessionId).toEqual({ type: 'string' });
-    expect(source).not.toContain('title: "OpenChamber"');
+    expect(source).not.toContain('title: "Multichamber"');
     // Nothing resolves from the generated directory, so the file must not import.
     expect(source).not.toMatch(/\bimport\b/);
     expect(source).not.toContain(preparedEnv.OPENCHAMBER_AGENT_TOOL_TOKEN);
@@ -428,7 +428,7 @@ describe('managed agent tool runtime', () => {
     expect(sent[0].input).toEqual({ action: 'browser.open', url: 'https://example.test', viewport: 'mobile' });
     expect(sent[1].input.url).toBe('https://example.test/nested');
     expect(sent[2].input).toEqual({ action: 'session.messages', sessionId: 'ses_1', limit: 3 });
-    // v2 tools get no directory; the session id is what OpenChamber resolves from.
+    // v2 tools get no directory; the session id is what Multichamber resolves from.
     expect(sent[2].sessionID).toBe('ses_1');
     expect(sent[2].contextDirectory).toBeUndefined();
   });
@@ -651,7 +651,7 @@ describe('managed agent tool runtime', () => {
   });
 
   it('returns the answer a page waited for, or ends the wait when the user writes in the chat', async () => {
-    const service = createOpenChamberControlService({ sessionService: { resolveDirectory: async () => '/repo' } });
+    const service = createMultichamberControlService({ sessionService: { resolveDirectory: async () => '/repo' } });
     const { runtime, dataDir } = await createRuntime({
       resolveSessionDirectory: async () => '/repo',
       executeAction: (...args) => service.execute(...args),
@@ -895,7 +895,7 @@ describe('managed agent tool runtime', () => {
   it('forwards cancellation to the shared control service', async () => {
     const executeAction = vi.fn(async (_action, _input, _directory, options) => {
       await new Promise((resolve, reject) => {
-        options.signal.addEventListener('abort', () => reject(Object.assign(new Error('OpenChamber action was cancelled'), { statusCode: 499 })), { once: true });
+        options.signal.addEventListener('abort', () => reject(Object.assign(new Error('Multichamber action was cancelled'), { statusCode: 499 })), { once: true });
       });
     });
     const { runtime } = await createRuntime({ executeAction });
@@ -907,7 +907,7 @@ describe('managed agent tool runtime', () => {
     await expect(pending).resolves.toEqual(expect.objectContaining({
       ok: false,
       action: 'projects.list',
-      error: { message: 'OpenChamber action was cancelled', kind: 'runtime' },
+      error: { message: 'Multichamber action was cancelled', kind: 'runtime' },
     }));
     expect(executeAction).toHaveBeenCalledWith('projects.list', { action: 'projects.list' }, undefined, { signal: controller.signal });
   });
@@ -917,7 +917,7 @@ describe('managed agent tool runtime', () => {
     // ends the action itself when the event stream reports the cancel.
     const executeAction = vi.fn(async (_action, _input, _directory, options) => {
       await new Promise((resolve, reject) => {
-        options.signal.addEventListener('abort', () => reject(Object.assign(new Error('OpenChamber action was cancelled'), { statusCode: 499 })), { once: true });
+        options.signal.addEventListener('abort', () => reject(Object.assign(new Error('Multichamber action was cancelled'), { statusCode: 499 })), { once: true });
       });
     });
     const { runtime } = await createRuntime({ executeAction });
@@ -941,7 +941,7 @@ describe('managed agent tool runtime', () => {
 
     expect(runtime.abortSession('ses_cancel')).toBe(1);
     const response = await pending;
-    expect(response.body).toEqual(expect.objectContaining({ ok: false, error: expect.objectContaining({ message: 'OpenChamber action was cancelled' }) }));
+    expect(response.body).toEqual(expect.objectContaining({ ok: false, error: expect.objectContaining({ message: 'Multichamber action was cancelled' }) }));
 
     // The other session's action is untouched until it is told otherwise.
     expect(runtime.abortSession('ses_other')).toBe(1);

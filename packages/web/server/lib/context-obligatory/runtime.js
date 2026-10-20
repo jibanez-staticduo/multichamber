@@ -1,6 +1,7 @@
 import { isRecord } from '../shared/guards.js';
 import { assertPromptResponse } from '../opencode/prompt-response.js';
 import { unwrapOpenCodeResponse } from '../opencode/response-envelope.js';
+import { nativeSessionOperation } from '../harnesses/session-client.js';
 const FETCH_TIMEOUT_MS = 15_000;
 const MESSAGE_FETCH_LIMIT = 20;
 
@@ -34,7 +35,7 @@ const buildContextPrompt = (entries) => {
 /**
  * Re-injects the messages the user pinned as obligatory after a compaction.
  *
- * Both the pinned list and the cursor live in OpenChamber's own session
+ * Both the pinned list and the cursor live in Multichamber's own session
  * metadata store — v2 accepts session metadata only at create time.
  * `readSessionMetadata` reads it and `persistContextCursor` records how far we
  * got; without both seams the runtime stays inert.
@@ -49,6 +50,8 @@ export const createContextObligatoryRuntime = ({
   let stopped = false;
 
   const openCodeFetch = async (fetchPath, { directory, method = 'GET', body, query } = {}) => {
+    const native = await nativeSessionOperation(fetchPath, { method, body, query });
+    if (native.handled) return native.value;
     const params = new URLSearchParams(query || {});
     if (directory) params.set('directory', directory);
     const search = params.toString();
@@ -73,7 +76,7 @@ export const createContextObligatoryRuntime = ({
   const tick = async (sessionId, directory) => {
     const session = await openCodeFetch(`/api/session/${encodeURIComponent(sessionId)}`, { directory });
     if (session?.parentID) return;
-    // Pins and the cursor are OpenChamber's, not OpenCode's.
+    // Pins and the cursor are Multichamber's, not OpenCode's.
     const stored = { metadata: await readSessionMetadata(sessionId) };
     const state = readContextState(stored);
 

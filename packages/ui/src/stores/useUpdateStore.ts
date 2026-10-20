@@ -181,7 +181,7 @@ async function checkForWebUpdates(runtime: ClientRuntime, currentVersion?: strin
       : undefined;
     if (currentVersion) params.set('currentVersion', currentVersion);
     else if (runtime === 'vscode' && vscodeVersion) params.set('currentVersion', vscodeVersion);
-    const response = await runtimeFetch(`/api/openchamber/update-check?${params.toString()}`, {
+    const response = await runtimeFetch(`/api/multichamber/update-check?${params.toString()}`, {
       method: 'GET',
       headers: { Accept: 'application/json' },
       // Background check — keep sockets free for interactive traffic at startup.
@@ -202,7 +202,7 @@ async function checkForWebUpdates(runtime: ClientRuntime, currentVersion?: strin
 const updateCheckFailure = z.object({ error: z.string().trim().min(1) });
 
 /**
- * Checks the OpenChamber server the native app is connected to, not the app
+ * Checks the Multichamber server the native app is connected to, not the app
  * itself. The shared store's `mobile` check is about the app build (store or
  * APK updates); this asks the server about its own version, exactly like a
  * browser on that server would, so the result can be installed through the
@@ -214,7 +214,7 @@ export async function checkConnectedServerForUpdates(): Promise<UpdateInfo> {
   // The app's own check already reports usage for this install; asking about
   // the server must not count the phone a second time as a web client.
   params.set('reportUsage', 'false');
-  const response = await runtimeFetch(`/api/openchamber/update-check?${params.toString()}`, {
+  const response = await runtimeFetch(`/api/multichamber/update-check?${params.toString()}`, {
     method: 'GET',
     headers: { Accept: 'application/json' },
   });

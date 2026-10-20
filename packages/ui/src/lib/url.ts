@@ -52,8 +52,8 @@ const BLOCKED_APP_LINK_SCHEMES = new Set([
   // Historically abused Windows handlers can invoke diagnostic, shell, or
   // file-search flows that must not be offered from untrusted chat content.
   'ms-msdt', 'search-ms', 'shell',
-  // OpenChamber's own schemes must not be re-launched from chat content
-  'openchamber', 'openchamber-ui', 'capacitor',
+  // Multichamber's own schemes must not be re-launched from chat content
+  'multichamber', 'openchamber', 'openchamber-ui', 'capacitor',
 ]);
 
 const APP_LINK_SCHEME_RE = /^[a-z][a-z0-9+.-]{1,31}$/;

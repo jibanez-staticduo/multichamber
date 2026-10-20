@@ -178,3 +178,11 @@ describe('settings search', () => {
     expect(results.some((result) => result.id === 'integrations.guests')).toBe(false);
   });
 });
+
+test('native engine defaults and runtime checks are discoverable on desktop and mobile', () => {
+  for (const isMobile of [false, true]) {
+    const results = buildSettingsSearchResults({ query: 'codex', runtimeCtx: { ...runtimeCtx, isMobile }, t, getPageTitle: (page) => page });
+    expect(results.some((result) => result.id === 'sessions.harness-codex-model' && result.page === 'sessions')).toBe(true);
+    expect(results.some((result) => result.id === 'sessions.harness-codex-runtime')).toBe(true);
+  }
+});

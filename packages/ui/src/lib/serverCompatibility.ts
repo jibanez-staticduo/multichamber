@@ -4,7 +4,7 @@ import { runtimeFetch } from './runtime-fetch';
 const versionResponse = z.object({ openchamberVersion: z.string() });
 
 /**
- * The OpenChamber version the connected server reports, over whatever
+ * The Multichamber version the connected server reports, over whatever
  * transport the app uses for it (direct, tunnel, relay). `null` when the
  * server does not say, which is not evidence of an old server.
  */

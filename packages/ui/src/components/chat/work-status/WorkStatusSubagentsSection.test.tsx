@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { Window } from 'happy-dom';
 import { OpenCode } from '@opencode/client';
 import { useUIStore } from '@/stores/useUIStore';
+import { useSessionUIStore } from '@/sync/session-ui-store';
 import { I18nProvider } from '@/lib/i18n';
 import { SyncProvider } from '@/sync/sync-context';
 import { getSyncChildStores } from '@/sync/sync-refs';
@@ -96,6 +97,36 @@ describe('subagent status rows', () => {
     expect(icon()).toBe('#oc-checkbox-circle');
     expect(rowContent().textContent).toBe('Child$0.25');
     expect(row().getAttribute('aria-label')).toContain('Done');
+  });
+
+  test('identifies untitled native siblings and opens each actual child in its owning directory', async () => {
+    const first: Session = { ...child, id: 'ses_cdxfirst', title: 'Untitled session', metadata: { backend: 'codex', codex: { agentNickname: 'Checker', agentPath: '/root/review' } } };
+    const second: Session = { ...first, id: 'ses_cdxsecond', directory: '/repo/child-worktree', metadata: { backend: 'codex', codex: { agentNickname: 'Checker', agentPath: '/root/tests' } } };
+    const originalSet = useSessionUIStore.getState().setCurrentSession;
+    const originalMobile = useUIStore.getState().isMobile;
+    const opened: Array<{ id: string | null; directory?: string }> = [];
+    try {
+      await act(async () => {
+        useSessionUIStore.setState({ setCurrentSession: (id, directory) => { opened.push({ id, directory: directory ?? undefined }); } });
+        useUIStore.setState({ isMobile: true });
+        getSyncChildStores().ensureChild(second.directory, { bootstrap: false }).setState({ session: [second] });
+      });
+      await publish({ session: [parent, first] });
+      const rows = Array.from(container.querySelectorAll<HTMLButtonElement>('button[aria-label]'));
+      const firstRow = rows.find((button) => button.getAttribute('aria-label')?.includes('/root/review'));
+      const secondRow = rows.find((button) => button.getAttribute('aria-label')?.includes('/root/tests'));
+      expect(firstRow).toBeDefined();
+      expect(secondRow).toBeDefined();
+      await act(async () => { firstRow?.click(); secondRow?.click(); });
+      expect(opened).toEqual([{ id: first.id, directory }, { id: second.id, directory: second.directory }]);
+      expect(first.parentID).toBe(parent.id);
+      expect(second.parentID).toBe(parent.id);
+    } finally {
+      await act(async () => {
+        useSessionUIStore.setState({ setCurrentSession: originalSet });
+        useUIStore.setState({ isMobile: originalMobile });
+      });
+    }
   });
 
   test('marks a subagent whose last turn failed instead of calling it done', async () => {

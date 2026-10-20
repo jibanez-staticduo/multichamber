@@ -23,14 +23,19 @@ const jsonResponse = (payload, status = 200) => new Response(JSON.stringify(payl
 describe('Linear auth routes', () => {
   let dataDir;
   let previousDataDir;
+  let previousClient;
+  let previousBroker;
 
   beforeEach(() => {
     previousDataDir = process.env.OPENCHAMBER_DATA_DIR;
+    previousClient = process.env.OPENCHAMBER_LINEAR_CLIENT_ID;
+    previousBroker = process.env.OPENCHAMBER_LINEAR_BROKER_URL;
     dataDir = makeTempDir();
     process.env.OPENCHAMBER_DATA_DIR = dataDir;
     process.env.OPENCHAMBER_PORT = '3001';
     process.env.OPENCHAMBER_LINEAR_REDIRECT_URI = 'http://127.0.0.1:3001/linear/oauth/callback';
-    delete process.env.OPENCHAMBER_LINEAR_CLIENT_ID;
+    process.env.OPENCHAMBER_LINEAR_CLIENT_ID = 'own-client';
+    delete process.env.OPENCHAMBER_LINEAR_BROKER_URL;
   });
 
   afterEach(() => {
@@ -42,7 +47,22 @@ describe('Linear auth routes', () => {
     }
     delete process.env.OPENCHAMBER_PORT;
     delete process.env.OPENCHAMBER_LINEAR_REDIRECT_URI;
+    if (previousClient === undefined) delete process.env.OPENCHAMBER_LINEAR_CLIENT_ID;
+    else process.env.OPENCHAMBER_LINEAR_CLIENT_ID = previousClient;
+    if (previousBroker === undefined) delete process.env.OPENCHAMBER_LINEAR_BROKER_URL;
+    else process.env.OPENCHAMBER_LINEAR_BROKER_URL = previousBroker;
     fs.rmSync(dataDir, { recursive: true, force: true });
+  });
+
+  it('reports missing OAuth configuration without contacting a broker', async () => {
+    delete process.env.OPENCHAMBER_LINEAR_CLIENT_ID;
+    const fetchImpl = vi.fn();
+    vi.stubGlobal('fetch', fetchImpl);
+    const app = createApp();
+    const status = await request(app).get('/api/linear/auth/status').expect(200);
+    expect(status.body).toMatchObject({ connected: false, configured: false });
+    await request(app).post('/api/linear/auth/start').send({ origin: 'desktop' }).expect(400);
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it('starts authorization and completes it from the public callback', async () => {
@@ -76,7 +96,7 @@ describe('Linear auth routes', () => {
               email: 'ada@example.com',
               avatarUrl: 'https://example.com/a.png',
             },
-            organization: { id: 'org-1', name: 'OpenChamber', urlKey: 'openchamber' },
+            organization: { id: 'org-1', name: 'Multichamber', urlKey: 'openchamber' },
           },
         });
       }
@@ -100,11 +120,11 @@ describe('Linear auth routes', () => {
       email: 'ada@example.com',
       avatarUrl: 'https://example.com/a.png',
     });
-    expect(status.body.organization).toEqual({ id: 'org-1', name: 'OpenChamber', urlKey: 'openchamber' });
+    expect(status.body.organization).toEqual({ id: 'org-1', name: 'Multichamber', urlKey: 'openchamber' });
     expect(status.body.scope).toBe('read,write,comments:create');
     expect(status.body.workspaces).toEqual([{
       id: 'org-1',
-      name: 'OpenChamber',
+      name: 'Multichamber',
       urlKey: 'openchamber',
       current: true,
       user: {
@@ -198,7 +218,7 @@ describe('Linear auth routes', () => {
     expect(body.get('token_type_hint')).toBe('refresh_token');
 
     const status = await request(app).get('/api/linear/auth/status').expect(200);
-    expect(status.body).toEqual({ connected: false });
+    expect(status.body).toEqual({ connected: false, configured: true });
   });
 
   it('stores a second workspace, switches current, and disconnects only that one', async () => {

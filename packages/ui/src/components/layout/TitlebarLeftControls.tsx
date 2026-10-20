@@ -1,3 +1,5 @@
+import { EngineSessionMenu } from '@/components/session/EngineSessionMenu';
+import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import React from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Icon } from '@/components/icon/Icon';
@@ -31,6 +33,7 @@ const ICON_BUTTON_CLASS =
  */
 export const TitlebarLeftControls: React.FC = () => {
   const { t, locale, direction } = useI18n();
+  const directory = useEffectiveDirectory();
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
   const isSidebarOpen = useUIStore((state) => state.isSidebarOpen);
   const shortcutOverrides = useUIStore((state) => state.shortcutOverrides);
@@ -147,25 +150,23 @@ export const TitlebarLeftControls: React.FC = () => {
         {/* Labelled while the sidebar is open; collapses to an icon with a
             tooltip so the cluster stays compact over the header otherwise. */}
         {isSidebarOpen ? (
-          <button
+          <EngineSessionMenu directory={directory} onOpenCode={handleNewSession}><button
             type="button"
-            onClick={handleNewSession}
             className={cn(ICON_BUTTON_CLASS, '-ms-1 w-auto min-w-0 px-1.5 font-normal')}
           >
             <Icon name="chat-new" className="h-4 w-4 shrink-0" />
             <span className="truncate">{t('sessions.sidebar.header.actions.newSession')}</span>
-          </button>
+          </button></EngineSessionMenu>
         ) : (
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <EngineSessionMenu directory={directory} onOpenCode={handleNewSession}><button
                 type="button"
-                onClick={handleNewSession}
                 aria-label={t('sessions.sidebar.header.actions.newSession')}
                 className={cn(ICON_BUTTON_CLASS, '-ms-1 shrink-0')}
               >
                 <Icon name="chat-new" className="h-4 w-4" />
-              </button>
+              </button></EngineSessionMenu>
             </TooltipTrigger>
             <TooltipContent>
               <p>{t('sessions.sidebar.header.actions.newSession')}</p>

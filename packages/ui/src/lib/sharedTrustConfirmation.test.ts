@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
-import type { ProjectSetup } from './openchamberConfig';
+import type { ProjectSetup } from './multichamberConfig';
 
 const project = { id: 'p', path: '/repo' };
 
@@ -8,7 +8,7 @@ let setup: ProjectSetup;
 let patches: Array<Record<string, unknown>> = [];
 let saveOk = true;
 
-mock.module('./openchamberConfig', () => ({
+mock.module('./multichamberConfig', () => ({
   getProjectSetup: mock(async () => setup),
   updateProjectSetup: mock(async (_project: unknown, patch: Record<string, unknown>) => {
     patches.push(patch);

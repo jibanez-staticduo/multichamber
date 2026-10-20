@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { registerSessionWarmingRoutes } from './routes.js';
 import { createSessionWarmingRuntime } from './runtime.js';
+import { configureSessionHarnesses } from '../harnesses/session-client.js';
 
 describe('session warming routes', () => {
   let root;
@@ -33,8 +34,16 @@ describe('session warming routes', () => {
   });
 
   afterEach(async () => {
+    configureSessionHarnesses(() => null);
     await runtime.stop();
     fs.rmSync(root, { recursive: true, force: true });
+  });
+  it('refuses native harness warming before mutating the OpenCode warming store', async () => {
+    configureSessionHarnesses((id) => id.startsWith('ses_cdx') ? {} : null);
+    const response = await request(app).put('/api/session-warming/sessions/ses_cdxnative').send({ directory: '/repo', warm: true });
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe('unsupported_harness_operation');
+    expect(runtime.snapshot().sessions).toEqual([]);
   });
 
   it('switches between OpenCode warming every session and per-session warming', async () => {

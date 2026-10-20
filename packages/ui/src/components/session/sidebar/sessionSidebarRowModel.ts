@@ -5,7 +5,7 @@ import { isSessionPinned } from '@/lib/sessionPins';
 import type { GroupSearchData, SessionGroup, SessionNode } from './types';
 import type { ProjectSection } from './projects/sessionProjectRender';
 import { buildGroupRenderDescriptors } from './projects/sessionProjectRender';
-import { normalizeFolderRoots, selectFolderIdsForProjection, selectFolderRootNodes, type BlockingBadgeSessionScope } from './sessions/sessionNodeItemUtils';
+import { resolveTooltipBranchLabel, normalizeFolderRoots, selectFolderIdsForProjection, selectFolderRootNodes, type BlockingBadgeSessionScope } from './sessions/sessionNodeItemUtils';
 import { getSessionFolderIdentityKey, getSessionFolderOwnerKey, getSessionFolderScopes, isArchivedFolderScope } from './sessions/sessionFolderIdentity';
 import type { SessionRowOrderEntry } from './sessions/sessionRowOrder';
 import { computeSessionTreeGuides, type SessionTreeGuide } from './sessions/sessionTreeGeometry';
@@ -239,9 +239,9 @@ const SESSION_ESTIMATE = 32;
 const TIMELINE_SESSION_ESTIMATE = 52;
 // A third fixed line: the 20px title line and its 1px gap.
 const TIMELINE_THREE_LINE_ESTIMATE = TIMELINE_SESSION_ESTIMATE + 21;
-const estimateSessionRow = (context: SessionSidebarRenderContext): number => {
-  if (context === 'timeline-by-time') return TIMELINE_THREE_LINE_ESTIMATE;
-  return isMultiLineTimelineContext(context) ? TIMELINE_SESSION_ESTIMATE : SESSION_ESTIMATE;
+const estimateSessionRow = (context: SessionSidebarRenderContext, hasDetailLine = true): number => {
+  if (context === 'timeline-by-time') return TIMELINE_THREE_LINE_ESTIMATE - (hasDetailLine ? 0 : 17);
+  return isMultiLineTimelineContext(context) ? TIMELINE_SESSION_ESTIMATE - (hasDetailLine ? 0 : 17) : SESSION_ESTIMATE;
 };
 // Chats open on a short page in both views, with pinned chats on top of it.
 const CHATS_INITIAL_LIMIT = 3;
@@ -352,6 +352,7 @@ export const buildSessionSidebarRowModel = (args: SessionSidebarRowModelArgs): S
   const stickyHeaders: SessionSidebarStickyHeader[] = [];
   const folderDropTargets: SessionSidebarFolderTarget[] = [];
   const sessionById = new Map<string, Session>();
+  const knownProjectIds = new Set(args.authoritativeSections.map((section) => section.project.id));
   const keyOccurrences = new Map<string, number>();
   const search = args.mode === 'search';
   const pinned = args.pinnedSessionIds instanceof Set ? args.pinnedSessionIds : new Set(args.pinnedSessionIds);
@@ -448,10 +449,13 @@ export const buildSessionSidebarRowModel = (args: SessionSidebarRowModelArgs): S
       const rowKey = keyFor(`${options.containerKey}:session:${current.node.session.id}`);
       const directory = current.node.session.directory ?? current.directory;
       sessionById.set(current.node.session.id, current.node.session);
+      const secondaryMeta = options.getSecondaryMeta ? options.getSecondaryMeta(current.node.session.id) : options.secondaryMeta ?? null;
+      const hasDetailLine = Boolean(resolveTooltipBranchLabel(secondaryMeta, current.node.worktree?.branch))
+        || (options.renderContext === 'timeline-mixed' && options.projectId !== null && knownProjectIds.has(options.projectId));
       push({
         kind: 'session',
         key: rowKey,
-        estimateSize: estimateSessionRow(options.renderContext),
+        estimateSize: estimateSessionRow(options.renderContext, hasDetailLine),
         node: current.node,
         blockingBadgeSessionScopes: current.depth === baseDepth
           ? options.getBlockingBadgeSessionScopes?.(current.node.session.id) ?? options.blockingBadgeSessionScopes
@@ -463,9 +467,7 @@ export const buildSessionSidebarRowModel = (args: SessionSidebarRowModelArgs): S
         selectionScopeKey: options.selectionScopeKey,
         archived: options.archived,
         renderContext: options.renderContext,
-        secondaryMeta: options.getSecondaryMeta
-          ? options.getSecondaryMeta(current.node.session.id)
-          : options.secondaryMeta ?? null,
+        secondaryMeta,
       });
       const subtreeRange = options.indexedNodes?.subtreeRangeByNode.get(current.node);
       const descendantRange = subtreeRange && subtreeRange[1] > subtreeRange[0] + 1

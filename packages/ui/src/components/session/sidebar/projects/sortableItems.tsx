@@ -1,3 +1,5 @@
+import { useSessionEngineAvailability } from '@/hooks/useSessionEngine';
+import { requestNewClaudeSession, requestNewCodexSession } from '@/sync/session-actions';
 import { DirectoryActionIndicator } from '../sessions/DirectoryActionIndicator';
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
@@ -186,6 +188,8 @@ export const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
     isDragging,
   } = useSortable({ id, disabled });
 
+  const claudeAvailable = useSessionEngineAvailability('claude');
+  const codexAvailable = useSessionEngineAvailability('codex');
   const suppressNextToggleRef = React.useRef(false);
   const menuInstanceKey = `project:${id}`;
   const isMenuOpen = openSidebarMenuKey === menuInstanceKey;
@@ -199,6 +203,8 @@ export const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
 
   const renderProjectMenuItems = (Item: React.ElementType) => (
     <>
+      {claudeAvailable ? <Item onClick={() => requestNewClaudeSession(projectDirectory)}>{t('sessions.sidebar.project.actions.newClaudeSession')}</Item> : null}
+      {codexAvailable ? <Item onClick={() => requestNewCodexSession(projectDirectory)}>{t('sessions.sidebar.project.actions.newCodexSession')}</Item> : null}
       {showCreateButtons && !isRepo && !hideDirectoryControls && onNewSession && (
         <Item onClick={onNewSession}>
           <Icon name="add" className="me-1.5 h-4 w-4" />

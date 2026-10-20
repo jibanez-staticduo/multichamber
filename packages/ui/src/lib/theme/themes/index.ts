@@ -4,30 +4,32 @@ import { withPrColors } from './prColors';
 import { requireTheme } from '../definition';
 import flexokiLightRaw from './flexoki-light.json';
 import flexokiDarkRaw from './flexoki-dark.json';
-import openchamberLightRaw from './openchamber-light.json';
-import openchamberDarkRaw from './openchamber-dark.json';
+import multichamberLightRaw from './multichamber-light.json';
+import multichamberDarkRaw from './multichamber-dark.json';
 
 const flexokiLightTheme = withPrColors(requireTheme(flexokiLightRaw));
 const flexokiDarkTheme = withPrColors(requireTheme(flexokiDarkRaw));
-const openchamberLightTheme = withPrColors(requireTheme(openchamberLightRaw));
-const openchamberDarkTheme = withPrColors(requireTheme(openchamberDarkRaw));
+const multichamberLightTheme = withPrColors(requireTheme(multichamberLightRaw));
+const multichamberDarkTheme = withPrColors(requireTheme(multichamberDarkRaw));
 
-export const DEFAULT_LIGHT_THEME_ID = 'openchamber-light' as const;
-export const DEFAULT_DARK_THEME_ID = 'openchamber-dark' as const;
+export const DEFAULT_LIGHT_THEME_ID = 'multichamber-light' as const;
+export const DEFAULT_DARK_THEME_ID = 'multichamber-dark' as const;
 
 export const themes: Theme[] = [
-  openchamberLightTheme,
-  openchamberDarkTheme,
+  multichamberLightTheme,
+  multichamberDarkTheme,
   flexokiLightTheme,
   flexokiDarkTheme,
   ...presetThemes.filter(
-    (theme) => theme.metadata.id !== 'openchamber-light' && theme.metadata.id !== 'openchamber-dark',
+    (theme) => theme.metadata.id !== 'multichamber-light' && theme.metadata.id !== 'multichamber-dark',
   ),
 ];
 
 export function getThemeById(id: string): Theme | undefined {
-  // Back-compat for a short-lived rename.
+  // Saved legacy selections resolve to the canonical palette without rewriting preferences.
   const resolvedId =
+    id === 'openchamber-light' ? 'multichamber-light' :
+    id === 'openchamber-dark' ? 'multichamber-dark' :
     id === 'app-light' ? 'flexoki-light' :
     id === 'app-dark' ? 'flexoki-dark' :
     id;

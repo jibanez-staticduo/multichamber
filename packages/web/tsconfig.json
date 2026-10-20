@@ -22,10 +22,10 @@
       "node"
     ],
     "paths": {
-      "@openchamber/sdk": [
+      "@multichamber/sdk": [
         "../sdk/src/index.ts"
       ],
-      "@openchamber/sdk/schemas": [
+      "@multichamber/sdk/schemas": [
         "../sdk/src/schemas.ts"
       ],
       "@/*": [
@@ -35,10 +35,10 @@
       "@web/*": [
         "./src/*"
       ],
-      "@openchamber/ui/*": [
+      "@multichamber/ui/*": [
         "../ui/src/*"
       ],
-      "@openchamber/web/*": [
+      "@multichamber/web/*": [
         "./src/*"
       ]
     }

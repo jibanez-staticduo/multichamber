@@ -5,7 +5,7 @@
  * renderer's main thread. A user reporting "CPU jumps to 30%" is reading a
  * process monitor, which also counts the renderer's raster, compositor and
  * garbage-collection threads, Chrome's GPU and network processes, the
- * OpenChamber server relaying the event stream, and OpenCode itself. A capture
+ * Multichamber server relaying the event stream, and OpenCode itself. A capture
  * that only reports main-thread busy time can therefore sit at 5% while the
  * number the user sees is several times higher.
  *
@@ -46,7 +46,7 @@ const parsePsTime = (text) => {
 }
 
 /**
- * Resolves the OpenChamber server listening on `port` and the processes it
+ * Resolves the Multichamber server listening on `port` and the processes it
  * spawned (the managed OpenCode instance). Returns an empty list where the
  * platform has no `lsof`/`pgrep`, which the report states explicitly instead
  * of showing a zero.

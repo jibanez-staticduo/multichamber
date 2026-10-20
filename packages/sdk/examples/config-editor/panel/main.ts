@@ -1,4 +1,4 @@
-import { connectHost, HostRequestError } from '@openchamber/sdk';
+import { connectHost, HostRequestError } from '@multichamber/sdk';
 import {
   applyHostReady,
   mountBadge,
@@ -12,7 +12,7 @@ import {
   mountText,
   mountTextField,
   type Tone,
-} from '@openchamber/sdk/ui';
+} from '@multichamber/sdk/ui';
 import { card, codeSample, createExample, element, paragraph } from '../../shared.ts';
 
 // Reads a file outside the open project (`~/.config/opencode/opencode.json`,

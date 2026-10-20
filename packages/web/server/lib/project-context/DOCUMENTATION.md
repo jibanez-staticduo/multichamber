@@ -148,7 +148,7 @@ and I/O failures are `500`.
 
 ## Change notifications
 
-After `writeContext` atomically commits `context.json`, the runtime calls its optional `onChanged(projectId)` dependency. The server broadcasts `openchamber:project-context-changed` with `{ projectId }` on the existing OpenChamber control stream. It carries the path-derived owner id, not the bounded storage stem or any note content. Failed writes and missing-entry no-ops announce nothing. Updating or deleting a shared plan through the API announces the same way after the file write, since shared plans have no manifest entry.
+After `writeContext` atomically commits `context.json`, the runtime calls its optional `onChanged(projectId)` dependency. The server broadcasts `openchamber:project-context-changed` with `{ projectId }` on the existing Multichamber control stream. It carries the path-derived owner id, not the bounded storage stem or any note content. Failed writes and missing-entry no-ops announce nothing. Updating or deleting a shared plan through the API announces the same way after the file write, since shared plans have no manifest entry.
 
 Clients re-read authoritative context for the visible owner. This is a commit notification, not a filesystem watcher; direct changes to shared plan files outside the API retain their existing read-on-open behavior.
 

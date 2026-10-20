@@ -126,7 +126,7 @@ group and folders: In work is an extra view of it, not a move.
 
 - Web, desktop, hosted mobile, Capacitor: all of it; the server opens
   sessions and owns Jev.
-- VS Code: no OpenChamber server, so sessions do not open on their own and
+- VS Code: no Multichamber server, so sessions do not open on their own and
   there is no done hint and no review offer. The block and Track / Done work
   through the extension's metadata bridge.
 

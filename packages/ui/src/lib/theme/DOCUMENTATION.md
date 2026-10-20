@@ -1,5 +1,9 @@
 # Theme definitions and rendering
 
+The fork's default theme IDs are `multichamber-light` and `multichamber-dark`.
+`getThemeById` accepts the previous `openchamber-light` and `openchamber-dark`
+IDs as aliases to the same palettes, so saved selections remain valid.
+
 `definition.ts` parses authored JSON into the complete runtime `Theme`. Built-ins and custom-file responses use this same boundary. Embedded windows receive an already resolved theme. The server checks required authored roles and file limits; the UI validates all supported overrides before rendering. An invalid sibling is skipped, while an invalid response shape leaves the previous custom library intact. Theme values are written into a `<style>` element, so the boundary also guards CSS: a colour must be a hex value, a keyword or a colour function (`rgb()`, `hsl()`, `oklch()`, `color-mix()` and kin), and fonts and transitions may not contain `; { } < > \` or load anything (`url()`, `image-set()`, `@import`). A theme that fails is skipped like any other invalid sibling.
 
 Keep authored definitions separate from runtime colors. Optional values are meaningful defaults, not missing rendering data. `compactTheme` removes semantic defaults; the maintainer script checks resolved-color equality before replacing JSON files. Existing custom files are read without rewriting them.
@@ -9,7 +13,7 @@ Keep authored definitions separate from runtime colors. Optional values are mean
 CodeMirror, Shiki/Pierre and chat/tool output use the authored
 `syntax.base.background` directly, exposed as `--syntax-background` in CSS.
 There is no global opacity or canvas-mixing adjustment. Built-in palettes keep
-that background close to the canvas, using OpenChamber Light's quiet separation
+that background close to the canvas, using Multichamber Light's quiet separation
 as a reference. Their background-to-background contrast stays at or below 1.10;
 this is a surface distinction budget, not a text contrast target. Custom themes
 retain their exact authored background. Bodies and gutters use the same fill.
@@ -68,7 +72,7 @@ Body and secondary text retain the official contrasts rather than the softened
 text targets used by adapted palettes. These exceptions are authored in the
 built-in definition; the shared theme resolver and VS Code adaptation are unchanged.
 
-Built-in border strength uses OpenChamber's matching light/dark palette as the
+Built-in border strength uses Multichamber's matching light/dark palette as the
 reference. Compare alpha-composited contrast on canvas, sidebar and elevated
 surfaces separately for ordinary borders, hover borders, tool outlines and
 dividers. Only soften roles exceeding the reference's strongest contrast across
@@ -78,7 +82,7 @@ own emphasis.
 
 The VS Code adapter maps the main canvas from chat/editor, secondary layout from
 sidebar/panel, and the shared elevated role from an editor-widget, dropdown or
-input pair in that order. OpenChamber currently has one elevated role for fields
+input pair in that order. Multichamber currently has one elevated role for fields
 and floating UI, so it cannot retain different VS Code input and popup fills at
 the same time. Always keep the foreground paired with the chosen source.
 Selection prefers the authored list pair, then menu and editor pairs, but skips
@@ -112,7 +116,7 @@ source lightness but take the canvas hue, so a neutral code fill does not sit as
 cold slab inside a warm theme, and stay within 1.10 of the canvas; syntax token and
 diff colors retain their source values.
 
-Borders use the matching OpenChamber role's contrast on each corresponding
+Borders use the matching Multichamber role's contrast on each corresponding
 surface as a baseline, including explicit tool and quote borders. Each cap allows
 20% of the gap toward the role's strongest reference contrast to retain a little
 more definition. The sidebar's
@@ -135,7 +139,7 @@ It accepts bounded JSON/JSONC with literal VS Code colors. Missing neutral roles
 derive from the imported canvas, while the adapter owns UI role precedence.
 General semantic selectors override general TextMate rules unless semantic
 highlighting is disabled. Language-specific selectors do not become global colors.
-Missing code categories inherit code text, not the default OpenChamber syntax.
+Missing code categories inherit code text, not the default Multichamber syntax.
 `include` and external token files fail explicitly instead of guessing missing data.
 
 The provider persists imports through `POST /api/config/themes` before adding them

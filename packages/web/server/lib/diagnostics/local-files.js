@@ -56,11 +56,11 @@ const SSH_MESSAGES = [
   { pattern: /^Starting SSH connection$/, action: 'connection started' },
   { pattern: /^Connection already in progress$/, action: 'connection already in progress' },
   { pattern: /^Main tunnel helper exited after ControlMaster handoff$/, action: 'tunnel handoff' },
-  { pattern: /^Could not list OpenChamber servers on the remote host\b/, action: 'remote server discovery failed' },
+  { pattern: /^Could not list Multichamber servers on the remote host\b/, action: 'remote server discovery failed' },
   { pattern: /^The managed server on remote port \d{1,5} did not stop\b/, action: 'remote server stop failed' },
   { pattern: /^Not reusing the server on remote port \d{1,5}: it does not take this instance's UI password\b/, action: 'remote server authentication mismatch' },
   { pattern: /^Not reusing the server on remote port \d{1,5}: it runs in the foreground\b/, action: 'remote server left running' },
-  { pattern: /^Replacing the managed server on remote port \d{1,5}: it runs OpenChamber\b/, action: 'remote server version replaced' },
+  { pattern: /^Replacing the managed server on remote port \d{1,5}: it runs Multichamber\b/, action: 'remote server version replaced' },
   { pattern: /^Replacing the managed server on remote port \d{1,5}: it is bound to\b/, action: 'remote server bind replaced' },
 ];
 
@@ -230,7 +230,7 @@ export async function collectLocalFileDiagnostics({ electronLogPath, home = os.h
   const sources = [
     ...(electronLogPath ? [{ name: 'desktop', folder: path.dirname(electronLogPath), matches: (name) => /^main(?:\.\d+)?\.log$/.test(name) }] : []),
     ...(Number.isInteger(webPort) && webPort > 0 ? [{ name: 'web', folder: path.join(dataDir, 'logs'), matches: (name) => name === `openchamber-${webPort}.log` }] : []),
-    ...(process.platform === 'darwin' ? [{ name: 'startup', folder: path.join(home, 'Library', 'Logs', 'OpenChamber'), matches: (name) => /^startup(?:\.err)?\.log$/.test(name) }] : []),
+    ...(process.platform === 'darwin' ? [{ name: 'startup', folder: path.join(home, 'Library', 'Logs', 'Multichamber'), matches: (name) => /^startup(?:\.err)?\.log$/.test(name) }] : []),
     { name: 'update', folder: dataDir, matches: (name) => name === 'update-install.log' },
   ];
   const { events: journalEvents, coverage: journalCoverage } = journal.snapshot();

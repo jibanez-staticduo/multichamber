@@ -1,4 +1,4 @@
-import { resolveAttachMode, type GuestItem } from '@openchamber/sdk';
+import { resolveAttachMode, type GuestItem } from '@multichamber/sdk';
 import { create } from 'zustand';
 
 import { pluginModeFromId } from '@/lib/surfaces/modes';

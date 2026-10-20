@@ -1,5 +1,5 @@
 /**
- * OpenChamber deep-link vocabulary — the single source of truth for the `openchamber://`
+ * Multichamber deep-link vocabulary — the single source of truth for the `openchamber://`
  * URL scheme used across every native entry point: notification taps, home-screen / lock-
  * screen widgets, and (later) Live Activities. Anything that wants to drive navigation
  * builds a URL with {@link buildDeepLink} and anything that receives one parses it with
@@ -12,7 +12,7 @@
 
 import { isLinkIdentifier } from '@/lib/router/messageFocus';
 
-const DEEP_LINK_SCHEME = 'openchamber';
+const DEEP_LINK_SCHEME = 'multichamber';
 
 export type SessionsFilter = 'all' | 'attention' | 'recent';
 export type ViewTarget = 'files' | 'mcp' | 'instances' | 'update';
@@ -46,7 +46,7 @@ const segmentsOf = (url: URL): string[] => {
 
 /**
  * Parse a raw `openchamber://…` string into a typed intent, or `null` if it isn't a
- * recognised OpenChamber deep link. Tolerant by design: unknown routes return `null`
+ * recognised Multichamber deep link. Tolerant by design: unknown routes return `null`
  * rather than throwing, so callers can fall back without a try/catch.
  */
 export function parseDeepLink(raw: string | null | undefined): DeepLinkIntent | null {
@@ -61,7 +61,7 @@ export function parseDeepLink(raw: string | null | undefined): DeepLinkIntent | 
     return null;
   }
 
-  if (url.protocol !== `${DEEP_LINK_SCHEME}:`) {
+  if (url.protocol !== `${DEEP_LINK_SCHEME}:` && url.protocol !== 'openchamber:') {
     return null;
   }
 

@@ -13,7 +13,7 @@ export function openParallelComposer(prompt = ''): void {
   const project = projects.projects.find((entry) => entry.id === projects.activeProjectId) ?? projects.projects[0];
   useUIStore.getState().closeMainSurfaces();
   useSessionUIStore.getState().openNewSessionDraft(project
-    ? { target: 'project', selectedProjectId: project.id, directoryOverride: project.path }
-    : { target: 'project' });
+    ? { automatic: true, target: 'project', selectedProjectId: project.id, directoryOverride: project.path }
+    : { automatic: true, target: 'project' });
   useUIStore.getState().requestParallelComposer(prompt);
 }

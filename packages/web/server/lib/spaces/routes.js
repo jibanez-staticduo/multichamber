@@ -287,7 +287,7 @@ export function registerSpaceRoutes(app, { getJourney, getPlaces = () => [], get
     res.json({ place: await setMachine(body.data.machine) });
   }));
 
-  // The disk a place's spaces take, and the clean-up of what OpenChamber can make again.
+  // The disk a place's spaces take, and the clean-up of what Multichamber can make again.
   app.get(`${SPACES_ROUTE}/places/:placeId/disk`, withJourney(async (journey, req, res) => {
     res.json(await journey.readDisk(String(req.params.placeId ?? '')));
   }));

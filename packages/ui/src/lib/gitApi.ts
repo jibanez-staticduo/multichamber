@@ -1,3 +1,5 @@
+import { EngineUnsupportedError } from '@/lib/sessionEngine';
+import { engineInfoForSession } from '@/stores/useEngineStore';
 
 import * as gitHttp from './gitApiHttp';
 import { mapWithConcurrency } from './concurrency';
@@ -660,6 +662,8 @@ const runStructuredGenerationInActiveSession = async ({
   generationSession: SessionGenerationContext;
   kind: 'commit' | 'pr';
 }): Promise<Record<string, unknown>> => {
+  const engine = engineInfoForSession({ id: generationSession.sessionId });
+  if (!engine.capabilities.generate) throw new EngineUnsupportedError(engine, "generate");
   const requestStartedAt = Date.now();
   console.info('[git-generation][browser] runStructuredGenerationInActiveSession start', {
     kind,

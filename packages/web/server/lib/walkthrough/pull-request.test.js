@@ -78,7 +78,7 @@ describe('getPullRequestDiff', () => {
   });
 
   it('reads a named source repository when it is the bound one, without resolving the network', async () => {
-    const result = await read({ sourceRepo: { owner: 'OpenChamber', repo: 'OpenChamber' } });
+    const result = await read({ sourceRepo: { owner: 'Multichamber', repo: 'Multichamber' } });
 
     expect(result.meta).toEqual({ owner: 'openchamber', repo: 'openchamber', number: 2122 });
     expect(request).toHaveBeenCalledOnce();

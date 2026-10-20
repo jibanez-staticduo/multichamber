@@ -24,8 +24,8 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const OXLINT_CONFIG = path.join(REPO_ROOT, 'oxlint.anti-slop.config.ts');
 const LINTABLE_FILE = /\.(ts|tsx|js|jsx|mjs|cjs)$/;
 
-const git = (args) => execFileSync('git', args, {
-  cwd: REPO_ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'],
+const git = (args, cwd = REPO_ROOT) => execFileSync('git', args, {
+  cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'],
 });
 
 const readBase = (argv) => {
@@ -34,9 +34,9 @@ const readBase = (argv) => {
   return git(['merge-base', 'HEAD', 'origin/main']).trim();
 };
 
-const listChangedFiles = (base) => {
-  const tracked = git(['diff', '--name-only', '--diff-filter=AMR', base]).split('\n');
-  const untracked = git(['ls-files', '--others', '--exclude-standard']).split('\n');
+const listChangedFiles = (base, repoRoot = REPO_ROOT) => {
+  const tracked = git(['diff', '--no-renames', '--name-only', '-z', '--diff-filter=AMR', base], repoRoot).split('\0');
+  const untracked = git(['ls-files', '--others', '--exclude-standard', '-z'], repoRoot).split('\0');
   return [...new Set([...tracked, ...untracked])].filter((file) => LINTABLE_FILE.test(file));
 };
 
@@ -88,16 +88,19 @@ const runOxlint = (files, cwd) => {
   return JSON.parse(result.stdout).diagnostics;
 };
 
-const checkAntiSlopRatchet = (base, files) => {
-  const current = countFindings(runOxlint(files, REPO_ROOT), (file) => path.relative(REPO_ROOT, path.resolve(REPO_ROOT, file)));
+export const checkAntiSlopRatchet = (base, repoRoot = REPO_ROOT) => {
+  const files = listChangedFiles(base, repoRoot);
+  const current = countFindings(runOxlint(files, repoRoot), (file) => path.relative(repoRoot, path.resolve(repoRoot, file)));
+  // Include the old side of moves even when Git recognizes a staged rename.
+  const changedBasePaths = git(['diff', '--no-renames', '--name-only', '-z', '--diff-filter=ACDMR', base], repoRoot).split('\0').filter((file) => LINTABLE_FILE.test(file));
 
   const baseDir = mkdtempSync(path.join(tmpdir(), 'oc-check-changed-'));
   try {
     const baseFiles = [];
-    for (const file of files) {
+    for (const file of changedBasePaths) {
       let content;
       try {
-        content = git(['show', `${base}:${file}`]);
+        content = git(['show', `${base}:${file}`], repoRoot);
       } catch {
         continue; // Added since the base: every finding in it is new.
       }
@@ -130,7 +133,7 @@ const main = () => {
   if (!runStep('dead code', 'bun', ['run', 'dead-code'])) failed.push('dead code');
 
   console.log('\n▶ anti-slop ratchet');
-  const violations = checkAntiSlopRatchet(base, files);
+  const violations = checkAntiSlopRatchet(base);
   for (const { rule, base: before, current, files: grown } of violations) {
     console.log(`  ${rule}: ${before} → ${current} (grew in ${grown.join(', ')})`);
   }

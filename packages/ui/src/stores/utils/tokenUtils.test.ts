@@ -262,3 +262,11 @@ describe("isSameContextUsage", () => {
     expect(isSameContextUsage(after, buildSessionContextUsage([reply("r", 50_000), compaction("s")], 200_000, 0))).toBe(true)
   })
 })
+
+test('Codex context uses the latest API request rather than accumulated billable turn usage', () => {
+  const messages = [{ id: 'native', role: 'assistant', providerID: 'codex', tokens: { input: 1_500_000, output: 100_000 }, metadata: { codex: { context: { state: 'measured', tokens: 353093, window: 997500 } } } }];
+  expect(findLatestContextFill(messages)).toMatchObject({ state: 'measured', totalTokens: 353093, contextWindow: 997500 });
+  expect(buildSessionContextUsage(messages, 200_000, 0)).toMatchObject({ totalTokens: 353093, contextLimit: 997500, percentage: 35 });
+  expect(findLatestContextFill([{ ...messages[0], metadata: {} }])).toBeNull();
+  expect(buildSessionContextUsage([{ ...messages[0], metadata: { codex: { context: { state: 'measured', tokens: 353093, window: null } } } }], 200_000, 0)).toBeNull();
+});

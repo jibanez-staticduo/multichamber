@@ -70,7 +70,7 @@ export function SyncRuntimeEffects({ backgroundWorkEnabled }: {
 }) {
   useSessionAutoCleanup({ enabled: backgroundWorkEnabled });
   useMergedWorktreeCleanup({ enabled: backgroundWorkEnabled });
-  // Web, desktop, and mobile hand the queue to the OpenChamber server, which
+  // Web, desktop, and mobile hand the queue to the Multichamber server, which
   // delivers it with or without a UI; only VS Code still sends from the UI.
   useQueuedMessageAutoSend(backgroundWorkEnabled && !isServerOwnedMessageQueue());
   useMessageQueueHoldSync();

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Cold-start benchmark for a packaged OpenChamber Desktop build.
+ * Cold-start benchmark for a packaged Multichamber Desktop build.
  *
  * Launches the packaged app in an isolated home directory (its own settings,
  * Electron profile, logs and OpenCode data, with the developer's
@@ -33,7 +33,7 @@
  * OpenCode CLI once before the runs and points every launch at it through
  * OPENCODE_PORT, so the measurement excludes OpenCode's own start.
  *
- * `--url <OpenChamber URL>` measures the web app instead: a fresh Chrome per
+ * `--url <Multichamber URL>` measures the web app instead: a fresh Chrome per
  * launch loads the URL, and every milestone is in milliseconds since that
  * navigation started. `--cache cold` (default) gives every launch an empty
  * profile, a first visit; `--cache warm` keeps one profile (HTTP cache,
@@ -53,11 +53,11 @@ import { buildStartupProbeSource, STARTUP_PROBE_GLOBAL } from "./perf/startup-pr
 
 const HELP = `Usage: bun run profile:startup -- [options]
 
-Measures how long a packaged OpenChamber Desktop build, or the web app at
+Measures how long a packaged Multichamber Desktop build, or the web app at
 --url, takes to start and become usable.
 
 Options:
-  --url <url>              Measure the web app at this OpenChamber URL in Chrome
+  --url <url>              Measure the web app at this Multichamber URL in Chrome
                            instead of a packaged build
   --cache cold|warm        Web only. cold: an empty Chrome profile per launch
                            (default). warm: one profile reused by every launch
@@ -66,7 +66,7 @@ Options:
   --model-label <text>     Record modelPickerShown: when the composer footer
                            first shows this model name
   --app <path>             Packaged app (.app bundle on macOS, executable elsewhere).
-                           Default: packages/electron/dist/mac-<arch>/OpenChamber.app
+                           Default: packages/electron/dist/mac-<arch>/Multichamber.app
   --compare <path>         Second build; launches alternate between the two
   --runs <n>               Measured launches per build (default: 5)
   --warmup <n>             Discarded launches per build before measuring (default: 1)
@@ -159,9 +159,9 @@ const repoRoot = resolve(new URL("..", import.meta.url).pathname)
 
 const defaultApp = () => {
   const arch = process.arch === "arm64" ? "arm64" : "x64"
-  if (process.platform === "darwin") return join(repoRoot, "packages/electron/dist", `mac-${arch}`, "OpenChamber.app")
+  if (process.platform === "darwin") return join(repoRoot, "packages/electron/dist", `mac-${arch}`, "Multichamber.app")
   if (process.platform === "linux") return join(repoRoot, "packages/electron/dist/linux-unpacked/openchamber")
-  return join(repoRoot, "packages/electron/dist/win-unpacked/OpenChamber.exe")
+  return join(repoRoot, "packages/electron/dist/win-unpacked/Multichamber.exe")
 }
 
 // The executable to spawn and the bundled OpenCode CLI, per platform layout.
@@ -185,10 +185,10 @@ const resolveBuild = (appPath, label) => {
 const homeLayout = (home) => {
   const config = join(home, ".config", "openchamber")
   const logs = process.platform === "darwin"
-    ? join(home, "Library", "Logs", "OpenChamber")
+    ? join(home, "Library", "Logs", "Multichamber")
     : process.platform === "win32"
-      ? join(home, "AppData", "Roaming", "OpenChamber", "logs")
-      : join(home, ".config", "OpenChamber", "logs")
+      ? join(home, "AppData", "Roaming", "Multichamber", "logs")
+      : join(home, ".config", "Multichamber", "logs")
   return { home, config, settings: join(config, "settings.json"), userData: join(home, "userData"), mainLog: join(logs, "main.log") }
 }
 

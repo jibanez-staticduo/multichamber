@@ -2,13 +2,13 @@ const CORE_VERSION = /^(\d+)\.(\d+)\.(\d+)$/;
 /** `1.22.0` or `>=1.22.0`. Ranges beyond a floor are not accepted. */
 export const OPENCHAMBER_ENGINE_PATTERN = /^(>=)?\d+\.\d+\.\d+$/;
 
-type OpenChamberVersionParts = {
+type MultichamberVersionParts = {
   major: number;
   minor: number;
   patch: number;
 };
 
-export const parseOpenChamberVersion = (value: string): OpenChamberVersionParts | null => {
+export const parseMultichamberVersion = (value: string): MultichamberVersionParts | null => {
   const core = String(value || '').trim().replace(/^v/i, '').split(/[-+]/)[0] ?? '';
   const match = CORE_VERSION.exec(core);
   if (!match) {
@@ -21,9 +21,9 @@ export const parseOpenChamberVersion = (value: string): OpenChamberVersionParts 
   };
 };
 
-export const compareOpenChamberVersions = (left: string, right: string): number => {
-  const a = parseOpenChamberVersion(left);
-  const b = parseOpenChamberVersion(right);
+export const compareMultichamberVersions = (left: string, right: string): number => {
+  const a = parseMultichamberVersion(left);
+  const b = parseMultichamberVersion(right);
   if (!a || !b) {
     return 0;
   }
@@ -33,29 +33,29 @@ export const compareOpenChamberVersions = (left: string, right: string): number 
 };
 
 /** Normalize `>=1.22.0` / `1.22.0` to the floor version string. */
-export const openChamberEngineMinimum = (engine: string): string | null => {
+export const multichamberEngineMinimum = (engine: string): string | null => {
   const trimmed = engine.trim();
   if (!OPENCHAMBER_ENGINE_PATTERN.test(trimmed)) {
     return null;
   }
   const floor = trimmed.startsWith('>=') ? trimmed.slice(2) : trimmed;
-  return parseOpenChamberVersion(floor) ? floor : null;
+  return parseMultichamberVersion(floor) ? floor : null;
 };
 
 /**
- * True when this OpenChamber build is new enough for the guest's `engines.openchamber`.
+ * True when this Multichamber build is new enough for the guest's normalized engine requirement.
  * Unknown host versions fail closed when an engine is declared.
  */
-export const hostMeetsOpenChamberEngine = (
+export const hostMeetsMultichamberEngine = (
   hostVersion: string,
   engine: string,
 ): boolean => {
-  const minimum = openChamberEngineMinimum(engine);
+  const minimum = multichamberEngineMinimum(engine);
   if (!minimum) {
     return false;
   }
-  if (!parseOpenChamberVersion(hostVersion)) {
+  if (!parseMultichamberVersion(hostVersion)) {
     return false;
   }
-  return compareOpenChamberVersions(hostVersion, minimum) >= 0;
+  return compareMultichamberVersions(hostVersion, minimum) >= 0;
 };

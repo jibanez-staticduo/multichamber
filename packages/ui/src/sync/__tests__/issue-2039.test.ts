@@ -338,7 +338,7 @@ mock.module("../session-actions", () => ({
     }
     const { useSessionUIStore: store } = await import("../session-ui-store")
     store.getState().setCurrentSession(session.id, sessionDirectory, selectionTransition)
-    store.getState().markSessionAsOpenChamberCreated(session.id)
+    store.getState().markSessionAsMultichamberCreated(session.id)
     return session
   }),
   forkAfterMessage: mock(async () => undefined),
@@ -366,7 +366,7 @@ mock.module("@/lib/git/branchNameGenerator", () => ({
   generateBranchName: () => "generated-branch",
 }))
 
-mock.module("@/lib/openchamberConfig", () => ({
+mock.module("@/lib/multichamberConfig", () => ({
   getWorktreeSetupCommands: async () => [],
   getWorktreeSetupWaitEnabled: async () => false,
   substituteCommandVariables: (command: string) => command,
@@ -485,7 +485,7 @@ describe("issue 2039 draft auto-accept", () => {
   })
 
   test("stores auto-accept in the draft and applies it when the session materializes", async () => {
-    useSessionUIStore.getState().openNewSessionDraft()
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true })
 
     // No choice yet: the server writes the default from Settings.
     expect(useSessionUIStore.getState().newSessionDraft.permissionMode).toBeUndefined()
@@ -509,7 +509,7 @@ describe("issue 2039 draft auto-accept", () => {
   test("writes the Settings default onto a new space session, which no server does for it", async () => {
     useUIStore.setState({ permissionDefaultMode: "auto" })
     createdSessionDirectory = "/spaces/0123456789ab/project"
-    useSessionUIStore.getState().openNewSessionDraft({ target: "project", directoryOverride: "/spaces/0123456789ab/project" })
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, target: "project", directoryOverride: "/spaces/0123456789ab/project" })
 
     await materializeOpenDraftSession({ providerID: "provider", modelID: "model" })
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -519,12 +519,12 @@ describe("issue 2039 draft auto-accept", () => {
 
   test("leaves the default to the host's server outside a space, and writes nothing for ask", async () => {
     useUIStore.setState({ permissionDefaultMode: "auto" })
-    useSessionUIStore.getState().openNewSessionDraft({ target: "project", directoryOverride: "/repo" })
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, target: "project", directoryOverride: "/repo" })
     await materializeOpenDraftSession({ providerID: "provider", modelID: "model" })
 
     useUIStore.setState({ permissionDefaultMode: "ask" })
     createdSessionDirectory = "/spaces/0123456789ab/project"
-    useSessionUIStore.getState().openNewSessionDraft({ target: "project", directoryOverride: "/spaces/0123456789ab/project" })
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, target: "project", directoryOverride: "/spaces/0123456789ab/project" })
     await materializeOpenDraftSession({ providerID: "provider", modelID: "model" })
     await new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -534,7 +534,7 @@ describe("issue 2039 draft auto-accept", () => {
   test("a choice made in a space draft wins over the Settings default", async () => {
     useUIStore.setState({ permissionDefaultMode: "auto" })
     createdSessionDirectory = "/spaces/0123456789ab/project"
-    useSessionUIStore.getState().openNewSessionDraft({ target: "project", directoryOverride: "/spaces/0123456789ab/project" })
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, target: "project", directoryOverride: "/spaces/0123456789ab/project" })
     useSessionUIStore.getState().setDraftPermissionMode("ask")
 
     await materializeOpenDraftSession({ providerID: "provider", modelID: "model" })
@@ -544,7 +544,7 @@ describe("issue 2039 draft auto-accept", () => {
   })
 
   test("stores only an explicit draft variant as the session override", async () => {
-    useSessionUIStore.getState().openNewSessionDraft()
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true })
     await materializeOpenDraftSession({
       providerID: "provider",
       modelID: "model",
@@ -555,7 +555,7 @@ describe("issue 2039 draft auto-accept", () => {
     expect(savedVariantCalls).toEqual([undefined])
 
     configVariantOverride = "high"
-    useSessionUIStore.getState().openNewSessionDraft()
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true })
     await materializeOpenDraftSession({
       providerID: "provider",
       modelID: "model",
@@ -567,7 +567,7 @@ describe("issue 2039 draft auto-accept", () => {
   })
 
   test("stores a draft agent model only after an explicit model choice", async () => {
-    useSessionUIStore.getState().openNewSessionDraft()
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true })
     await materializeOpenDraftSession({
       providerID: "provider",
       modelID: "model",
@@ -578,7 +578,7 @@ describe("issue 2039 draft auto-accept", () => {
     expect(savedAgentModelCalls).toEqual([])
 
     selectionSource = "manual"
-    useSessionUIStore.getState().openNewSessionDraft()
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true })
     await materializeOpenDraftSession({
       providerID: "provider",
       modelID: "other-model",
@@ -601,7 +601,7 @@ describe("issue 2039 draft auto-accept", () => {
     }
     projectsState.projects = [project]
 
-    useSessionUIStore.getState().openNewSessionDraft({
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true,
       target: "project",
       selectedProjectId: project.id,
       directoryOverride: project.path,
@@ -625,7 +625,7 @@ describe("issue 2039 draft auto-accept", () => {
     const project = { id: "project-1", path: "/repo" }
     projectsState.projects = [project]
 
-    useSessionUIStore.getState().openNewSessionDraft({
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true,
       target: "project",
       selectedProjectId: project.id,
       directoryOverride: project.path,
@@ -654,7 +654,7 @@ describe("issue 2039 draft auto-accept", () => {
     }
     projectsState.projects = [project]
 
-    useSessionUIStore.getState().openNewSessionDraft()
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true })
     await new Promise((resolve) => setTimeout(resolve, 0))
     applyDefaultModelAgentSelectionCalls.length = 0
     activateDirectoryCalls.length = 0
@@ -678,7 +678,7 @@ describe("issue 2039 draft auto-accept", () => {
     let finish!: () => void
     activationPending = new Promise<void>((resolve) => { finish = resolve })
     projectsState.projects = [{ id: 'project-1', path: '/repo', defaultAgent: 'build' }]
-    useSessionUIStore.getState().openNewSessionDraft({ target: 'project', selectedProjectId: 'project-1', directoryOverride: '/repo' })
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, target: 'project', selectedProjectId: 'project-1', directoryOverride: '/repo' })
     expect(applyDefaultModelAgentSelectionCalls).toHaveLength(1)
     selectionSource = 'manual'
     useSessionUIStore.getState().overrideNewSessionDraftTarget({ directoryOverride: '/worktree', pendingWorktreeRequestId: 'request' })
@@ -691,7 +691,7 @@ describe("issue 2039 draft auto-accept", () => {
     let finish!: () => void
     activationPending = new Promise<void>((resolve) => { finish = resolve })
     projectsState.projects = [{ id: 'project-1', path: '/repo', defaultAgent: 'project-agent' }]
-    useSessionUIStore.getState().openNewSessionDraft({ target: 'project', selectedProjectId: 'project-1', directoryOverride: '/repo' })
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, target: 'project', selectedProjectId: 'project-1', directoryOverride: '/repo' })
     useSessionUIStore.getState().setNewSessionDraftTarget({ projectId: 'openchamber:chats' })
     const appliedBeforeClose = applyDefaultModelAgentSelectionCalls.length
     useSessionUIStore.getState().closeNewSessionDraft()
@@ -701,7 +701,7 @@ describe("issue 2039 draft auto-accept", () => {
   })
 
   test("reapplies global defaults when opening a fresh no-project draft", async () => {
-    useSessionUIStore.getState().openNewSessionDraft()
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true })
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(activateDirectoryCalls).toEqual([null])
@@ -722,7 +722,7 @@ describe("issue 2039 draft auto-accept", () => {
     }
     projectsState.projects = [project]
 
-    useSessionUIStore.getState().openNewSessionDraft({
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true,
       target: "project",
       selectedProjectId: project.id,
       directoryOverride: project.path,
@@ -737,7 +737,7 @@ describe("issue 2039 draft auto-accept", () => {
     applyDefaultModelAgentSelectionCalls.length = 0
     activateDirectoryCalls.length = 0
 
-    useSessionUIStore.getState().openNewSessionDraft()
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true })
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(activateDirectoryCalls).toEqual(["/repo"])
@@ -750,17 +750,17 @@ describe("issue 2039 draft auto-accept", () => {
 
   test("starting a chat brings back a hidden Chats section; a project session leaves it hidden", async () => {
     useSessionDisplayStore.getState().setShowChatsSection(false)
-    useSessionUIStore.getState().openNewSessionDraft({ target: "project", directoryOverride: "/repo" })
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true, target: "project", directoryOverride: "/repo" })
     await materializeOpenDraftSession({ providerID: "provider", modelID: "model" })
     expect(useSessionDisplayStore.getState().showChatsSection).toBe(false)
 
-    useSessionUIStore.getState().openNewSessionDraft()
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true })
     await materializeOpenDraftSession({ providerID: "provider", modelID: "model" })
     expect(useSessionDisplayStore.getState().showChatsSection).toBe(true)
   })
 
   test("does not apply draft auto-accept after the draft is closed", async () => {
-    useSessionUIStore.getState().openNewSessionDraft()
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true })
     useSessionUIStore.getState().setDraftPermissionMode("auto")
     useSessionUIStore.getState().closeNewSessionDraft()
 
@@ -778,7 +778,7 @@ describe("issue 2039 draft auto-accept", () => {
   })
 
   test("transfers draft project context pins only to the session it creates", async () => {
-    useSessionUIStore.getState().openNewSessionDraft({
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true,
       projectContextPins: { notes: ["note-a"], plans: [] },
     })
     useSessionUIStore.getState().setDraftProjectContextPin("plan", "plan-a", true)
@@ -792,7 +792,7 @@ describe("issue 2039 draft auto-accept", () => {
     })
     expect(useSessionUIStore.getState().newSessionDraft.projectContextPins).toBe(undefined)
 
-    useSessionUIStore.getState().openNewSessionDraft()
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true })
     await materializeOpenDraftSession({ providerID: "provider", modelID: "model" })
 
     expect(createSessionCalls[1]?.metadata).toBe(undefined)
@@ -800,7 +800,7 @@ describe("issue 2039 draft auto-accept", () => {
 
   test("uses the server-authoritative directory after worktree session creation", async () => {
     createdSessionDirectory = "/canonical/worktree"
-    useSessionUIStore.getState().openNewSessionDraft({
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true,
       directoryOverride: "/requested/worktree",
     })
 
@@ -816,7 +816,7 @@ describe("issue 2039 draft auto-accept", () => {
 
   test("routes the session by the canonical directory, not the requested worktree path", async () => {
     createdSessionDirectory = "/canonical/worktree"
-    useSessionUIStore.getState().openNewSessionDraft({
+    useSessionUIStore.getState().openNewSessionDraft({ harness: 'opencode', resolvedHarness: true,
       directoryOverride: "/requested/worktree",
     })
 

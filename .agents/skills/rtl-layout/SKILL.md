@@ -1,6 +1,6 @@
 ---
 name: rtl-layout
-description: Use when creating or modifying OpenChamber UI layout, horizontal positioning, offsets or scroll math, resize or drag handles, arrow-key navigation, directional icons, or slide animations.
+description: Use when creating or modifying Multichamber UI layout, horizontal positioning, offsets or scroll math, resize or drag handles, arrow-key navigation, directional icons, or slide animations.
 ---
 
 # RTL Layout

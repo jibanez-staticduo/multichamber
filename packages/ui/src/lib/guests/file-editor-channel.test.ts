@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { OPENCHAMBER_SDK_API_VERSION, OPENCHAMBER_SDK_CHANNEL, type FileEditorChange, type HostMessage } from '@openchamber/sdk';
+import { OPENCHAMBER_SDK_API_VERSION, OPENCHAMBER_SDK_CHANNEL, type FileEditorChange, type HostMessage } from '@multichamber/sdk';
 
 import { createGuestFileChannel, GuestFileSnapshotError, type GuestFileMessage } from './file-editor-channel';
 

@@ -1,4 +1,4 @@
-// OpenChamber private relay protocol constants and shared types.
+// Multichamber private relay protocol constants and shared types.
 // Overview: packages/web/server/lib/relay/DOCUMENTATION.md
 // Three layers: relay routing (Layer 1), E2EE channel (Layer 2), tunnel mux (Layer 3).
 // This module is isomorphic: browser, Node, and Cloudflare Workers.

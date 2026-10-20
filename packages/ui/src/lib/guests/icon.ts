@@ -1,4 +1,4 @@
-import { isGuestPackageSvgIcon } from '@openchamber/sdk';
+import { isGuestPackageSvgIcon } from '@multichamber/sdk';
 
 import { iconSpriteData } from '@/components/icon/sprite';
 import type { IconName } from '@/components/icon/icons';

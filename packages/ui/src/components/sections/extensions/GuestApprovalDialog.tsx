@@ -1,5 +1,5 @@
 import React from 'react';
-import { serviceProvides, type GuestCapability } from '@openchamber/sdk';
+import { serviceProvides, type GuestCapability } from '@multichamber/sdk';
 
 import { Button } from '@/components/ui/button';
 import {

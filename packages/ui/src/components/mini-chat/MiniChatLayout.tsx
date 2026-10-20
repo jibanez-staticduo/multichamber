@@ -1,4 +1,5 @@
 import React from 'react';
+import { nativeSessionLabel } from '@/lib/nativeSessionLabel';
 import { Button } from '@/components/ui/button';
 import { ChatContainer } from '@/components/chat/ChatContainer';
 import { GuestHosts } from '@/components/layout/GuestHosts';
@@ -98,7 +99,7 @@ const MiniChatHeader: React.FC<{ mode: MiniChatMode }> = ({ mode }) => {
     });
   }, []);
 
-  const title = session?.title?.trim()
+  const title = (session ? nativeSessionLabel(session, t('sessions.sidebar.session.untitled')) : '')
     || (draftOpen || mode === 'draft' ? t('miniChat.header.newSession') : t('miniChat.header.session'));
   const sessionDirectory = normalizePath((session as { directory?: string | null } | null)?.directory ?? null);
   const worktreeDirectory = normalizePath(worktreePath || sessionWorktreeMetadata?.path || worktreeAttachment?.cwd || worktreeAttachment?.worktreeRoot || '');
@@ -133,7 +134,7 @@ const MiniChatHeader: React.FC<{ mode: MiniChatMode }> = ({ mode }) => {
   const projectLabel = React.useMemo(() => {
     if (isChatContext) return null;
     const project = pathMatchedProject ?? activeProject;
-    if (!project) return directoryLabel || 'OpenChamber';
+    if (!project) return directoryLabel || 'Multichamber';
     const label = project.label?.trim();
     if (label) return label;
     const segments = project.path.split(/[\\/]/).filter(Boolean);

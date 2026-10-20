@@ -1,10 +1,10 @@
-# OpenChamber Control Service
+# Multichamber Control Service
 
 ## Purpose
 
-This module owns the typed control contract shared by the OpenChamber CLI and
+This module owns the typed control contract shared by the Multichamber CLI and
 the managed OpenCode `openchamber` tool. Both adapters delegate to
-`createOpenChamberControlService()`; neither adapter may call or spawn the
+`createMultichamberControlService()`; neither adapter may call or spawn the
 other.
 
 ## Boundaries
@@ -12,7 +12,7 @@ other.
 - `service.js` validates and executes the fixed project, model, session, and
   scheduled-task action allowlist. `actions.js` marks CLI-only actions with
   `agentExposed: false` (currently `schedule.status`); the agent tool consumes
-  the filtered `OPENCHAMBER_AGENT_TOOL_*` exports. `schedule.toggle` requires
+  the filtered `MULTICHAMBER_AGENT_TOOL_*` exports. `schedule.toggle` requires
   the `disabled` boolean and replaces separate enable/disable actions; its
   `enabled` is the saved state, never the requested one. Loop tasks and the
   refusal to enable a repository loop are the scheduled-task service's rules
@@ -139,7 +139,7 @@ other.
   root. When the checkout lacks the folder, it cannot be checked, or git cannot
   report the project's folder, the session starts at the worktree root and the
   result carries `startDirectoryFallback` (`missing`, `unverified` or `unknown`).
-  The field is for API callers; the OpenChamber UI does not read it, because it
+  The field is for API callers; the Multichamber UI does not read it, because it
   resolves its own start folder and shows its own warning. `unknown` also covers a
   failed git read: `resolveWorktreeTopLevel` answers without a `prefix` then,
   which is never taken for "the project is at the repository root". For a move,

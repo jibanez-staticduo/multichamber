@@ -5,7 +5,7 @@ import { devtools } from 'zustand/middleware';
 import type { CreateMultiRunParams, CreateMultiRunResult } from '@/types/multirun';
 import { opencodeClient } from '@/lib/opencode/client';
 import { syncSessionKnowledge } from '@/lib/sessionKnowledgeApi';
-import { getWorktreeSetupWaitEnabled, saveWorktreeSetupCommands } from '@/lib/openchamberConfig';
+import { getWorktreeSetupWaitEnabled, saveWorktreeSetupCommands } from '@/lib/multichamberConfig';
 import type { ProjectRef } from '@/lib/worktrees/worktreeManager';
 import { createWorktreeWithDefaults, resolveRootTrackingRemote } from '@/lib/worktrees/worktreeCreate';
 import { waitForWorktreeBootstrap } from '@/lib/worktrees/worktreeBootstrap';
@@ -52,7 +52,7 @@ export const registerMultiRunSession = (session: Session, directory: string): Se
     : { ...session, directory: normalizedDirectory };
 
   registerSessionDirectory(session.id, normalizedDirectory);
-  useSessionUIStore.getState().markSessionAsOpenChamberCreated(session.id);
+  useSessionUIStore.getState().markSessionAsMultichamberCreated(session.id);
   useGlobalSessionsStore.getState().upsertSession(sessionWithDirectory);
 
   try {
@@ -209,6 +209,7 @@ export const useMultiRunStore = create<MultiRunStore>()(
             sessionId: string;
             /** Where the run's session starts: the worktree root, or the project's folder inside it. */
             directory: string;
+            harness?: import('@/lib/sessionEngine').SessionEngine;
             providerID: string;
             modelID: string;
             variant?: string;
@@ -227,19 +228,19 @@ export const useMultiRunStore = create<MultiRunStore>()(
             const modelCounts = new Map<string, number>();
             for (const model of group.models) {
               assertCurrent();
-              const key = `${model.providerID}:${model.modelID}`;
+              const key = `${model.harness ?? 'opencode'}:${model.providerID}:${model.modelID}`;
               modelCounts.set(key, (modelCounts.get(key) || 0) + 1);
             }
 
             const modelIndexes = new Map<string, number>();
 
             for (const model of group.models) {
-              const key = `${model.providerID}:${model.modelID}`;
+              const key = `${model.harness ?? 'opencode'}:${model.providerID}:${model.modelID}`;
               const count = modelCounts.get(key) || 1;
               const index = (modelIndexes.get(key) || 0) + 1;
               modelIndexes.set(key, index);
 
-              const modelSlug = toModelSlug(model.providerID, model.modelID);
+              const modelSlug = toModelSlug(`${model.harness ?? 'opencode'}-${model.providerID}`, model.modelID);
               const runGroup = groups.length > 1 ? `g${gi + 1}` : undefined;
               const modelPart = count > 1
                 ? generateWorktreeNameSeed(groupSlug, `${modelSlug}/${index}`)
@@ -257,7 +258,7 @@ export const useMultiRunStore = create<MultiRunStore>()(
               try {
                 const createRun = (runDirectory: string) => createMultiRunSession({
                   title: sessionTitle, directory: runDirectory,
-                  identity: { group: membershipGroup, groupSlug, runGroup, providerID: model.providerID,
+                  identity: { harness: model.harness, mode: model.mode, variant: model.variant, group: membershipGroup, groupSlug, runGroup, providerID: model.providerID,
                     modelID: model.modelID, index: count > 1 ? index : undefined, role: 'run', title: runTitle, autoFusion },
                   selection: { model: { providerID: model.providerID, id: model.modelID, variant: model.variant }, agent },
                 }, assertCurrent);
@@ -268,6 +269,7 @@ export const useMultiRunStore = create<MultiRunStore>()(
                   createdRuns.push({
                     sessionId: session.id,
                     directory,
+                    harness: model.harness,
                     providerID: model.providerID,
                     modelID: model.modelID,
                     variant: model.variant,
@@ -315,6 +317,7 @@ export const useMultiRunStore = create<MultiRunStore>()(
                 createdRuns.push({
                   sessionId: session.id,
                   directory: startDirectory,
+                  harness: model.harness,
                   providerID: model.providerID,
                   modelID: model.modelID,
                   variant: model.variant,
@@ -362,7 +365,7 @@ export const useMultiRunStore = create<MultiRunStore>()(
                 providerID: run.providerID,
                 modelID: run.modelID,
                 variant: run.variant,
-                agent,
+                agent: run.harness && run.harness !== 'opencode' ? undefined : agent,
                 files: [...(filesForMessage ?? []), ...(run.files ?? []).map((f) => ({ type: 'file' as const, mime: f.mime, filename: f.filename, url: f.url }))],
               });
             } catch (err) {

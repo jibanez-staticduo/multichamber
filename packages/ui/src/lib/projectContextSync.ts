@@ -1,4 +1,4 @@
-import { subscribeOpenchamberEvents } from './openchamberEvents';
+import { subscribeOpenchamberEvents } from './multichamberEvents';
 import { resolveProjectContextId, type ProjectRef } from './projectContextApi';
 import { getRuntimeKey } from './runtime-switch';
 import { useProjectContextStore } from '@/stores/useProjectContextStore';

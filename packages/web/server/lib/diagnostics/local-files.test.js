@@ -78,7 +78,7 @@ describe('local file diagnostics', () => {
   it('groups repeated failed HTTP access records while retaining other errors and distinct bursts', async () => {
     const home = await fs.mkdtemp(path.join(os.tmpdir(), 'oc-diagnostics-'));
     try {
-      const folder = path.join(home, 'Library', 'Logs', 'OpenChamber');
+      const folder = path.join(home, 'Library', 'Logs', 'Multichamber');
       await fs.mkdir(folder, { recursive: true });
       const start = Date.parse('2026-09-28T10:00:00Z');
       const access = (at, status = 404) => `[${new Date(at).toISOString()}] [error] GET /private/secret-123?token=secret-456 - ${status} with id 00000000:00000000:00000000:00000000 in 20ms`;
@@ -105,7 +105,7 @@ describe('local file diagnostics', () => {
   it('groups each stream-failure reporter without hiding other warnings or later bursts', async () => {
     const home = await fs.mkdtemp(path.join(os.tmpdir(), 'oc-diagnostics-'));
     try {
-      const folder = path.join(home, 'Library', 'Logs', 'OpenChamber');
+      const folder = path.join(home, 'Library', 'Logs', 'Multichamber');
       await fs.mkdir(folder, { recursive: true });
       const start = Date.parse('2026-09-28T10:00:00Z');
       const line = (at, body) => `[${new Date(at).toISOString()}] [warn] ${body}`;

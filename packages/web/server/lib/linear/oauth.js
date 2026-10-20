@@ -141,7 +141,7 @@ export async function startAuthorization({ origin } = {}) {
   const clientId = getLinearClientId();
   if (!clientId) {
     throw new LinearOAuthError(
-      'Linear OAuth client not configured. Set OPENCHAMBER_LINEAR_CLIENT_ID.',
+      'Linear OAuth client not configured. Set MULTICHAMBER_LINEAR_CLIENT_ID.',
       'LINEAR_CLIENT_ID_MISSING',
     );
   }
@@ -151,6 +151,7 @@ export async function startAuthorization({ origin } = {}) {
   const state = crypto.randomBytes(32).toString('base64url');
   const brokerUrl = getLinearBrokerUrl();
   const configuredRedirectUri = getLinearRedirectUri();
+  if (!configuredRedirectUri) throw new LinearOAuthError('Linear callback not configured. Set MULTICHAMBER_LINEAR_REDIRECT_URI or MULTICHAMBER_LINEAR_BROKER_URL.', 'LINEAR_REDIRECT_URI_MISSING');
   const usesBroker = configuredRedirectUri === brokerCallbackUrl(brokerUrl);
   const claimSecret = usesBroker ? crypto.randomBytes(32).toString('base64url') : null;
   const redirectUri = usesBroker
@@ -269,7 +270,7 @@ export async function consumeAuthorizationCallback({ code, state, error, errorDe
   }
   if (!pending?.codeVerifier) {
     throw failAuthorization(
-      'This authorization session has expired or is unknown to the running app. Return to OpenChamber and click Connect again.',
+      'This authorization session has expired or is unknown to the running app. Return to Multichamber and click Connect again.',
       'UNKNOWN_STATE',
     );
   }

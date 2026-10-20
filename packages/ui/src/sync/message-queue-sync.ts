@@ -1,4 +1,4 @@
-import { subscribeOpenchamberEvents } from '@/lib/openchamberEvents';
+import { subscribeOpenchamberEvents } from '@/lib/multichamberEvents';
 import { getRuntimeKey } from '@/lib/runtime-switch';
 import { useSpacesStore } from '@/lib/spaces/spaces-store';
 import { applyMessageQueueUpdatedEvent, useMessageQueueStore } from '@/stores/messageQueueStore';

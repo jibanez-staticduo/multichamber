@@ -1,3 +1,4 @@
+import { assertOpenCodeCreationTarget } from '@/lib/sessionCreation';
 /**
  * Utilities for creating worktrees and, when needed, sessions bound to them.
  * This is a standalone entrypoint for keyboard shortcuts, menu actions,
@@ -14,7 +15,7 @@ import { checkIsGitRepository, resolveGitPrimaryRoot, resolveGitRepositoryPrefix
 import { generateBranchName } from '@/lib/git/branchNameGenerator';
 import { parseModelIdentifier } from '@/lib/modelIdentifier';
 import { getRootBranch } from '@/lib/worktrees/worktreeStatus';
-import { getWorktreeSetupWaitEnabled } from '@/lib/openchamberConfig';
+import { getWorktreeSetupWaitEnabled } from '@/lib/multichamberConfig';
 import {
   resolveWorktreeSetupCommands,
   resolveWorktreeSetupCommandsOrCancel,
@@ -196,7 +197,7 @@ const initializeSessionForWorktree = (sessionId: string, startDirectory: string,
 }) => {
   const sessionStore = useSessionUIStore.getState();
   const configState = useConfigStore.getState();
-  sessionStore.initializeNewOpenChamberSession(sessionId, configState.agents);
+  sessionStore.initializeNewMultichamberSession(sessionId, configState.agents);
   sessionStore.setSessionDirectory(sessionId, startDirectory);
   sessionStore.setWorktreeMetadata(sessionId, metadata, startDirectory);
   applyDefaultAgentAndModelSelection(sessionId, configState);
@@ -234,6 +235,7 @@ const createInstantWorktreeDraft = async (options?: {
   initialPrompt?: string;
   title?: string;
 }): Promise<string | null> => {
+  await assertOpenCodeCreationTarget();
   const currentDraft = useSessionUIStore.getState().newSessionDraft;
   if (currentDraft.open && currentDraft.target === 'chat') {
     return null;
@@ -373,6 +375,7 @@ export async function createWorktreeSessionForNewBranch(
     returnAfterDirectoryCreated?: boolean;
   }
 ): Promise<{ id: string; branch: string; path: string; directory: string } | null> {
+  await assertOpenCodeCreationTarget();
   if (isCreatingWorktreeSession) {
     return null;
   }
@@ -390,7 +393,7 @@ export async function createWorktreeSessionForNewBranch(
 
     const projectRef = resolveProjectRef(projectDirectory);
     if (!projectRef) {
-      throw new Error('Project is not registered in OpenChamber');
+      throw new Error('Project is not registered in Multichamber');
     }
 
     let isGitRepo = false;

@@ -4,14 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       repository:
-        description: Repository to checkout, for example openchamber/openchamber or daveotero/openchamber
+        description: Repository to checkout, for example jibanez-staticduo/multichamber
         required: false
-        default: openchamber/openchamber
+        default: jibanez-staticduo/multichamber
         type: string
       ref:
         description: Git ref to build (branch, tag, or sha)
         required: true
-        default: feat/windows-desktop-app
+        default: main
         type: string
       build_macos:
         description: Build signed/notarized macOS Electron artifacts
@@ -46,7 +46,7 @@ jobs:
   build-macos-electron:
     if: ${{ inputs.build_macos }}
     name: Build macOS Electron (${{ matrix.arch }})
-    runs-on: blacksmith-6vcpu-macos-26
+    runs-on: macos-26
     strategy:
       fail-fast: false
       matrix:
@@ -128,6 +128,7 @@ jobs:
           # recompile native deps on its own. Rebuild against the target
           # Electron ABI before packaging, matching the release workflow.
           bun run rebuild:native
+          bun run generate:macos-icon
           bunx electron-builder --mac --${{ matrix.arch }} --publish=never
           bun run verify:opencode-cli:packaged
 
@@ -293,14 +294,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: blacksmith-4vcpu-ubuntu-2404
+          - runner: ubuntu-24.04
             arch: x64
             host_arch: x86_64
             artifact_arch: x86_64
             deb_arch: amd64
             rpm_arch: x86_64
             manifest: latest-linux.yml
-          - runner: blacksmith-4vcpu-ubuntu-2404-arm
+          - runner: ubuntu-24.04-arm
             arch: arm64
             host_arch: aarch64
             artifact_arch: arm64
@@ -386,18 +387,18 @@ jobs:
         run: |
           set -euo pipefail
           node ./scripts/verify-update-manifest.mjs "dist/${MANIFEST}" "$VERSION" \
-            "dist/OpenChamber-${VERSION}-linux-${ARTIFACT_ARCH}.AppImage" \
-            "dist/OpenChamber-${VERSION}-linux-${DEB_ARCH}.deb" \
-            "dist/OpenChamber-${VERSION}-linux-${RPM_ARCH}.rpm"
+            "dist/Multichamber-${VERSION}-linux-${ARTIFACT_ARCH}.AppImage" \
+            "dist/Multichamber-${VERSION}-linux-${DEB_ARCH}.deb" \
+            "dist/Multichamber-${VERSION}-linux-${RPM_ARCH}.rpm"
 
       - name: Upload Linux installable artifacts
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: desktop-release-smoke-linux-${{ matrix.arch }}
           path: |
-            packages/electron/dist/OpenChamber-${{ steps.versions.outputs.app }}-linux-${{ matrix.artifact_arch }}.AppImage
-            packages/electron/dist/OpenChamber-${{ steps.versions.outputs.app }}-linux-${{ matrix.deb_arch }}.deb
-            packages/electron/dist/OpenChamber-${{ steps.versions.outputs.app }}-linux-${{ matrix.rpm_arch }}.rpm
+            packages/electron/dist/Multichamber-${{ steps.versions.outputs.app }}-linux-${{ matrix.artifact_arch }}.AppImage
+            packages/electron/dist/Multichamber-${{ steps.versions.outputs.app }}-linux-${{ matrix.deb_arch }}.deb
+            packages/electron/dist/Multichamber-${{ steps.versions.outputs.app }}-linux-${{ matrix.rpm_arch }}.rpm
             packages/electron/dist/${{ matrix.manifest }}
           if-no-files-found: error
           retention-days: ${{ fromJSON(inputs.retention_days) }}

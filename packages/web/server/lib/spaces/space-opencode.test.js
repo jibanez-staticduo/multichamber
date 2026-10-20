@@ -117,7 +117,7 @@ describe('the login row inside a space', () => {
     expect(row).toEqual({
       id: spaceLoginCredentialId('github-copilot'),
       integrationID: 'github-copilot',
-      label: 'OpenChamber space',
+      label: 'Multichamber space',
       value: { type: 'oauth', methodID: 'device', access: WINDOW_PLACEHOLDER_KEY, refresh: WINDOW_PLACEHOLDER_KEY, expires: Date.UTC(2100, 0, 1), metadata: { apiEndpoint: 'http://gatekeeper:8080/model/github-copilot' } },
     });
     expect(JSON.stringify(row)).not.toContain('gho_');
@@ -130,7 +130,7 @@ describe('the login row inside a space', () => {
     expect(row).toEqual({
       id: spaceLoginCredentialId('openai'),
       integrationID: 'openai',
-      label: 'OpenChamber space',
+      label: 'Multichamber space',
       value: { type: 'oauth', methodID: 'chatgpt-token-sharing', access: WINDOW_PLACEHOLDER_KEY, refresh: WINDOW_PLACEHOLDER_KEY, expires: Date.UTC(2100, 0, 1), metadata: { clientID: 'client_1', scopes: ['chatgpt.tokens.use.direct'] } },
     });
     expect(JSON.stringify(row)).not.toContain(ACCESS);

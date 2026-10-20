@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
-import { GUEST_REQUEST_TIMEOUT_MS, type GuestMessageItem } from '@openchamber/sdk';
+import { GUEST_REQUEST_TIMEOUT_MS, type GuestMessageItem } from '@multichamber/sdk';
 import { toast } from 'sonner';
 import { Window } from 'happy-dom';
 

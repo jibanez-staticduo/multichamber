@@ -89,7 +89,7 @@ describe('third-party plugin catalog helpers', () => {
     expect(specMatchesPackage('@openchamber/opencode-claude-extra@0.6.0', claudePackage)).toBe(false);
   });
 
-  test('points catalog plugins at the OpenChamber GitHub and npm packages', () => {
+  test('points catalog plugins at the Multichamber GitHub and npm packages', () => {
     expect(THIRD_PARTY_PLUGINS.map((plugin) => ({
       id: plugin.id,
       packageName: plugin.packageName,

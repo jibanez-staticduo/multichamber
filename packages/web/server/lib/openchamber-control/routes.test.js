@@ -3,16 +3,16 @@ import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 
 import { BrowserControlError } from '../browser-control/broker.js';
-import { OpenChamberControlError } from './error.js';
-import { registerOpenChamberControlRoutes } from './routes.js';
+import { MultichamberControlError } from './error.js';
+import { registerMultichamberControlRoutes } from './routes.js';
 
 const createApp = (execute, answerPage = vi.fn()) => {
   const app = express();
-  registerOpenChamberControlRoutes(app, { controlService: { execute, answerPage } });
+  registerMultichamberControlRoutes(app, { controlService: { execute, answerPage } });
   return app;
 };
 
-describe('OpenChamber control route', () => {
+describe('Multichamber control route', () => {
   it('is a thin adapter over the control service', async () => {
     const execute = vi.fn(async () => ({ projects: [] }));
     const response = await request(createApp(execute))
@@ -25,7 +25,7 @@ describe('OpenChamber control route', () => {
 
   it('preserves service status and partial-result details', async () => {
     const execute = vi.fn(async () => {
-      throw new OpenChamberControlError('dispatch failed', 500, {
+      throw new MultichamberControlError('dispatch failed', 500, {
         partial: true,
         partialAction: 'fork-created',
         sessionId: 'ses_fork',
@@ -71,7 +71,7 @@ describe('page answer route', () => {
 
   it('reports a page that no longer waits as an error, never as success', async () => {
     const answerPage = vi.fn(() => {
-      throw new OpenChamberControlError('This page is no longer waiting for an answer', 404);
+      throw new MultichamberControlError('This page is no longer waiting for an answer', 404);
     });
     const response = await request(createApp(vi.fn(), answerPage))
       .post('/api/openchamber/render/answer')

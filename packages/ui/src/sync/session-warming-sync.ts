@@ -1,12 +1,12 @@
 import { isVSCodeRuntime } from '@/lib/desktop';
-import { subscribeOpenchamberEvents } from '@/lib/openchamberEvents';
+import { subscribeOpenchamberEvents } from '@/lib/multichamberEvents';
 import { getRuntimeKey } from '@/lib/runtime-switch';
 import { useSessionWarmingStore } from '@/stores/useSessionWarmingStore';
 
 /**
  * Mirrors the server's per-session warming. The snapshot is read when the
  * control stream (re)connects, since changes during a gap were not seen, and
- * each change arrives whole on the stream. VS Code has no OpenChamber server
+ * each change arrives whole on the stream. VS Code has no Multichamber server
  * and keeps only OpenCode's global warming, so its store stays empty.
  */
 export const subscribeSessionWarmingSync = (runtimeKey: string): (() => void) => {

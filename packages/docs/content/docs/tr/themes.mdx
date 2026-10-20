@@ -1,11 +1,11 @@
 ---
 title: Temalar
-description: OpenChamber'ı yerleşik ve kullanıcı tanımlı temalarla özelleştirin.
+description: Multichamber'ı yerleşik ve kullanıcı tanımlı temalarla özelleştirin.
 ---
 
 # Temalar
 
-OpenChamber yerleşik temaları ve özel tema JSON dosyalarını destekler.
+Multichamber yerleşik temaları ve özel tema JSON dosyalarını destekler.
 
 ## VS Code teması içe aktarma
 
@@ -13,7 +13,7 @@ Open VSX üzerinde arama yapmak için **Ayarlar → Görünüm → VS Code temas
 
 En fazla 512 KiB boyutunda yerel bir `.json` veya `.jsonc` için **JSON dosyası seç** düğmesini kullanın. Masaüstünde varsa `~/.vscode/extensions` klasörü açılır. Dosya içe aktarma arayüz, sözdizimi ve diff renklerini dönüştürüp temayı etkinleştirir. İçe aktarılan temanın yanındaki çöp kutusu temayı bağlı sunucudan siler. Seçili tema silinirse o modun varsayılan temasına dönülür.
 
-Tema, masaüstü veya mobil uygulamadan içe aktarıldığında da bağlı OpenChamber sunucusuna kaydedilir. Aynı dosyayı yeniden içe aktarmak kopya oluşturmaz ve sunucuda düzenlenmiş bir temanın üzerine yazmaz. VS Code uzantısı ise VS Code'un kendi temasını kullanır.
+Tema, masaüstü veya mobil uygulamadan içe aktarıldığında da bağlı Multichamber sunucusuna kaydedilir. Aynı dosyayı yeniden içe aktarmak kopya oluşturmaz ve sunucuda düzenlenmiş bir temanın üzerine yazmaz. VS Code uzantısı ise VS Code'un kendi temasını kullanır.
 
 Dosya `include` kullanıyorsa veya ayrı bir token dosyasına başvuruyorsa VS Code komut paletinde **Developer: Generate Color Theme From Current Settings** komutunu çalıştırıp oluşturulan JSON dosyasını içe aktarın.
 
@@ -26,7 +26,7 @@ mkdir -p ~/.config/openchamber/themes
 ```
 
 2. JSON dosyanızı bu dizine ekleyin, örneğin `my-theme.json`.
-3. OpenChamber'ı açın, sonra **Settings -> Theme -> Reload themes** yoluna gidin.
+3. Multichamber'ı açın, sonra **Settings -> Theme -> Reload themes** yoluna gidin.
 4. Temanızı açılır menüden seçin. Hemen uygulanır.
 
 ## Tema konumu
@@ -37,4 +37,4 @@ mkdir -p ~/.config/openchamber/themes
 
 Ana depo dokümanlarındaki tam biçim kılavuzunu kullanın:
 
-- [`docs/CUSTOM_THEMES.md`](https://github.com/openchamber/openchamber/blob/main/docs/CUSTOM_THEMES.md)
+- [`docs/CUSTOM_THEMES.md`](https://github.com/jibanez-staticduo/multichamber/blob/main/docs/CUSTOM_THEMES.md)

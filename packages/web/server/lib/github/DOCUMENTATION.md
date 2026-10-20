@@ -2,7 +2,7 @@
 
 ## Purpose
 
-- This module owns GitHub auth, Octokit access, repo resolution, and Pull Request status resolution for OpenChamber.
+- This module owns GitHub auth, Octokit access, repo resolution, and Pull Request status resolution for Multichamber.
 - From user perspective, this is the layer that lets the app know which PR belongs to a local branch and keeps that UI feeling current.
 
 ## Entrypoints and structure
@@ -38,7 +38,7 @@
 ### Device flow
 
 - `startDeviceFlow({ clientId, scope, fetch, timeoutMs })`: request and validate the provider grant with a bounded request that rejects redirects.
-- `exchangeDeviceCode({ clientId, deviceCode, fetch, timeoutMs })`: server-internal access-token polling. The provider device code never crosses the OpenChamber HTTP boundary.
+- `exchangeDeviceCode({ clientId, deviceCode, fetch, timeoutMs })`: server-internal access-token polling. The provider device code never crosses the Multichamber HTTP boundary.
 
 ### Octokit
 
@@ -55,8 +55,8 @@
 
 - Auth storage: `~/.config/openchamber/github-auth.json`
 - Writes are atomic and file mode is `0o600`.
-- Client ID resolution order: `OPENCHAMBER_GITHUB_CLIENT_ID` -> `settings.json` -> default.
-- Scope resolution order: `OPENCHAMBER_GITHUB_SCOPES` -> `settings.json` -> default.
+- Client ID resolution order: `MULTICHAMBER_GITHUB_CLIENT_ID` -> `settings.json` -> default.
+- Scope resolution order: `MULTICHAMBER_GITHUB_SCOPES` -> `settings.json` -> default.
 - New verified credentials use immutable opaque `occred:v1:github:<uuid>:r1` IDs. Their separate `providerUserId` is `github.com#<numeric-provider-user-id>`, so login changes do not change provider identity. Reading a legacy verified entry preserves its migrated provider-user ID as the credential ID so existing `ocgit:v1` references remain exact; the next explicit transport save writes `ocgit:v2` with the stored credential revision.
 - Account inventory contains `valid` and `invalid` records without tokens. A provider `401` marks only the acting account invalid; network failures and resource `403` responses do not invalidate it.
 

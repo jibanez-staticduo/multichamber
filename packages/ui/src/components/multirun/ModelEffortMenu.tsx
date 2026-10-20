@@ -1,3 +1,5 @@
+import type { SessionEngine } from '@/lib/sessionEngine';
+import { useMultiRunNativeCatalog } from '@/lib/multirun/nativeCatalog';
 import React from 'react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { dropdownTriggerVariants } from '@/components/ui/dropdown-trigger';
@@ -12,7 +14,8 @@ import { useConfigStore } from '@/stores/useConfigStore';
  * models without variants. `inline` sits inside a model chip, `trigger` stands
  * next to a model picker button.
  */
-export function ModelEffortMenu({ providerID, modelID, variant, onChange, appearance = 'inline', disabled = false }: {
+export function ModelEffortMenu({ harness, providerID, modelID, variant, onChange, appearance = 'inline', disabled = false }: {
+  harness?: SessionEngine;
   providerID: string;
   modelID: string;
   variant: string | undefined;
@@ -21,10 +24,12 @@ export function ModelEffortMenu({ providerID, modelID, variant, onChange, appear
   disabled?: boolean;
 }): React.ReactNode {
   const { t } = useI18n();
-  const variants = useConfigStore(React.useCallback((state) => {
+  const nativeModels = useMultiRunNativeCatalog(Boolean(harness && harness !== 'opencode'));
+  const openCodeVariants = useConfigStore(React.useCallback((state) => {
     const model = state.providers.find((provider) => provider.id === providerID)?.models.find((entry) => entry.id === modelID);
     return listModelVariantIds(model?.variants).join('\n');
   }, [modelID, providerID]));
+  const variants = harness && harness !== 'opencode' ? (nativeModels.find((model) => model.harness === harness && model.id === modelID)?.efforts ?? []).join('\n') : openCodeVariants;
   if (!variants) return null;
   const label = variant ?? t('multirun.modelMultiSelect.variant.default');
   return (

@@ -1,7 +1,7 @@
 import { asNonEmptyString, isBoolean } from '../shared/guards.js';
 import path from 'node:path';
 import { OpenCode } from '@opencode/client';
-import { OpenChamberControlError, asControlError } from './error.js';
+import { MultichamberControlError, asControlError } from './error.js';
 import { OPENCHAMBER_ALL_ACTIONS, OPENCHAMBER_KNOWLEDGE_ACTIONS } from './actions.js';
 import { writeScreenshot } from './screenshots.js';
 import { createProjectKnowledgeActions } from './project-knowledge.js';
@@ -25,7 +25,7 @@ const positiveInteger = (value, fallback, field) => {
   if (value === undefined || value === null) return fallback;
   const number = Number(value);
   if (!Number.isSafeInteger(number) || number < 1) {
-    throw new OpenChamberControlError(`${field} must be a positive integer`, 400);
+    throw new MultichamberControlError(`${field} must be a positive integer`, 400);
   }
   return number;
 };
@@ -33,7 +33,7 @@ const positiveInteger = (value, fallback, field) => {
 const normalizeWaitTimeoutMs = (value) => {
   const seconds = value === undefined || value === null ? DEFAULT_WAIT_TIMEOUT_SECONDS : Number(value);
   if (!Number.isSafeInteger(seconds) || seconds < 1 || seconds > MAX_WAIT_TIMEOUT_SECONDS) {
-    throw new OpenChamberControlError(`timeout must be from 1 to ${MAX_WAIT_TIMEOUT_SECONDS} seconds`, 400);
+    throw new MultichamberControlError(`timeout must be from 1 to ${MAX_WAIT_TIMEOUT_SECONDS} seconds`, 400);
   }
   return seconds * 1000;
 };
@@ -73,20 +73,20 @@ const extractTextMessages = (messages, role = 'all') => {
 
 const parseModel = (value) => {
   const model = asNonEmptyString(value);
-  if (!model) throw new OpenChamberControlError('model is required', 400);
+  if (!model) throw new MultichamberControlError('model is required', 400);
   const slashIndex = model.indexOf('/');
   if (slashIndex <= 0 || slashIndex === model.length - 1) {
-    throw new OpenChamberControlError('model must be in provider/model format', 400);
+    throw new MultichamberControlError('model must be in provider/model format', 400);
   }
   return { providerID: model.slice(0, slashIndex), modelID: model.slice(slashIndex + 1) };
 };
 
 const parseWeekdays = (value) => {
   const raw = asNonEmptyString(value);
-  if (!raw) throw new OpenChamberControlError('weekly is required', 400);
+  if (!raw) throw new MultichamberControlError('weekly is required', 400);
   const weekdays = raw.split(',').map((entry) => Number.parseInt(entry.trim(), 10));
   if (weekdays.some((entry) => !Number.isInteger(entry) || entry < 0 || entry > 6)) {
-    throw new OpenChamberControlError('weekly must contain weekdays from 0 to 6', 400);
+    throw new MultichamberControlError('weekly must contain weekdays from 0 to 6', 400);
   }
   return Array.from(new Set(weekdays)).sort((a, b) => a - b);
 };
@@ -98,18 +98,18 @@ const buildSchedule = (input) => {
   const cron = asNonEmptyString(input.cron);
   const selectors = [daily, weekly, once, cron].filter(Boolean);
   if (selectors.length !== 1) {
-    throw new OpenChamberControlError('Provide exactly one of daily, weekly, once, or cron', 400);
+    throw new MultichamberControlError('Provide exactly one of daily, weekly, once, or cron', 400);
   }
   const timezone = asNonEmptyString(input.timezone);
   if (daily) return { kind: 'daily', times: [daily], ...(timezone ? { timezone } : {}) };
   if (weekly) {
     const time = asNonEmptyString(input.time);
-    if (!time) throw new OpenChamberControlError('time is required with weekly', 400);
+    if (!time) throw new MultichamberControlError('time is required with weekly', 400);
     return { kind: 'weekly', weekdays: parseWeekdays(weekly), times: [time], ...(timezone ? { timezone } : {}) };
   }
   if (once) {
     const time = asNonEmptyString(input.time);
-    if (!time) throw new OpenChamberControlError('time is required with once', 400);
+    if (!time) throw new MultichamberControlError('time is required with once', 400);
     return { kind: 'once', date: once, time, ...(timezone ? { timezone } : {}) };
   }
   return { kind: 'cron', cron, ...(timezone ? { timezone } : {}) };
@@ -118,16 +118,16 @@ const buildSchedule = (input) => {
 const buildScheduledTask = (input) => {
   const name = asNonEmptyString(input.name);
   const prompt = asNonEmptyString(input.prompt);
-  if (!name) throw new OpenChamberControlError('name is required', 400);
-  if (!prompt) throw new OpenChamberControlError('prompt is required', 400);
+  if (!name) throw new MultichamberControlError('name is required', 400);
+  if (!prompt) throw new MultichamberControlError('prompt is required', 400);
   const targetSessionId = asNonEmptyString(input.targetSessionId);
   const model = targetSessionId && input.model === undefined ? { useDefaults: !asNonEmptyString(input.agent) } : parseModel(input.model);
   const goalTokenBudget = input.goalTokenBudget;
   if (goalTokenBudget !== undefined && input.goal !== true) {
-    throw new OpenChamberControlError('goalTokenBudget requires goal', 400);
+    throw new MultichamberControlError('goalTokenBudget requires goal', 400);
   }
   if (goalTokenBudget !== undefined && (!Number.isSafeInteger(goalTokenBudget) || goalTokenBudget < 1000 || goalTokenBudget > 100_000_000)) {
-    throw new OpenChamberControlError('goalTokenBudget must be from 1000 to 100000000', 400);
+    throw new MultichamberControlError('goalTokenBudget must be from 1000 to 100000000', 400);
   }
   const task = {
     name,
@@ -153,12 +153,12 @@ const buildScheduledTask = (input) => {
  */
 const patchScheduledTask = (existing, input) => {
   if (existing.loopFile) {
-    throw new OpenChamberControlError(`This task comes from ${existing.loopFile}; change that file instead`, 409);
+    throw new MultichamberControlError(`This task comes from ${existing.loopFile}; change that file instead`, 409);
   }
   const execution = { ...existing.execution };
   if (input.prompt !== undefined) {
     const prompt = asNonEmptyString(input.prompt);
-    if (!prompt) throw new OpenChamberControlError('prompt cannot be empty', 400);
+    if (!prompt) throw new MultichamberControlError('prompt cannot be empty', 400);
     execution.prompt = prompt;
   }
   if (input.model !== undefined) {
@@ -182,16 +182,16 @@ const patchScheduledTask = (existing, input) => {
     }
   }
   if (input.goalTokenBudget !== undefined) {
-    if (!execution.goalEnabled) throw new OpenChamberControlError('goalTokenBudget requires goal', 400);
+    if (!execution.goalEnabled) throw new MultichamberControlError('goalTokenBudget requires goal', 400);
     if (!Number.isSafeInteger(input.goalTokenBudget) || input.goalTokenBudget < 1000 || input.goalTokenBudget > 100_000_000) {
-      throw new OpenChamberControlError('goalTokenBudget must be from 1000 to 100000000', 400);
+      throw new MultichamberControlError('goalTokenBudget must be from 1000 to 100000000', 400);
     }
     execution.goalTokenBudget = input.goalTokenBudget;
   }
   let name = existing.name;
   if (input.name !== undefined) {
     name = asNonEmptyString(input.name);
-    if (!name) throw new OpenChamberControlError('name cannot be empty', 400);
+    if (!name) throw new MultichamberControlError('name cannot be empty', 400);
   }
   const replacesSchedule = ['daily', 'weekly', 'once', 'cron'].some((key) => asNonEmptyString(input[key]));
   const timezone = asNonEmptyString(input.timezone);
@@ -208,7 +208,7 @@ const patchScheduledTask = (existing, input) => {
   };
 };
 
-export const createOpenChamberControlService = (dependencies) => {
+export const createMultichamberControlService = (dependencies) => {
   const {
     readSettingsFromDiskMigrated,
     sanitizeProjects,
@@ -234,7 +234,7 @@ export const createOpenChamberControlService = (dependencies) => {
     // Delivers a dispatched session's result back to the session that asked
     // (`returnResult`); absent means the server cannot offer it.
     dispatchResults = null,
-    // Archive lives in OpenChamber's own store now — v2 has no route that sets
+    // Archive lives in Multichamber's own store now — v2 has no route that sets
     // Session.time.archived — so an unwired store simply means nothing is archived.
     archiveStore = null,
     createClient = OpenCode.make,
@@ -244,11 +244,11 @@ export const createOpenChamberControlService = (dependencies) => {
 
   const wait = (duration, signal) => {
     if (!signal) return sleep(duration);
-    if (signal.aborted) return Promise.reject(new OpenChamberControlError('OpenChamber action was cancelled', 499));
+    if (signal.aborted) return Promise.reject(new MultichamberControlError('Multichamber action was cancelled', 499));
     return new Promise((resolve, reject) => {
       const onAbort = () => {
         signal.removeEventListener('abort', onAbort);
-        reject(new OpenChamberControlError('OpenChamber action was cancelled', 499));
+        reject(new MultichamberControlError('Multichamber action was cancelled', 499));
       };
       signal.addEventListener('abort', onAbort, { once: true });
       sleep(duration).then(() => {
@@ -294,7 +294,7 @@ export const createOpenChamberControlService = (dependencies) => {
   // one silently win over the other, so every session action refuses the pair.
   const assertSingleScope = (input) => {
     if (asNonEmptyString(input.projectId) && asNonEmptyString(input.directory)) {
-      throw new OpenChamberControlError('Provide only one of projectId or directory', 400);
+      throw new MultichamberControlError('Provide only one of projectId or directory', 400);
     }
   };
 
@@ -402,7 +402,7 @@ export const createOpenChamberControlService = (dependencies) => {
   const activeSessions = async (client) => {
     const statuses = await client.session.active();
     if (!statuses || typeof statuses !== 'object' || Array.isArray(statuses)) {
-      throw new OpenChamberControlError('Invalid session status response', 500);
+      throw new MultichamberControlError('Invalid session status response', 500);
     }
     return statuses;
   };
@@ -451,7 +451,7 @@ export const createOpenChamberControlService = (dependencies) => {
     const deadline = now() + timeoutMs;
     let observedActivity = false;
     while (true) {
-      if (signal?.aborted) throw new OpenChamberControlError('OpenChamber action was cancelled', 499);
+      if (signal?.aborted) throw new MultichamberControlError('Multichamber action was cancelled', 499);
       const status = await sessionStatus(client, sessionID);
       if (status.type === 'busy') {
         observedActivity = true;
@@ -466,7 +466,7 @@ export const createOpenChamberControlService = (dependencies) => {
       }
       const remaining = deadline - now();
       if (remaining <= 0) {
-        throw new OpenChamberControlError(`Session did not become idle within ${Math.ceil(timeoutMs / 1000)} seconds`, 500);
+        throw new MultichamberControlError(`Session did not become idle within ${Math.ceil(timeoutMs / 1000)} seconds`, 500);
       }
       await wait(Math.min(WAIT_POLL_INTERVAL_MS, remaining), signal);
     }
@@ -500,13 +500,13 @@ export const createOpenChamberControlService = (dependencies) => {
   // Checked before anything is created or sent: a result nobody can deliver
   // must fail the call, not leave a dispatched session the agent waits on.
   const assertReturnResult = (action, input, parentSessionID) => {
-    if (input.wait === true) throw new OpenChamberControlError('returnResult cannot be combined with wait', 400);
-    if (!dispatchResults) throw new OpenChamberControlError('Returning a session result is not available on this server', 503);
-    if (!parentSessionID) throw new OpenChamberControlError('returnResult needs a calling session to deliver the result to', 400);
-    if (!asNonEmptyString(input.prompt)) throw new OpenChamberControlError('returnResult requires prompt', 400);
+    if (input.wait === true) throw new MultichamberControlError('returnResult cannot be combined with wait', 400);
+    if (!dispatchResults) throw new MultichamberControlError('Returning a session result is not available on this server', 503);
+    if (!parentSessionID) throw new MultichamberControlError('returnResult needs a calling session to deliver the result to', 400);
+    if (!asNonEmptyString(input.prompt)) throw new MultichamberControlError('returnResult requires prompt', 400);
     // A fork is a new session, so only a send can target the caller itself.
     if (action === 'session.send' && asNonEmptyString(input.sessionId) === parentSessionID) {
-      throw new OpenChamberControlError('returnResult cannot deliver a session\'s result to itself', 400);
+      throw new MultichamberControlError('returnResult cannot deliver a session\'s result to itself', 400);
     }
   };
 
@@ -549,17 +549,17 @@ export const createOpenChamberControlService = (dependencies) => {
     // whose result is never delivered, or a call that returns before the turn
     // it asked to wait for. Reject a non-boolean loudly instead.
     if (input.wait !== undefined && !isBoolean(input.wait)) {
-      throw new OpenChamberControlError('wait must be a boolean', 400);
+      throw new MultichamberControlError('wait must be a boolean', 400);
     }
     if (input.returnResult !== undefined && !isBoolean(input.returnResult)) {
-      throw new OpenChamberControlError('returnResult must be a boolean', 400);
+      throw new MultichamberControlError('returnResult must be a boolean', 400);
     }
-    if (input.timeout !== undefined && input.wait !== true) throw new OpenChamberControlError('timeout requires wait', 400);
-    if (input.lastAssistant === true && input.wait !== true) throw new OpenChamberControlError('lastAssistant requires wait', 400);
+    if (input.timeout !== undefined && input.wait !== true) throw new MultichamberControlError('timeout requires wait', 400);
+    if (input.lastAssistant === true && input.wait !== true) throw new MultichamberControlError('lastAssistant requires wait', 400);
     assertSingleScope(input);
     // Only a new session gets a worktree; elsewhere the number would be ignored.
     if (input.pullRequest !== undefined && action !== 'session.create') {
-      throw new OpenChamberControlError('pullRequest applies only to session.create', 400);
+      throw new MultichamberControlError('pullRequest applies only to session.create', 400);
     }
     const sessionID = asNonEmptyString(input.sessionId);
     const parentSessionID = asNonEmptyString(contextSessionId);
@@ -603,7 +603,7 @@ export const createOpenChamberControlService = (dependencies) => {
     if (action === 'session.create') {
       result = await sessionService.create(payload);
     } else {
-      if (!sessionID) throw new OpenChamberControlError('sessionId is required', 400);
+      if (!sessionID) throw new MultichamberControlError('sessionId is required', 400);
       if (action === 'session.send') {
         result = await sessionService.send(sessionID, payload);
       } else {
@@ -652,18 +652,18 @@ export const createOpenChamberControlService = (dependencies) => {
     // Any action may name a tab; the browser that issued the id resolves it.
     const tabId = asNonEmptyString(input.tabId);
     if (tabId) {
-      if (tabId.length > 128) throw new OpenChamberControlError('tabId must be an id from browser.snapshot tabs', 400);
+      if (tabId.length > 128) throw new MultichamberControlError('tabId must be an id from browser.snapshot tabs', 400);
       parameters.tabId = tabId;
     }
 
     const readViewport = (required) => {
       const viewport = asNonEmptyString(input.viewport);
       if (!viewport) {
-        if (required) throw new OpenChamberControlError('viewport is required for browser.resize', 400);
+        if (required) throw new MultichamberControlError('viewport is required for browser.resize', 400);
         return;
       }
       if (!['mobile', 'tablet', 'desktop', 'fill'].includes(viewport)) {
-        throw new OpenChamberControlError('viewport must be mobile, tablet, desktop, or fill', 400);
+        throw new MultichamberControlError('viewport must be mobile, tablet, desktop, or fill', 400);
       }
       parameters.viewport = viewport;
     };
@@ -678,15 +678,15 @@ export const createOpenChamberControlService = (dependencies) => {
     if (action === 'browser.open') {
       readViewport(false);
       const url = asNonEmptyString(input.url);
-      if (!url) throw new OpenChamberControlError('url is required for browser.open', 400);
+      if (!url) throw new MultichamberControlError('url is required for browser.open', 400);
       let parsed;
       try {
         parsed = new URL(url);
       } catch {
-        throw new OpenChamberControlError('url must be an absolute http(s) URL', 400);
+        throw new MultichamberControlError('url must be an absolute http(s) URL', 400);
       }
       if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        throw new OpenChamberControlError('url must use http or https', 400);
+        throw new MultichamberControlError('url must use http or https', 400);
       }
       parameters.url = parsed.toString();
     }
@@ -695,7 +695,7 @@ export const createOpenChamberControlService = (dependencies) => {
       const selector = asNonEmptyString(input.selector);
       const text = asNonEmptyString(input.text);
       if (!selector && !text) {
-        throw new OpenChamberControlError('browser.click requires selector or text', 400);
+        throw new MultichamberControlError('browser.click requires selector or text', 400);
       }
       if (selector) parameters.selector = selector;
       if (text) parameters.text = text;
@@ -708,15 +708,15 @@ export const createOpenChamberControlService = (dependencies) => {
 
     if (action === 'browser.inspect') {
       const selector = asNonEmptyString(input.selector);
-      if (!selector) throw new OpenChamberControlError('selector is required for browser.inspect', 400);
+      if (!selector) throw new MultichamberControlError('selector is required for browser.inspect', 400);
       parameters.selector = selector;
     }
 
     if (action === 'browser.type') {
       const selector = asNonEmptyString(input.selector);
-      if (!selector) throw new OpenChamberControlError('selector is required for browser.type', 400);
+      if (!selector) throw new MultichamberControlError('selector is required for browser.type', 400);
       if (typeof input.value !== 'string') {
-        throw new OpenChamberControlError('value is required for browser.type', 400);
+        throw new MultichamberControlError('value is required for browser.type', 400);
       }
       parameters.selector = selector;
       parameters.value = input.value;
@@ -727,10 +727,10 @@ export const createOpenChamberControlService = (dependencies) => {
       const selector = asNonEmptyString(input.selector);
       const direction = asNonEmptyString(input.direction);
       if (!selector && !direction) {
-        throw new OpenChamberControlError('browser.scroll requires direction or selector', 400);
+        throw new MultichamberControlError('browser.scroll requires direction or selector', 400);
       }
       if (direction && !['up', 'down', 'top', 'bottom'].includes(direction)) {
-        throw new OpenChamberControlError('direction must be up, down, top, or bottom', 400);
+        throw new MultichamberControlError('direction must be up, down, top, or bottom', 400);
       }
       if (selector) parameters.selector = selector;
       if (direction) parameters.direction = direction;
@@ -754,7 +754,7 @@ export const createOpenChamberControlService = (dependencies) => {
     if (action === 'browser.capture') {
       const directory = asNonEmptyString(input.directory) || asNonEmptyString(contextDirectory);
       if (!directory) {
-        throw new OpenChamberControlError('directory is required to save a screenshot', 400);
+        throw new MultichamberControlError('directory is required to save a screenshot', 400);
       }
       const capture = result && typeof result === 'object' ? result : {};
       const saved = await writeScreenshot({
@@ -786,26 +786,26 @@ export const createOpenChamberControlService = (dependencies) => {
   const execute = async (action, input = {}, contextDirectory, options = {}) => {
     try {
       if (!CONTROL_ACTIONS.has(action)) {
-        throw new OpenChamberControlError(`Unsupported OpenChamber action: ${action || 'missing'}`, 400);
+        throw new MultichamberControlError(`Unsupported Multichamber action: ${action || 'missing'}`, 400);
       }
       if (OPENCHAMBER_KNOWLEDGE_ACTIONS.includes(action)) {
         return await knowledgeActions.execute(action, input, contextDirectory, options.contextSessionId);
       }
       if (action.startsWith('memory.')) {
         if (!agentMemoryActions) {
-          throw new OpenChamberControlError('Agent memory is not available on this server', 503);
+          throw new MultichamberControlError('Agent memory is not available on this server', 503);
         }
         return agentMemoryActions.execute(action, input, contextDirectory);
       }
       if (action.startsWith('browser.')) {
         if (!browserControl) {
-          throw new OpenChamberControlError('The in-app browser is not available on this server', 503);
+          throw new MultichamberControlError('The in-app browser is not available on this server', 503);
         }
         return browserAction(action, input, options.signal, contextDirectory, options.contextSessionId);
       }
       if (action === 'notify.send') {
         if (!notifyUser) {
-          throw new OpenChamberControlError('Notifications are not available on this server', 503);
+          throw new MultichamberControlError('Notifications are not available on this server', 503);
         }
         const result = await notifyUser({
           title: input.title,
@@ -815,7 +815,7 @@ export const createOpenChamberControlService = (dependencies) => {
           directory: asNonEmptyString(contextDirectory) || undefined,
         });
         if (result.status !== 200) {
-          throw new OpenChamberControlError(result.body.error, result.status);
+          throw new MultichamberControlError(result.body.error, result.status);
         }
         return result.body;
       }
@@ -829,7 +829,7 @@ export const createOpenChamberControlService = (dependencies) => {
       }
       if (action === 'file.open') {
         if (!fileOpen) {
-          throw new OpenChamberControlError('The file viewer is not available on this server', 503);
+          throw new MultichamberControlError('The file viewer is not available on this server', 503);
         }
         return fileOpen.request({
           path: asNonEmptyString(input.path),
@@ -844,7 +844,7 @@ export const createOpenChamberControlService = (dependencies) => {
       if (action.startsWith('schedule.')) {
         const taskID = asNonEmptyString(input.taskId);
         if (SCHEDULE_TASK_ID_ACTIONS.has(action) && !taskID) {
-          throw new OpenChamberControlError('taskId is required', 400);
+          throw new MultichamberControlError('taskId is required', 400);
         }
         const explicitProjectID = asNonEmptyString(input.projectId);
         const explicitDirectory = asNonEmptyString(input.directory);
@@ -864,7 +864,7 @@ export const createOpenChamberControlService = (dependencies) => {
           }
           case 'schedule.update': {
             const existing = (await scheduledTaskService.list(projectID)).find((task) => task.id === taskID);
-            if (!existing) throw new OpenChamberControlError(`Scheduled task not found: ${taskID}`, 404);
+            if (!existing) throw new MultichamberControlError(`Scheduled task not found: ${taskID}`, 404);
             const result = await scheduledTaskService.upsert(projectID, patchScheduledTask(existing, input));
             return { task: result.task, updated: true };
           }
@@ -874,7 +874,7 @@ export const createOpenChamberControlService = (dependencies) => {
             return { deleted: true, tasks: await scheduledTaskService.remove(projectID, taskID) };
           case 'schedule.toggle': {
             if (typeof input.disabled !== 'boolean') {
-              throw new OpenChamberControlError('disabled is required for schedule.toggle', 400);
+              throw new MultichamberControlError('disabled is required for schedule.toggle', 400);
             }
             const task = await scheduledTaskService.setEnabled(projectID, taskID, input.disabled === false);
             // What was saved, which is what the scheduler acts on.
@@ -886,7 +886,7 @@ export const createOpenChamberControlService = (dependencies) => {
         return executeSessionAction(action, input, contextDirectory, options.signal, options.contextSessionId);
       }
       if (action === 'session.link') {
-        if (!sessionLinks) throw new OpenChamberControlError('Linking is not available on this server', 503);
+        if (!sessionLinks) throw new MultichamberControlError('Linking is not available on this server', 503);
         assertSingleScope(input);
         // An explicit session is linked where it lives; the calling session
         // uses the directory the tool call came from.
@@ -905,7 +905,7 @@ export const createOpenChamberControlService = (dependencies) => {
         // The calling session by default: the agent moves its own work.
         const explicitSessionID = asNonEmptyString(input.sessionId);
         const sessionID = explicitSessionID || asNonEmptyString(options.contextSessionId);
-        if (!sessionID) throw new OpenChamberControlError('sessionId is required', 400);
+        if (!sessionID) throw new MultichamberControlError('sessionId is required', 400);
         // Where the session lives now, which is where the changes are taken
         // from; never a directory of the caller's choosing, so the action
         // cannot carry away another checkout's changes.
@@ -924,7 +924,7 @@ export const createOpenChamberControlService = (dependencies) => {
       }
       if (action.startsWith('session.')) {
         const sessionID = asNonEmptyString(input.sessionId);
-        if (action !== 'session.list' && !sessionID) throw new OpenChamberControlError('sessionId is required', 400);
+        if (action !== 'session.list' && !sessionID) throw new MultichamberControlError('sessionId is required', 400);
         const directory = await resolveReadDirectory(input, contextDirectory);
         const client = await getClient(directory);
         if (action === 'session.list') {
@@ -942,7 +942,7 @@ export const createOpenChamberControlService = (dependencies) => {
             if (directory) listInput.directory = directory;
             if (cursor) listInput.cursor = cursor;
             const response = await client.session.list(listInput);
-            // Archive is OpenChamber state; overlay it so callers keep reading
+            // Archive is Multichamber state; overlay it so callers keep reading
             // it off the session the way OpenCode used to report it.
             const page = await Promise.all((Array.isArray(response?.data) ? response.data : []).map(async (session) => {
               const archived = await archivedAt(session?.id);
@@ -975,17 +975,17 @@ export const createOpenChamberControlService = (dependencies) => {
           }
           return { sessions, limit, directory, archived: input.all === true ? 'included' : 'excluded' };
         }
-        if (!directory) throw new OpenChamberControlError('directory is required', 400);
+        if (!directory) throw new MultichamberControlError('directory is required', 400);
         if (action === 'session.status') {
           return { sessionId: sessionID, directory, sessionStatus: await sessionStatus(client, sessionID) };
         }
         if (action === 'session.messages') {
-          if (input.timeout !== undefined && input.wait !== true) throw new OpenChamberControlError('timeout requires wait', 400);
+          if (input.timeout !== undefined && input.wait !== true) throw new MultichamberControlError('timeout requires wait', 400);
           const role = input.lastAssistant === true ? 'assistant' : (asNonEmptyString(input.role) || 'all');
-          if (!['all', 'user', 'assistant'].includes(role)) throw new OpenChamberControlError('role must be all, user, or assistant', 400);
+          if (!['all', 'user', 'assistant'].includes(role)) throw new MultichamberControlError('role must be all, user, or assistant', 400);
           const last = input.last === true || input.lastAssistant === true;
-          if (input.all === true && (last || input.limit !== undefined)) throw new OpenChamberControlError('all cannot be combined with last or limit', 400);
-          if (last && input.limit !== undefined) throw new OpenChamberControlError('last cannot be combined with limit', 400);
+          if (input.all === true && (last || input.limit !== undefined)) throw new MultichamberControlError('all cannot be combined with last or limit', 400);
+          if (last && input.limit !== undefined) throw new MultichamberControlError('last cannot be combined with limit', 400);
           const currentStatus = input.wait === true
             ? await waitForIdle({ client, sessionID, directory, timeoutMs: normalizeWaitTimeoutMs(input.timeout), requireActivity: false, startedAt: now(), signal: options.signal })
             : await sessionStatus(client, sessionID);
@@ -993,9 +993,9 @@ export const createOpenChamberControlService = (dependencies) => {
           return { sessionId: sessionID, directory, role, sessionStatus: currentStatus, messages: await sessionMessages(client, sessionID, role, limit) };
         }
       }
-      throw new OpenChamberControlError(`Unsupported OpenChamber action: ${action || 'missing'}`, 400);
+      throw new MultichamberControlError(`Unsupported Multichamber action: ${action || 'missing'}`, 400);
     } catch (error) {
-      throw asControlError(error, `Failed to execute ${action || 'OpenChamber action'}`);
+      throw asControlError(error, `Failed to execute ${action || 'Multichamber action'}`);
     }
   };
 

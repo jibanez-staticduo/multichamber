@@ -1,4 +1,6 @@
 import React from 'react';
+import { resolveSessionEngine } from '@/lib/sessionEngine';
+import { useSession } from '@/sync/sync-context';
 import { LegendList, type LegendListRef } from '@legendapp/list/react';
 
 import ChatMessage from './ChatMessage';
@@ -896,7 +898,11 @@ const MessageList = React.forwardRef<MessageListHandle, MessageListProps>(({
         });
     }), [baseDisplayMessages, retryOverlay]);
 
+    const sessionRecord = useSession(sessionKey, directory);
+    const globalSessionRecord = useGlobalSessionsStore(React.useCallback((state) => state.entityById.get(sessionKey), [sessionKey]));
+    const childRecord = sessionRecord ?? globalSessionRecord;
     const { projection, staticTurns, streamingTurn } = useTurnRecords(displayMessages, {
+        allowOrphanAssistantMessages: Boolean(childRecord?.parentID && resolveSessionEngine(childRecord) === 'codex'),
         sessionKey,
         showTurnChangedFiles,
     });

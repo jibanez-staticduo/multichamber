@@ -1,5 +1,5 @@
 import { isString } from '../shared/guards.js';
-import { OpenChamberControlError } from './error.js';
+import { MultichamberControlError } from './error.js';
 
 // The page travels in the tool call's input, which OpenCode stores with the
 // message and streams to every client, and through the callback request, whose
@@ -89,17 +89,17 @@ export const createPageAnswers = ({ onWaitChange = () => {} } = {}) => {
   const wait = ({ sessionId, callId, title, directory, signal }) => new Promise((resolve, reject) => {
     const key = pageKey(sessionId, callId);
     if (waiting.has(key)) {
-      reject(new OpenChamberControlError('This call already shows a page that waits for an answer', 409));
+      reject(new MultichamberControlError('This call already shows a page that waits for an answer', 409));
       return;
     }
     if (signal?.aborted) {
-      reject(new OpenChamberControlError('The page stopped waiting before the user answered', 499));
+      reject(new MultichamberControlError('The page stopped waiting before the user answered', 499));
       return;
     }
     const onAbort = () => {
       waiting.delete(key);
       announce({ type: 'settled', sessionId, callId });
-      reject(new OpenChamberControlError('The page stopped waiting before the user answered', 499));
+      reject(new MultichamberControlError('The page stopped waiting before the user answered', 499));
     };
     signal?.addEventListener('abort', onAbort, { once: true });
     waiting.set(key, (answer) => {
@@ -115,23 +115,23 @@ export const createPageAnswers = ({ onWaitChange = () => {} } = {}) => {
     const sessionId = isString(input.sessionId) ? input.sessionId.trim() : '';
     const callId = isString(input.callId) ? input.callId.trim() : '';
     if (!sessionId || !callId) {
-      throw new OpenChamberControlError('sessionId and callId are required', 400);
+      throw new MultichamberControlError('sessionId and callId are required', 400);
     }
     const summary = isString(input.summary) ? input.summary.trim() : '';
     if (!summary) {
-      throw new OpenChamberControlError('summary is required: what the user chose, in a few words', 400);
+      throw new MultichamberControlError('summary is required: what the user chose, in a few words', 400);
     }
     if (summary.length > RENDER_PAGE_MAX_SUMMARY_LENGTH) {
-      throw new OpenChamberControlError(`summary is ${summary.length} characters; the limit is ${RENDER_PAGE_MAX_SUMMARY_LENGTH}`, 400);
+      throw new MultichamberControlError(`summary is ${summary.length} characters; the limit is ${RENDER_PAGE_MAX_SUMMARY_LENGTH}`, 400);
     }
     const data = input.data === undefined ? null : input.data;
     const dataLength = JSON.stringify(data).length;
     if (dataLength > RENDER_PAGE_MAX_ANSWER_DATA_LENGTH) {
-      throw new OpenChamberControlError(`data is ${dataLength} characters as JSON; the limit is ${RENDER_PAGE_MAX_ANSWER_DATA_LENGTH}`, 413);
+      throw new MultichamberControlError(`data is ${dataLength} characters as JSON; the limit is ${RENDER_PAGE_MAX_ANSWER_DATA_LENGTH}`, 413);
     }
     const resolve = waiting.get(pageKey(sessionId, callId));
     if (!resolve) {
-      throw new OpenChamberControlError('This page is no longer waiting for an answer', 404);
+      throw new MultichamberControlError('This page is no longer waiting for an answer', 404);
     }
     resolve({ answered: true, summary, data });
     return { answered: true };
@@ -148,27 +148,27 @@ export const createPageAnswers = ({ onWaitChange = () => {} } = {}) => {
  */
 export const createRenderPageAction = ({ isEnabled, pageAnswers }) => async (input, { sessionId, callId, directory, signal } = {}) => {
   if (!await isEnabled()) {
-    throw new OpenChamberControlError('The render tool is turned off in OpenChamber settings', 403);
+    throw new MultichamberControlError('The render tool is turned off in Multichamber settings', 403);
   }
   const html = isString(input.html) ? input.html : '';
   if (!html.trim()) {
-    throw new OpenChamberControlError('html is required: one complete, self-contained HTML document. Send html and title together in one call', 400);
+    throw new MultichamberControlError('html is required: one complete, self-contained HTML document. Send html and title together in one call', 400);
   }
   if (html.length > RENDER_PAGE_MAX_HTML_LENGTH) {
-    throw new OpenChamberControlError(`html is ${html.length} characters; the limit is ${RENDER_PAGE_MAX_HTML_LENGTH}. Make the page smaller, for example by drawing data with a script instead of writing out every element`, 400);
+    throw new MultichamberControlError(`html is ${html.length} characters; the limit is ${RENDER_PAGE_MAX_HTML_LENGTH}. Make the page smaller, for example by drawing data with a script instead of writing out every element`, 400);
   }
   const title = (isString(input.title) ? input.title.trim() : '')
     || renderPageTitleFromHtml(html)
     || RENDER_PAGE_FALLBACK_TITLE;
   if (title.length > RENDER_PAGE_MAX_TITLE_LENGTH) {
-    throw new OpenChamberControlError(`title is ${title.length} characters; the limit is ${RENDER_PAGE_MAX_TITLE_LENGTH}`, 400);
+    throw new MultichamberControlError(`title is ${title.length} characters; the limit is ${RENDER_PAGE_MAX_TITLE_LENGTH}`, 400);
   }
   if (input.awaitAnswer !== true) {
     return { shown: true, title, note: SHOWN_NOTE };
   }
   // A plugin generated before pages could wait sends no call id.
   if (!sessionId || !callId) {
-    throw new OpenChamberControlError('This connection cannot wait for an answer on a page; show the page without awaitAnswer and ask in text', 400);
+    throw new MultichamberControlError('This connection cannot wait for an answer on a page; show the page without awaitAnswer and ask in text', 400);
   }
   const answer = await pageAnswers.wait({ sessionId, callId, title, directory, signal });
   return { title, answer, note: ANSWERED_NOTE };

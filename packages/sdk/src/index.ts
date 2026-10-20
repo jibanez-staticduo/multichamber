@@ -22,13 +22,13 @@ export {
 } from './shells.ts';
 export { GUEST_STATUS_CONTROLS_MAX, GUEST_STATUS_CONTROL_ID, GUEST_STATUS_CONTROL_LABEL_MAX, GUEST_STATUS_CONTROL_OPTIONS_MAX, GUEST_STATUS_CONTROL_VALUE_MAX } from './status-controls.ts';
 export type { GuestStatusControl, GuestStatusControlEvent, GuestStatusControlOption } from './status-controls.ts';
-export type { OpenChamberManifestApiVersion } from './api-version.ts';
+export type { MultichamberManifestApiVersion } from './api-version.ts';
 export {
-  compareOpenChamberVersions,
-  hostMeetsOpenChamberEngine,
-  openChamberEngineMinimum,
+  compareMultichamberVersions,
+  hostMeetsMultichamberEngine,
+  multichamberEngineMinimum,
   OPENCHAMBER_ENGINE_PATTERN,
-  parseOpenChamberVersion,
+  parseMultichamberVersion,
 } from './host-version.ts';
 export {
   DECLARED_GUEST_CAPABILITIES,
@@ -107,9 +107,9 @@ export type {
   IntegrationSettingField,
   IntegrationToken,
   IntegrationTokenScheme,
-  OpenChamberContributes,
-  OpenChamberEngines,
-  OpenChamberManifest,
+  MultichamberContributes,
+  MultichamberEngines,
+  MultichamberManifest,
   PanelContribution,
   BackgroundContribution,
   PageContribution,

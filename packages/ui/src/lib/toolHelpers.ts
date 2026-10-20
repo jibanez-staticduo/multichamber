@@ -199,49 +199,49 @@ const TOOL_METADATA: Record<string, ToolMetadata> = {
      },
 
     openchamber: {
-      displayName: 'OpenChamber',
+      displayName: 'Multichamber',
       category: 'system',
       outputLanguage: 'json',
       inputFields: []
     },
 
     openchamber_schedule: {
-      displayName: 'OpenChamber Schedule',
+      displayName: 'Multichamber Schedule',
       category: 'system',
       outputLanguage: 'json',
       inputFields: []
     },
 
     openchamber_web: {
-      displayName: 'OpenChamber Web',
+      displayName: 'Multichamber Web',
       category: 'system',
       outputLanguage: 'json',
       inputFields: []
     },
 
     openchamber_memory: {
-      displayName: 'OpenChamber Memory',
+      displayName: 'Multichamber Memory',
       category: 'system',
       outputLanguage: 'json',
       inputFields: []
     },
 
     openchamber_knowledge: {
-      displayName: 'OpenChamber Knowledge',
+      displayName: 'Multichamber Knowledge',
       category: 'system',
       outputLanguage: 'json',
       inputFields: []
     },
 
     openchamber_notify: {
-      displayName: 'OpenChamber Notify',
+      displayName: 'Multichamber Notify',
       category: 'system',
       outputLanguage: 'json',
       inputFields: []
     },
 
     openchamber_render: {
-      displayName: 'OpenChamber Render',
+      displayName: 'Multichamber Render',
       category: 'system',
       outputLanguage: 'json',
       inputFields: []

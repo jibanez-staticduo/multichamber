@@ -22,7 +22,7 @@ export const createNotificationTriggerRuntime = (deps) => {
     isAnyInteractiveClientVisible,
     buildOpenCodeUrl,
     getOpenCodeAuthHeaders,
-    // OpenChamber's own session metadata (the goal lives there, not on the
+    // Multichamber's own session metadata (the goal lives there, not on the
     // OpenCode record). Optional: without it no goal can suppress a push.
     readSessionMetadata = null,
     // `(spaceId) => fetch` for a session of an isolated space, whose record and messages only

@@ -197,6 +197,15 @@ export const createSettingsHelpers = (dependencies) => {
 
     const candidate = payload;
     const result = {};
+    if (Object.hasOwn(candidate, 'defaultHarness')) {
+      if (!['opencode', 'claude', 'codex'].includes(candidate.defaultHarness)) throw new Error('Invalid default harness');
+      result.defaultHarness = candidate.defaultHarness;
+    }
+    for (const key of ['codexDefaultModel', 'codexDefaultEffort', 'codexDefaultMode']) {
+      if (!Object.hasOwn(candidate, key)) continue;
+      if (!z.string().max(256).safeParse(candidate[key]).success) throw new Error(`Invalid ${key}`);
+      result[key] = candidate[key].trim() || undefined;
+    }
 
     if (typeof candidate.themeId === 'string' && candidate.themeId.length > 0) {
       result.themeId = candidate.themeId;
@@ -673,6 +682,27 @@ export const createSettingsHelpers = (dependencies) => {
     if (typeof candidate.defaultAgent === 'string') {
       const trimmed = candidate.defaultAgent.trim();
       result.defaultAgent = trimmed.length > 0 ? trimmed : undefined;
+    }
+    // Claude session-start defaults (Settings > Defaults). Same shape as
+    // defaultModel/defaultAgent: an empty string clears the override and
+    // falls through to ~/.claude/settings.json, read by the claude runtime.
+    if (typeof candidate.claudeDefaultModel === 'string') {
+      const trimmed = candidate.claudeDefaultModel.trim();
+      result.claudeDefaultModel = trimmed.length > 0 ? trimmed : undefined;
+    }
+    if (typeof candidate.claudeDefaultEffort === 'string') {
+      const trimmed = candidate.claudeDefaultEffort.trim();
+      result.claudeDefaultEffort = trimmed.length > 0 ? trimmed : undefined;
+    }
+    if (typeof candidate.claudeDefaultMode === 'string') {
+      const trimmed = candidate.claudeDefaultMode.trim();
+      result.claudeDefaultMode = trimmed.length > 0 ? trimmed : undefined;
+    }
+    // Whether the `+` of a Claude project asks for the three picks before
+    // starting. Unset is NOT "true": the dialog is opt-in, so a session starts
+    // on the defaults above (or Claude Code's own) without a window.
+    if (typeof candidate.claudeAskSessionDefaults === 'boolean') {
+      result.claudeAskSessionDefaults = candidate.claudeAskSessionDefaults;
     }
     if (typeof candidate.smallModelUseDefault === 'boolean') {
       result.smallModelUseDefault = candidate.smallModelUseDefault;
@@ -1175,7 +1205,7 @@ export const createSettingsHelpers = (dependencies) => {
       // Tells the client whether agent memory exists in this build at all, so
       // its settings row and panel tab can be absent rather than merely off.
       agentMemoryFeatureAvailable: isAgentMemoryFeatureAvailable(),
-      // Jev routing needs the OpenChamber server, so it is present here and
+      // Jev routing needs the Multichamber server, so it is present here and
       // absent wherever this payload does not come from one (VS Code).
       routingFeatureAvailable: true,
       ...(pwaAppName ? { pwaAppName } : {}),

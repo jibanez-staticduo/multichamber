@@ -1,3 +1,4 @@
+import type { SessionEngine } from '@/lib/sessionEngine';
 import React from 'react';
 import { toast } from '@/components/ui';
 import { useI18n } from '@/lib/i18n';
@@ -10,6 +11,8 @@ import { useUIStore } from '@/stores/useUIStore';
 import type { CreateMultiRunParams } from '@/types/multirun';
 
 export type ParallelModel = {
+  harness?: SessionEngine;
+  mode?: string;
   providerID: string;
   modelID: string;
   variant?: string;
@@ -23,7 +26,7 @@ export type ParallelVariant = {
   models: ParallelModel[];
 };
 
-export type ParallelFuseJudge = { providerID: string; modelID: string; variant?: string; displayName?: string };
+export type ParallelFuseJudge = { harness?: SessionEngine; mode?: string; providerID: string; modelID: string; variant?: string; displayName?: string };
 
 export type ParallelComposerState = {
   variants: ParallelVariant[];
@@ -110,7 +113,7 @@ export function useParallelComposer(input: {
     if (isAutoModel(model.providerID, model.modelID)) return;
     updateActiveModels((models) => {
       // The same model with another thinking effort is a separate lane.
-      const existing = models.findIndex((entry) => entry.providerID === model.providerID && entry.modelID === model.modelID && entry.variant === model.variant);
+      const existing = models.findIndex((entry) => (entry.harness ?? 'opencode') === (model.harness ?? 'opencode') && entry.providerID === model.providerID && entry.modelID === model.modelID && entry.variant === model.variant);
       if (existing >= 0) return models.map((entry, index) => (index === existing ? { ...entry, count: entry.count + 1 } : entry));
       return [...models, { ...model, count: 1 }];
     });
@@ -120,7 +123,7 @@ export function useParallelComposer(input: {
     updateActiveModels((models) => {
       const target = models[index];
       if (!target) return models;
-      const twin = models.findIndex((entry, i) => i !== index && entry.providerID === target.providerID && entry.modelID === target.modelID && entry.variant === variant);
+      const twin = models.findIndex((entry, i) => i !== index && (entry.harness ?? 'opencode') === (target.harness ?? 'opencode') && entry.providerID === target.providerID && entry.modelID === target.modelID && entry.variant === variant);
       if (twin < 0) return models.map((entry, i) => (i === index ? { ...entry, variant } : entry));
       // Choosing an effort another chip already has folds the two chips together.
       return models.flatMap((entry, i) => (i === index ? [] : i === twin ? [{ ...entry, count: entry.count + target.count }] : [entry]));
@@ -196,6 +199,7 @@ export function useParallelComposer(input: {
       groups: variants.map((variant) => ({
         prompt: variant.text.trim(),
         models: variant.models.flatMap((model) => Array.from({ length: model.count }, () => ({
+          harness: model.harness, mode: model.mode,
           providerID: model.providerID,
           modelID: model.modelID,
           variant: model.variant,
@@ -210,7 +214,7 @@ export function useParallelComposer(input: {
         : undefined,
       setupCommands: current.isolate ? current.setupCommands?.filter((command) => command.trim()) : undefined,
       autoFusion: current.fuse
-        ? { providerID: current.fuse.providerID, modelID: current.fuse.modelID, variant: current.fuse.variant, agent: config.currentAgentName || undefined }
+        ? { harness: current.fuse.harness, mode: current.fuse.mode, providerID: current.fuse.providerID, modelID: current.fuse.modelID, variant: current.fuse.variant, agent: config.currentAgentName || undefined }
         : undefined,
     };
 

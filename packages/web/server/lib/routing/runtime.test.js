@@ -283,7 +283,7 @@ describe('preserving the prompt cache', () => {
     expect((await route({ choice: 'trivial', lastAnswer: answeredBy(HARD, 20), configEntries: turnedOff })).resolved.decision.category).toBe('trivial');
   });
 
-  it('holds a session OpenChamber keeps warm without reading the OpenCode config', async () => {
+  it('holds a session Multichamber keeps warm without reading the OpenCode config', async () => {
     const { resolved, readConfigEntries } = await route({ choice: 'trivial', lastAnswer: answeredBy(HARD, 50), warmSessions: ['s1'] });
     expect(resolved.decision.category).toBe('hard');
     expect(readConfigEntries).not.toHaveBeenCalled();

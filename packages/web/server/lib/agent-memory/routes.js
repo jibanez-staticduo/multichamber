@@ -1,5 +1,5 @@
 /**
- * OpenChamber agent memory routes.
+ * Multichamber agent memory routes.
  *
  * The scope is a query parameter rather than part of the path, because global
  * and project memory are the same resource with two homes: one set of handlers

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * An OpenChamber server for perf captures that shares nothing with the user's
+ * An Multichamber server for perf captures that shares nothing with the user's
  * own app: its own HOME (OpenCode's sessions database), its own
  * OPENCHAMBER_DATA_DIR, an environment rebuilt from scratch so no
  * OPENCHAMBER_* / OPENCODE_* variable from the desktop app leaks in, no UI
@@ -28,11 +28,11 @@ import { AGENT_READ_FILES, agentReadFileContent, fixtureProviderConfig } from ".
 
 export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..")
 const FIXTURE_SCRIPT = join(REPO_ROOT, "scripts/perf/fixture-provider.mjs")
-const MAC_BUNDLED_OPENCODE = "/Applications/OpenChamber.app/Contents/Resources/opencode-cli/opencode"
+const MAC_BUNDLED_OPENCODE = "/Applications/Multichamber.app/Contents/Resources/opencode-cli/opencode"
 
 const HELP = `Usage: bun run profile:serve -- [options]
 
-Starts the fixture provider and an isolated OpenChamber server on a build, and
+Starts the fixture provider and an isolated Multichamber server on a build, and
 keeps them running until Ctrl-C, which stops both. Point the profile:*
 commands at the printed URL with --dir <root>/project.
 
@@ -48,7 +48,7 @@ Options:
   --fixture-port <port>    Fixture provider port (default: 4798); reused when
                            something already listens there
   --opencode-binary <path> OpenCode CLI (default: $OPENCODE_BINARY, else the
-                           one bundled in /Applications/OpenChamber.app on macOS,
+                           one bundled in /Applications/Multichamber.app on macOS,
                            else the server's own resolution)
   --help                   Show this help`
 

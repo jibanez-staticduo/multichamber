@@ -3,7 +3,7 @@ import type { I18nKey } from '@/lib/i18n';
 import { guestNeedsApproval } from '@/lib/guests/capabilities';
 import type { InstalledGuest } from '@/lib/guests/types';
 
-/** An OpenChamber extension the team publishes and the Integrations page offers to install. */
+/** An Multichamber extension the team publishes and the Integrations page offers to install. */
 export interface CatalogExtensionDefinition {
   /** The extension's `panel.id`, which is its id once installed. */
   guestId: string;

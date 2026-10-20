@@ -10,7 +10,7 @@
 import path from 'node:path';
 import fsPromises from 'node:fs/promises';
 
-import { OpenChamberControlError } from './error.js';
+import { MultichamberControlError } from './error.js';
 
 /**
  * @param {{
@@ -21,7 +21,7 @@ import { OpenChamberControlError } from './error.js';
 export const createFileOpenRequester = ({ emit, stat = (target) => fsPromises.stat(target) }) => {
   /** `path` arrives already reduced to a trimmed string or null by the service. */
   const request = async ({ path: raw, directory, sessionId }) => {
-    if (!raw) throw new OpenChamberControlError('path is required for file.open', 400);
+    if (!raw) throw new MultichamberControlError('path is required for file.open', 400);
 
     // A relative path means "in the project I am working in"; without a
     // project there is nothing to resolve it against.
@@ -31,7 +31,7 @@ export const createFileOpenRequester = ({ emit, stat = (target) => fsPromises.st
     } else if (directory) {
       absolute = path.resolve(directory, raw);
     } else {
-      throw new OpenChamberControlError('path must be absolute when no session directory is known', 400);
+      throw new MultichamberControlError('path must be absolute when no session directory is known', 400);
     }
 
     let stats;
@@ -39,17 +39,17 @@ export const createFileOpenRequester = ({ emit, stat = (target) => fsPromises.st
       stats = await stat(absolute);
     } catch (error) {
       if (error?.code === 'ENOENT') {
-        throw new OpenChamberControlError(`File not found: ${absolute}`, 404);
+        throw new MultichamberControlError(`File not found: ${absolute}`, 404);
       }
-      throw new OpenChamberControlError(`Cannot read ${absolute}: ${error instanceof Error ? error.message : String(error)}`, 500);
+      throw new MultichamberControlError(`Cannot read ${absolute}: ${error instanceof Error ? error.message : String(error)}`, 500);
     }
     if (!stats.isFile()) {
-      throw new OpenChamberControlError(`Not a file: ${absolute}`, 400);
+      throw new MultichamberControlError(`Not a file: ${absolute}`, 400);
     }
 
     const delivered = emit({ path: absolute, directory: directory ?? null, sessionId: sessionId ?? null });
     if (delivered === 0) {
-      throw new OpenChamberControlError('No OpenChamber window is connected to show the file', 503);
+      throw new MultichamberControlError('No Multichamber window is connected to show the file', 503);
     }
 
     return { path: absolute, size: stats.size, opened: true };

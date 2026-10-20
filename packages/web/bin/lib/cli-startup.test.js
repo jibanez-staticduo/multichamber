@@ -3,10 +3,22 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildSystemdUserService, enableStartupService, stablePnpmEntrypoint } from './cli-startup.js';
+import { buildSystemdUserService, enableStartupService, getStartupStatus, stablePnpmEntrypoint } from './cli-startup.js';
 import { INJECTED_ENV_KEY, assignInjectedEnv } from '../../server/lib/injected-env.js';
 
 const join = (...parts) => path.join(...parts);
+
+it('uses an independent startup identity without adopting the upstream service', () => {
+  const platform = Object.getOwnPropertyDescriptor(process, 'platform');
+  try {
+    Object.defineProperty(process, 'platform', { configurable: true, value: 'darwin' });
+    vi.spyOn(os, 'homedir').mockReturnValue('/home/fixture');
+    vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+    expect(getStartupStatus().servicePath).toBe('/home/fixture/Library/LaunchAgents/com.staticduo.multichamber.web.plist');
+  } finally {
+    vi.restoreAllMocks(); Object.defineProperty(process, 'platform', platform);
+  }
+});
 
 describe('stablePnpmEntrypoint', () => {
   const globalModules = join('/home/me', '.local', 'share', 'pnpm', 'global', '5', 'node_modules');
@@ -40,7 +52,7 @@ describe('macOS startup service', () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'openchamber-startup-'));
     const platform = Object.getOwnPropertyDescriptor(process, 'platform');
     const previousDataDir = process.env.OPENCHAMBER_DATA_DIR;
-    const plistPath = path.join(home, 'Library', 'LaunchAgents', 'dev.openchamber.web.plist');
+    const plistPath = path.join(home, 'Library', 'LaunchAgents', 'com.staticduo.multichamber.web.plist');
     const writeFileSync = fs.writeFileSync;
     const stopBeforeLaunchctl = new Error('Stop before activating launchd');
 
@@ -67,10 +79,10 @@ describe('macOS startup service', () => {
     }
   });
 
-  it('leaves what OpenChamber put into the enabling shell out of the service environment', () => {
+  it('leaves what Multichamber put into the enabling shell out of the service environment', () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'openchamber-startup-'));
     const platform = Object.getOwnPropertyDescriptor(process, 'platform');
-    const plistPath = path.join(home, 'Library', 'LaunchAgents', 'dev.openchamber.web.plist');
+    const plistPath = path.join(home, 'Library', 'LaunchAgents', 'com.staticduo.multichamber.web.plist');
     const writeFileSync = fs.writeFileSync;
     const stopBeforeLaunchctl = new Error('Stop before activating launchd');
     // The shell of a desktop app's terminal, or an agent's: the user's own

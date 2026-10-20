@@ -30,7 +30,7 @@ import {
   worktreeMapsEqual,
 } from '@/lib/worktrees/worktreeManager';
 import { refreshWorktreeTopologyForChange } from '@/lib/worktrees/worktreeTopologyRefresh';
-import { subscribeOpenchamberEvents } from '@/lib/openchamberEvents';
+import { subscribeOpenchamberEvents } from '@/lib/multichamberEvents';
 import type { WorktreeMetadata } from '@/types/worktree';
 import { CHAT_DRAFT_PROJECT_ID } from '@/lib/chatDirectories';
 

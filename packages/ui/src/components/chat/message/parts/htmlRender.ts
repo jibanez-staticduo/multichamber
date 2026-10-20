@@ -11,7 +11,7 @@ import type { Theme } from '@/types/theme';
  * Pages an agent shows with the `openchamber_render` tool. The page is the
  * call's own `html` input; the chat draws it in a sandboxed frame without
  * `allow-same-origin`, so its scripts run in an opaque origin with no access to
- * OpenChamber's storage, credentials or DOM.
+ * Multichamber's storage, credentials or DOM.
  *
  * A small bootstrap goes into the page's head ahead of its own styles. It sets
  * the app theme as CSS variables (and swaps them when the host posts a new

@@ -8,7 +8,7 @@ import { createNotificationTemplateRuntime } from './template-runtime.js';
  * v2 splits a turn: the step start names agent and model, the step end
  * carries the finish. What is pinned here: the finish is announced with the
  * agent and model from the start, a user abort announces nothing, and an
- * active goal (which lives in OpenChamber's own metadata) silences the push.
+ * active goal (which lives in Multichamber's own metadata) silences the push.
  */
 const makeRuntime = ({ metadata = {} } = {}) => {
   const emitDesktopNotification = vi.fn(() => true);
@@ -76,7 +76,7 @@ describe('ready notification on v2 step events', () => {
     expect(emitDesktopNotification).not.toHaveBeenCalled();
   });
 
-  it('stays quiet while a goal from OpenChamber\'s own metadata is active', async () => {
+  it('stays quiet while a goal from Multichamber\'s own metadata is active', async () => {
     const { runtime, emitDesktopNotification } = makeRuntime({
       metadata: { openchamber: { goal: { id: 'g', status: 'active', objective: 'x' } } },
     });

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Fully automated session-switch latency capture for OpenChamber.
+ * Fully automated session-switch latency capture for Multichamber.
  *
  * Clicks sidebar session rows with real input events and measures, per click,
  * how long the page takes to acknowledge the click and to show the target
@@ -48,7 +48,7 @@ const HELP = `Usage: bun run profile:switch -- [options]
 Measures how long switching sessions from the sidebar takes.
 
 Options:
-  --url <url>              OpenChamber URL (default: http://localhost:3000)
+  --url <url>              Multichamber URL (default: http://localhost:3000)
   --sessions <ids>         Comma-separated session ids to click, in order.
                            Default: the first --count rows in the sidebar.
   --title <text>           Add the sidebar row whose text contains <text> to
@@ -113,7 +113,7 @@ Options:
   --headless               Run without a visible browser
   --help                   Show this help
 
-Needs a running OpenChamber server; see scripts/perf/DOCUMENTATION.md.
+Needs a running Multichamber server; see scripts/perf/DOCUMENTATION.md.
 `
 
 const parseArgs = (argv) => {

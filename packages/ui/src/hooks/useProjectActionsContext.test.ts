@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import { resolveProjectActionsOwner } from './useProjectActionsContext';
 
 const projects = [
-  { id: 'openchamber', path: '/workspace/openchamber', label: 'OpenChamber' },
+  { id: 'openchamber', path: '/workspace/openchamber', label: 'Multichamber' },
 ];
 
 describe('resolveProjectActionsOwner', () => {

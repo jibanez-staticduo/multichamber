@@ -2,7 +2,7 @@ import React from 'react';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 import { toast } from '@/components/ui';
 import { isDesktopShell, isWebRuntime } from '@/lib/desktop';
-import { subscribeOpenchamberEvents } from '@/lib/openchamberEvents';
+import { subscribeOpenchamberEvents } from '@/lib/multichamberEvents';
 import { useUIStore } from '@/stores/useUIStore';
 
 const isFocused = () => {

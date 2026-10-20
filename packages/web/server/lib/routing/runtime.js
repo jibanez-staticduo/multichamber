@@ -104,7 +104,7 @@ const customEndpointInputSchema = z.object({
   key: z.string().trim().max(4000).nullable().optional(),
 });
 
-/** OpenChamber stores a model as `{ providerID, modelID }`; v2 wants a `Model.Ref`. */
+/** Multichamber stores a model as `{ providerID, modelID }`; v2 wants a `Model.Ref`. */
 const toModelRef = (model, variant) => {
   const ref = { providerID: model.providerID, id: model.modelID };
   if (variant) ref.variant = variant;
@@ -158,7 +158,7 @@ export function createRoutingRuntime({
   listCatalogModels = null,
   readSessionHistory = null,
   readConfigEntries = null,
-  // Whether OpenChamber keeps this session's cache warm itself (`session-warming`).
+  // Whether Multichamber keeps this session's cache warm itself (`session-warming`).
   isSessionWarm = () => false,
   now = Date.now,
 }) {
@@ -219,7 +219,7 @@ export function createRoutingRuntime({
     const autoReady = jevAvailable && config.enabled && Boolean(config.fallback) && enabledCategories(config).length >= 2;
     // Built-in text travels with the config so "Reset" in Settings restores the shipped wording.
     // `available` stays in the payload for the client: a runtime without an
-    // OpenChamber server (VS Code) answers 404 and reads it as false.
+    // Multichamber server (VS Code) answers 404 and reads it as false.
     // `jevSource` is the two-value field clients from before the classifier
     // pick parse, `classifier` what v2.0.2 clients parse, and `classification`
     // the full picture.
@@ -278,7 +278,7 @@ export function createRoutingRuntime({
    * "Try to preserve cache usage": the category to stay on instead of a lower
    * one while the model that wrote the last answer likely still holds a warm
    * prompt cache, or null to switch as Jev said (`cache.js`). Once the plain
-   * cache lifetime has passed, a session OpenChamber keeps warm still holds,
+   * cache lifetime has passed, a session Multichamber keeps warm still holds,
    * and otherwise OpenCode's warming config decides.
    */
   const cacheHold = async ({ config, chosen, composerAgent, lastAnswer, sessionId, directory }) => {

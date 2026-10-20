@@ -864,7 +864,7 @@ const readResultMessage = (wire: WireRecord): HostResultMessage | null => {
  * (the client only listens to `event.source === parent`), so this checks the
  * envelope and the discriminant rather than every field, and the guest bundle
  * carries no schema library for it. The host side parses guest input with
- * `guestMessageSchema` in `@openchamber/sdk/schemas`.
+ * `guestMessageSchema` in `@multichamber/sdk/schemas`.
  */
 export const readHostMessage = (data: MessageEvent['data']): HostMessage | null => {
   const wire = asWireRecord(data);

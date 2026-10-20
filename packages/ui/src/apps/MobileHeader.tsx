@@ -1,4 +1,5 @@
 import React from 'react';
+import { nativeSessionLabel } from '@/lib/nativeSessionLabel';
 
 import { Icon } from '@/components/icon/Icon';
 import { useI18n } from '@/lib/i18n';
@@ -49,7 +50,7 @@ export const MobileHeader: React.FC<{
   // that is not on screen.
   const runOverviewKey = useUIStore((state) => state.runOverviewKey);
   const runTitle = useMultiRunTitle(runOverviewKey);
-  const sessionTitle = currentSession?.title?.trim();
+  const sessionTitle = currentSession ? nativeSessionLabel(currentSession, t('mobile.sessions.untitled')) : undefined;
   // Single-line title, desktop-style: session title, or the "New session"
   // placeholder on the draft screen. No project/branch metadata line.
   const primaryLabel = (runOverviewKey ? runTitle : null)

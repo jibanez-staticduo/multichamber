@@ -57,7 +57,7 @@ const createOpenCode = () => {
     }
     if (method === 'POST' && state.htmlNext?.test(pathname)) {
       state.htmlNext = null;
-      return new Response('<!doctype html><title>OpenChamber</title>', { status: 200, headers: { 'content-type': 'text/html' } });
+      return new Response('<!doctype html><title>Multichamber</title>', { status: 200, headers: { 'content-type': 'text/html' } });
     }
     // Real shape: `{ data }` without a `location`, unlike directory-scoped routes.
     if (pathname === '/api/session/active') return Response.json({ data: state.active });
@@ -86,7 +86,7 @@ const createOpenCode = () => {
   return { state, fetchImpl };
 };
 
-const createRuntime = ({ dataDir = makeDataDir(), openCode = createOpenCode(), knowledge = null, retryDelayMs, resolveAutoSelection, now, beforeScheduledTaskSend, onScheduledTaskResult, persistSessionGoal } = {}) => {
+const createRuntime = ({ dataDir = makeDataDir(), openCode = createOpenCode(), knowledge = null, retryDelayMs, resolveAutoSelection, now, beforeScheduledTaskSend, onScheduledTaskResult, persistSessionGoal, getEngineTransport } = {}) => {
   let eventHandler = () => {};
   let statusHandler = () => {};
   const broadcasts = [];
@@ -112,6 +112,7 @@ const createRuntime = ({ dataDir = makeDataDir(), openCode = createOpenCode(), k
   if (resolveAutoSelection) options.resolveAutoSelection = resolveAutoSelection;
   if (now) options.now = now;
   if (persistSessionGoal) options.persistSessionGoal = persistSessionGoal;
+  if (getEngineTransport) options.getEngineTransport = getEngineTransport;
   const runtime = createMessageQueueRuntime(options);
   return {
     runtime,
@@ -419,15 +420,13 @@ describe('a message queued as a goal', () => {
 
     openCode.state.active = {};
     emit({ type: 'session.status', properties: { sessionID: SESSION, status: { type: 'idle' } } });
-    await settle();
-    expect(openCode.state.sent.map((entry) => entry.body.text)).toEqual(['plain first']);
+    await vi.waitFor(() => expect(openCode.state.sent.map((entry) => entry.body.text)).toEqual(['plain first']));
     expect(persisted).toEqual([]);
 
     emit({ type: 'session.status', properties: { sessionID: SESSION, status: { type: 'busy' } } });
     emit({ type: 'session.status', properties: { sessionID: SESSION, status: { type: 'idle' } } });
-    await settle();
-
-    expect(persisted).toHaveLength(1);
+    await vi.waitFor(() => expect(persisted).toHaveLength(1));
+    await vi.waitFor(() => expect(openCode.state.sent).toHaveLength(3));
     expect(persisted[0]).toMatchObject({
       sessionID: SESSION,
       directory: DIRECTORY,
@@ -441,6 +440,37 @@ describe('a message queued as a goal', () => {
       [`/api/session/${SESSION}/prompt`, { text: 'build the parser' }],
     ]);
     expect(openCode.state.sent[1].body.text).toContain('A token budget of 5000 tokens');
+  });
+
+  it('keeps an idle signal received before the previous prompt acknowledgement settles', async () => {
+    process.env.OPENCHAMBER_DATA_DIR = makeDataDir();
+    const persisted = [];
+    const openCode = createOpenCode();
+    let release;
+    const acknowledgement = new Promise((resolve) => { release = resolve; });
+    const originalFetch = openCode.fetchImpl;
+    openCode.fetchImpl = vi.fn(async (url, init) => {
+      const response = await originalFetch(url, init);
+      if (new URL(url).pathname.endsWith('/prompt') && openCode.state.sent.length === 1) await acknowledgement;
+      return response;
+    });
+    const { runtime, emit } = createRuntime({ openCode, persistSessionGoal: async (_id, _directory, goal) => persisted.push(goal) });
+    runtime.start();
+    openCode.state.active = { [SESSION]: { type: 'running' } };
+    await runtime.enqueue(SESSION, DIRECTORY, item({ text: 'first' }));
+    await runtime.enqueue(SESSION, DIRECTORY, item({ text: 'goal', goal: { tokenBudget: 100 } }));
+    openCode.state.active = {};
+    emit({ type: 'session.status', properties: { sessionID: SESSION, status: { type: 'idle' } } });
+    await vi.waitFor(() => expect(openCode.state.sent).toHaveLength(1));
+    emit({ type: 'session.status', properties: { sessionID: SESSION, status: { type: 'busy' } } });
+    emit({ type: 'session.status', properties: { sessionID: SESSION, status: { type: 'idle' } } });
+    await settle();
+    expect(persisted).toEqual([]);
+    release();
+    await vi.waitFor(() => expect(persisted).toHaveLength(1));
+    expect(persisted[0].tokenBudget).toBe(100);
+    await vi.waitFor(() => expect(runtime.sessionSnapshot(SESSION).items).toEqual([]));
+    runtime.stop();
   });
 
   it('admits nothing when the goal cannot be saved, so a retry cannot duplicate the context', async () => {
@@ -982,5 +1012,116 @@ describe('message queue runtime', () => {
       `/api/session/${SESSION}/prompt`,
     ]);
     expect(openCode.state.sent[0].body).toEqual({ sessionId: SESSION, directory: DIRECTORY });
+  });
+});
+
+
+describe('sessions of another engine (Claude Code)', () => {
+  const CLAUDE = 'ses_ccc0b1e16d4-d15a-4616-b6d9-42db61f876f3';
+  const fakeClaude = ({ busy = false } = {}) => {
+    const state = { busy, sent: [] };
+    const transport = {
+      owns: (sessionId) => sessionId.startsWith('ses_ccc'),
+      isIdle: vi.fn(async () => !state.busy),
+      send: vi.fn(async (sessionId, directory, message) => {
+        state.sent.push({ sessionId, directory, ...message });
+        return { knowledgeDelivered: Boolean(message.knowledge) && !message.text.startsWith('/') };
+      }),
+    };
+    return { state, transport };
+  };
+
+  it('delivers through the engine, never to OpenCode, which does not know the id', async () => {
+    const claude = fakeClaude();
+    const { runtime, openCode } = createRuntime({ getEngineTransport: () => claude.transport });
+    runtime.start();
+    await runtime.enqueue(CLAUDE, DIRECTORY, item({ content: 'continue', text: 'continue' }));
+    await settle();
+
+    expect(claude.state.sent).toEqual([{ sessionId: CLAUDE, directory: DIRECTORY, text: 'continue', files: [], context: [], knowledge: '', sendConfig: { providerID: 'anthropic', modelID: 'claude', agent: 'build' } }]);
+    expect(openCode.fetchImpl).not.toHaveBeenCalled();
+    expect(runtime.sessionSnapshot(CLAUDE).items ?? []).toEqual([]);
+  });
+
+  it('waits while the Claude turn runs and drains on its idle status', async () => {
+    const claude = fakeClaude({ busy: true });
+    const { runtime, emit } = createRuntime({ getEngineTransport: () => claude.transport });
+    runtime.start();
+    await runtime.enqueue(CLAUDE, DIRECTORY, item({ content: 'next', text: 'next' }));
+    await settle();
+    expect(claude.state.sent).toEqual([]);
+
+    claude.state.busy = false;
+    emit({ type: 'session.status', properties: { sessionID: CLAUDE, status: { type: 'idle' } } });
+    await settle();
+    expect(claude.state.sent.map((entry) => entry.text)).toEqual(['next']);
+  });
+
+  it('admits captured context and pending knowledge ahead of the text', async () => {
+    const claude = fakeClaude();
+    const knowledge = {
+      resolvePendingForSession: vi.fn(async () => ({ text: 'project notes', signature: 'sig-1' })),
+      recordDelivered: vi.fn(async () => {}),
+    };
+    const { runtime } = createRuntime({ getEngineTransport: () => claude.transport, knowledge });
+    runtime.start();
+    await runtime.enqueue(CLAUDE, DIRECTORY, item({
+      content: 'go',
+      text: 'go',
+      context: [{ kind: 'context', text: 'quoted selection', metadata: { source: 'selection' } }],
+    }));
+    await settle();
+
+    expect(claude.state.sent[0].context).toEqual(['quoted selection']);
+    expect(claude.state.sent[0].knowledge).toBe('project notes');
+    expect(knowledge.recordDelivered).toHaveBeenCalledWith(CLAUDE, DIRECTORY, 'sig-1');
+  });
+
+  it('does not record knowledge as delivered when the engine did not carry it (a command)', async () => {
+    const claude = fakeClaude();
+    const knowledge = {
+      resolvePendingForSession: vi.fn(async () => ({ text: 'project notes', signature: 'sig-1' })),
+      recordDelivered: vi.fn(async () => {}),
+    };
+    const { runtime } = createRuntime({ getEngineTransport: () => claude.transport, knowledge });
+    runtime.start();
+    await runtime.enqueue(CLAUDE, DIRECTORY, item({ content: '/review', text: '/review' }));
+    await settle();
+    expect(claude.state.sent).toHaveLength(1);
+    expect(knowledge.recordDelivered).not.toHaveBeenCalled();
+  });
+
+  it('does not switch an OpenCode model or agent for it', async () => {
+    const claude = fakeClaude();
+    const resolveAutoSelection = vi.fn(async () => null);
+    const { runtime, openCode } = createRuntime({ getEngineTransport: () => claude.transport, resolveAutoSelection });
+    runtime.start();
+    await runtime.enqueue(CLAUDE, DIRECTORY, item());
+    await settle();
+    expect(openCode.state.switched).toEqual([]);
+    expect(resolveAutoSelection).not.toHaveBeenCalled();
+  });
+
+  it('keeps OpenCode sessions on OpenCode when an engine transport is present', async () => {
+    const claude = fakeClaude();
+    const { runtime, openCode } = createRuntime({ getEngineTransport: () => claude.transport });
+    runtime.start();
+    await runtime.enqueue(SESSION, DIRECTORY, item({ content: 'plain', text: 'plain' }));
+    await settle();
+    expect(claude.transport.send).not.toHaveBeenCalled();
+    expect(openCode.state.sent.map((entry) => entry.path)).toContain(`/api/session/${SESSION}/prompt`);
+  });
+
+  it('retries a failed engine delivery instead of dropping the message', async () => {
+    const claude = fakeClaude();
+    claude.transport.send.mockRejectedValueOnce(new Error('held by another process'));
+    const { runtime } = createRuntime({ getEngineTransport: () => claude.transport, retryDelayMs: () => 5 });
+    runtime.start();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await runtime.enqueue(CLAUDE, DIRECTORY, item({ content: 'again', text: 'again' }));
+    await settle(80);
+    warn.mockRestore();
+    expect(claude.transport.send).toHaveBeenCalledTimes(2);
+    expect(claude.state.sent.map((entry) => entry.text)).toEqual(['again']);
   });
 });

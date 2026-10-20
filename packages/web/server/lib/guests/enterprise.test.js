@@ -57,7 +57,7 @@ const writeGuest = async (root, id, contributes = {}) => {
   await fs.mkdir(path.join(root, 'panel'), { recursive: true });
   await fs.writeFile(path.join(root, 'panel', 'index.html'), '<html></html>');
   await fs.writeFile(path.join(root, 'package.json'), JSON.stringify({
-    name: `@openchamber/${id}`,
+    name: `@multichamber/${id}`,
     version: '1.0.0',
     openchamber: {
       apiVersion: 1,

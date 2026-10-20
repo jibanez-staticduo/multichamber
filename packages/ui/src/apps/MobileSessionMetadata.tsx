@@ -1,3 +1,4 @@
+import { useNativeContextFill, useContextWindowLimits } from '@/hooks/useContextWindowLimits';
 import React from 'react';
 
 import { Icon } from '@/components/icon/Icon';
@@ -401,19 +402,19 @@ export const MobileSessionMetadataButton = React.memo(function MobileSessionMeta
   const provider = modelRef ? providers.find((entry) => entry.id === modelRef.providerID) : undefined;
   const liveModel = provider?.models.find((model) => model.id === modelRef?.modelID);
   const metadata = modelRef ? getModelMetadata(modelRef.providerID, modelRef.modelID) : undefined;
-  const contextLimit = getNumericLimit((liveModel as { limit?: unknown } | undefined)?.limit, 'context')
-    ?? metadata?.limit?.context
-    ?? 0;
-  const contextFill = React.useMemo(() => findLatestContextFill(activeSessionMessages), [activeSessionMessages]);
+  const nativeContext = useNativeContextFill(currentSessionId, effectiveDirectory || undefined);
+  const nativeLimits = useContextWindowLimits(currentSessionId, effectiveDirectory || undefined);
+  const contextLimit = nativeContext ? nativeContext.window ?? 0 : nativeLimits.context || (getNumericLimit((liveModel as { limit?: unknown } | undefined)?.limit, 'context') ?? metadata?.limit?.context ?? 0);
+  const contextFill = React.useMemo(() => nativeContext ? nativeContext.state === 'compacted' ? { state: 'compacted' as const, index: -1 } : { state: 'measured' as const, index: -1, totalTokens: nativeContext.tokens, native: true, contextWindow: nativeContext.window } : findLatestContextFill(activeSessionMessages), [activeSessionMessages, nativeContext]);
 
   const contextDisplay = React.useMemo<ContextDisplay>(() => {
-    if (contextLimit <= 0) return null;
+    if (contextLimit <= 0 || (contextFill?.state === 'measured' && contextFill.native && !contextFill.contextWindow)) return { state: 'pending' };
     if (isNewSessionDraftOpen || !contextFill) return { state: 'pending' };
     if (contextFill.state === 'compacted') {
       return { state: 'compacted', tokens: `${UNKNOWN_VALUE}/${formatTokens(contextLimit)}` };
     }
 
-    const percentage = Math.min((contextFill.totalTokens / contextLimit) * 100, 999);
+    const percentage = (contextFill.totalTokens / contextLimit) * 100;
     const colorClass = percentage >= 90
       ? 'text-[var(--status-error)]'
       : percentage >= 75

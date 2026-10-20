@@ -2,7 +2,7 @@ import { sessionCookieNameForRequest } from '../ui-auth/session-cookie.js';
 
 /**
  * A sandboxed page (an HTML file preview, an extension frame) sends
- * `Origin: null`. No OpenChamber client connects that way, so every socket
+ * `Origin: null`. No Multichamber client connects that way, so every socket
  * refuses it, also when the UI has no password and origins go unchecked.
  */
 export const isOpaqueOriginRequest = (req) => {
@@ -28,7 +28,7 @@ const FRAME_ANCESTOR_SOURCE = /^(?:\*|https?:\/\/[a-z0-9.-]+(?::(?:\d{1,5}|\*))?
  * The `frame-ancestors` list for the app's own responses: the app itself and
  * its packaged shells, which frame extension panels and HTML previews from the
  * server, and on a development server the HMR window's loopback ports.
- * `OPENCHAMBER_FRAME_ANCESTORS` adds sources for people who embed OpenChamber
+ * `OPENCHAMBER_FRAME_ANCESTORS` adds sources for people who embed Multichamber
  * in a page of their own (`*` allows any); a source that is not a plain
  * origin is ignored rather than spliced into the policy.
  */
@@ -188,7 +188,7 @@ export const createRequestSecurityRuntime = (deps) => {
     const host = forwardedHost || (Array.isArray(hostHeader) ? hostHeader[0] : hostHeader || '').trim().toLowerCase();
     if (host && host === origin.host.toLowerCase()) return true;
 
-    // TLS commonly ends at a cloud edge before an HTTP hop to OpenChamber.
+    // TLS commonly ends at a cloud edge before an HTTP hop to Multichamber.
     // In that setup the browser's Origin is https while a generic reverse
     // proxy reports the upstream request as http. The external host remains
     // authoritative, so compare it directly instead of requiring the proxy to

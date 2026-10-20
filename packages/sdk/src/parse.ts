@@ -335,11 +335,14 @@ const runtimeContributions = (contributes: z.output<typeof contributesSchema>): 
   return declared;
 };
 
-export const openChamberManifestSchema = z.object({
+const engineVersionSchema = z.string().trim().regex(OPENCHAMBER_ENGINE_PATTERN);
+const enginesSchema = z.object({ multichamber: z.json().optional(), openchamber: z.json().optional() }).strict()
+  .transform((value) => ({ multichamber: Object.hasOwn(value, 'multichamber') ? value.multichamber : value.openchamber }))
+  .pipe(z.object({ multichamber: engineVersionSchema }));
+
+export const multichamberManifestSchema = z.object({
   apiVersion: z.literal(OPENCHAMBER_SDK_MANIFEST_API_VERSIONS[0]),
-  engines: z.object({
-    openchamber: z.string().trim().regex(OPENCHAMBER_ENGINE_PATTERN),
-  }).strict().optional(),
+  engines: enginesSchema.optional(),
   contributes: contributesSchema.superRefine((contributes, ctx) => {
     // Docking only means something for a page beside a shared surface.
     const docked = contributes.panel.dock !== undefined || contributes.panel.size !== undefined;
@@ -399,17 +402,22 @@ export const PACKAGE_VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[
 
 const packageVersionSchema = z.string().trim().regex(PACKAGE_VERSION_PATTERN).max(64);
 
-export const packageManifestSchema = z.object({
-  version: packageVersionSchema.optional(),
-  openchamber: openChamberManifestSchema,
-});
+export const packageManifestSchema = z.object({ version: packageVersionSchema.optional(), multichamber: z.json().optional(), openchamber: z.json().optional() })
+  .transform((value, ctx) => {
+    const parsed = multichamberManifestSchema.safeParse(Object.hasOwn(value, 'multichamber') ? value.multichamber : value.openchamber);
+    if (!parsed.success) {
+      for (const issue of parsed.error.issues) ctx.addIssue({ ...issue, path: ['multichamber', ...issue.path] });
+      return z.NEVER;
+    }
+    return { version: value.version, multichamber: parsed.data };
+  });
 
 const packageEnvelopeSchema = z.union([
-  z.object({ openchamber: z.null() }),
-  z.object({ openchamber: z.object({}).passthrough() }),
+  z.object({ multichamber: z.json() }),
+  z.object({ openchamber: z.json() }),
 ]);
 
-export type ManifestDocument = z.input<typeof openChamberManifestSchema> | z.input<typeof packageManifestSchema>;
+export type ManifestDocument = z.input<typeof multichamberManifestSchema> | z.input<typeof packageManifestSchema>;
 
 const fail = (code: ParseManifestErrorCode, message: string): ParseManifestFailure => ({
   ok: false,
@@ -421,8 +429,8 @@ const failureFromIssue = (issue: { path: ReadonlyArray<PropertyKey>; code: strin
   // Paths are reported relative to the `openchamber` block whether the
   // document was a bare manifest or a package.json envelope.
   const segments = issue.path.map(String);
-  const path = (segments[0] === 'openchamber' ? segments.slice(1) : segments).join('.');
-  const isPackageEnvelope = segments[0] === 'openchamber';
+  const path = (segments[0] === 'openchamber' || segments[0] === 'multichamber' ? segments.slice(1) : segments).join('.');
+  const isPackageEnvelope = segments[0] === 'openchamber' || segments[0] === 'multichamber';
   if (!path && issue.code === 'invalid_type') {
     return isPackageEnvelope
       ? fail('missing-openchamber', 'package.json openchamber must be a plain object.')
@@ -438,7 +446,7 @@ const failureFromIssue = (issue: { path: ReadonlyArray<PropertyKey>; code: strin
     );
   }
   if (path === 'engines' || path.startsWith('engines.')) {
-    return fail('invalid-engines', 'engines.openchamber must be a version like 1.22.0 or >=1.22.0.');
+    return fail('invalid-engines', 'engines.multichamber must be a version like 1.22.0 or >=1.22.0.');
   }
   if (path === 'contributes.panel' && issue.code === 'custom') {
     return fail('invalid-panel', issue.message);
@@ -534,7 +542,7 @@ const failureFromIssue = (issue: { path: ReadonlyArray<PropertyKey>; code: strin
   return fail('missing-panel', 'contributes.panel is required.');
 };
 
-const decodeManifest = (parsed: ReturnType<typeof openChamberManifestSchema.safeParse>): ParseManifestResult => {
+const decodeManifest = (parsed: ReturnType<typeof multichamberManifestSchema.safeParse>): ParseManifestResult => {
   if (parsed.success) {
     return { ok: true, manifest: parsed.data };
   }
@@ -546,12 +554,12 @@ const decodeManifest = (parsed: ReturnType<typeof openChamberManifestSchema.safe
 };
 
 export const parseManifest = (document: ManifestDocument): ParseManifestResult => {
-  if ('openchamber' in document) {
+  if ('multichamber' in document || 'openchamber' in document) {
     const parsed = packageManifestSchema.safeParse(document);
     if (parsed.success) {
       const success: ParseManifestSuccess = {
         ok: true,
-        manifest: parsed.data.openchamber,
+        manifest: parsed.data.multichamber,
       };
       if (parsed.data.version) {
         success.version = parsed.data.version;
@@ -564,7 +572,7 @@ export const parseManifest = (document: ManifestDocument): ParseManifestResult =
     }
     return failureFromIssue(issue);
   }
-  return decodeManifest(openChamberManifestSchema.safeParse(document));
+  return decodeManifest(multichamberManifestSchema.safeParse(document));
 };
 
 export const parseManifestJson = (json: string): ParseManifestResult => {
@@ -575,7 +583,7 @@ export const parseManifestJson = (json: string): ParseManifestResult => {
       if (parsed.success) {
         const success: ParseManifestSuccess = {
           ok: true,
-          manifest: parsed.data.openchamber,
+          manifest: parsed.data.multichamber,
         };
         if (parsed.data.version) {
           success.version = parsed.data.version;
@@ -588,7 +596,7 @@ export const parseManifestJson = (json: string): ParseManifestResult => {
       }
       return failureFromIssue(issue);
     }
-    return decodeManifest(openChamberManifestSchema.safeParse(raw));
+    return decodeManifest(multichamberManifestSchema.safeParse(raw));
   } catch {
     return fail('not-object', 'Manifest must be a plain object.');
   }

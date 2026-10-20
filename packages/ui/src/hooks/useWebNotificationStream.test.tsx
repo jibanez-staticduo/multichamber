@@ -1,7 +1,7 @@
 import React, { act } from 'react';
 import { expect, mock, test } from 'bun:test';
 import { Window } from 'happy-dom';
-import { subscribeOpenchamberEvents } from '@/lib/openchamberEvents';
+import { subscribeOpenchamberEvents } from '@/lib/multichamberEvents';
 import type { NotificationPayload } from '@/lib/api/types';
 import { useUIStore } from '@/stores/useUIStore';
 import { configureRuntimeUrlResolver } from '@/lib/runtime-url';
@@ -70,7 +70,7 @@ test('shares one control stream, deduplicates main-stream delivery, and retires 
     await act(async () => root.render(<Probe enabled />));
     expect(EventSourceFixture.instances).toHaveLength(1);
     const source = EventSourceFixture.instances[0];
-    expect(source.url).toContain('/api/openchamber/events');
+    expect(source.url).toContain('/api/multichamber/events');
     const payload = { title: 'Done', body: 'Ready', sessionId: 'session-one', kind: 'complete', directory: '/repo' };
     await act(async () => {
       source.emit(payload);

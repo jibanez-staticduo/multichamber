@@ -6,7 +6,7 @@ import {
   isGuestRequestPath,
   resolveIntegrationApi,
   resolveIntegrationAuth,
-} from '@openchamber/sdk';
+} from '@multichamber/sdk';
 
 import { dropGuestTokens, getGuestAuth, patchGuestAuth } from './auth-store.js';
 

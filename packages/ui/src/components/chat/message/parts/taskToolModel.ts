@@ -1,4 +1,5 @@
-import type { Part, Session, ToolInput } from '@/lib/opencode/model';
+import { z } from 'zod';
+import type { Metadata, Part, Session, ToolInput } from '@/lib/opencode/model';
 
 import { isSubagentTool, normalizeToolName } from '@/lib/opencode/tools';
 
@@ -21,6 +22,22 @@ export const readTaskSessionIdFromRecord = (value: unknown): string | undefined 
     const record = value as Record<string, unknown>;
     return normalizeSessionIdCandidate(record.sessionID) ?? normalizeSessionIdCandidate(record.sessionId);
 };
+
+const taskSessionIdsSchema = z.object({
+    sessionID: z.string().trim().min(1).optional().catch(undefined),
+    sessionId: z.string().trim().min(1).optional().catch(undefined),
+    sessionIDs: z.array(z.string().trim().min(1)).optional().catch(undefined),
+});
+
+/** Native collaboration calls may address several authoritative child threads. */
+export function readTaskSessionIdsFromRecord(value: Metadata | undefined): string[] {
+    const parsed = taskSessionIdsSchema.safeParse(value);
+    if (!parsed.success) return [];
+    const { sessionID, sessionId, sessionIDs } = parsed.data;
+    const ids = sessionIDs ?? [];
+    const primary = sessionID ?? sessionId;
+    return [...new Set(primary ? [primary, ...ids] : ids)];
+}
 
 /**
  * OpenCode 2.x publishes a running subagent's child session id only through

@@ -82,8 +82,8 @@ const defaultPrimaryWorktreeRoot = async (directory) => ({ root: directory === '
 const resolvePrimaryWorktreeRootMock = vi.fn(defaultPrimaryWorktreeRoot);
 globalThis.__openchamberResolvePrimaryWorktreeRootMock = resolvePrimaryWorktreeRootMock;
 
-let registerOpenChamberSessionRoutes;
-let createOpenChamberSessionService;
+let registerMultichamberSessionRoutes;
+let createMultichamberSessionService;
 let createSessionMetadataStore;
 let createOpenCodeSessionMetadata;
 
@@ -136,7 +136,7 @@ vi.mock('../git/index.js', () => ({
 }));
 
 /**
- * Archive state is OpenChamber's own now, so the routes take a store rather
+ * Archive state is Multichamber's own now, so the routes take a store rather
  * than talking to OpenCode. The tests use an in-memory one with the same
  * contract as `archive-store.js`.
  */
@@ -220,7 +220,7 @@ const createApp = (overrides = {}, options = {}) => {
   const archiveStore = overrides.archiveStore ?? createMemoryArchiveStore();
   const sessionMetadataStore = overrides.sessionMetadataStore ?? createMemorySessionMetadataStore();
   const broadcastGlobalUiEvent = overrides.broadcastGlobalUiEvent ?? vi.fn();
-  registerOpenChamberSessionRoutes(app, {
+  registerMultichamberSessionRoutes(app, {
     archiveStore,
     sessionMetadataStore,
     broadcastGlobalUiEvent,
@@ -239,7 +239,7 @@ const createApp = (overrides = {}, options = {}) => {
 
 describe('openchamber session routes', () => {
   beforeAll(async () => {
-    ({ registerOpenChamberSessionRoutes, createOpenChamberSessionService } = await import('./routes.js'));
+    ({ registerMultichamberSessionRoutes, createMultichamberSessionService } = await import('./routes.js'));
     ({ createSessionMetadataStore, createOpenCodeSessionMetadata } = await import('./session-metadata-store.js'));
   });
 
@@ -286,6 +286,43 @@ describe('openchamber session routes', () => {
   });
 
   describe('archiving a batch of sessions', () => {
+    it('restores native engine archives before clearing their overlay, preserving failed entities', async () => {
+      const native = new Set(['ses_cdx_ok', 'ses_cdx_failed']);
+      const { app, archiveStore } = createApp({
+        getEngineArchiveTransport: (id) => id.startsWith('ses_cdx') ? {
+          archiveSession: async (sessionId, archived) => {
+            if (sessionId === 'ses_cdx_failed') throw new Error('Engine unavailable');
+            if (archived) native.add(sessionId);
+            else native.delete(sessionId);
+          },
+        } : null,
+      });
+      await archiveStore.archive(['ses_cdx_ok', 'ses_cdx_failed'], 1700);
+      const response = await request(app).post('/api/openchamber/sessions/unarchive')
+        .send({ ids: ['ses_cdx_ok', 'ses_cdx_failed', 'ses_open'] }).expect(200);
+      expect(response.body.restored.map((entry) => entry.id)).toEqual(['ses_cdx_ok', 'ses_open']);
+      expect(response.body.failedIds).toEqual(['ses_cdx_failed']);
+      expect([...native]).toEqual(['ses_cdx_failed']);
+      await expect(archiveStore.getAll()).resolves.toEqual({ ses_cdx_failed: 1700 });
+    });
+
+    it('does not mark failed native archives as stored success', async () => {
+      const native = [];
+      const { app, archiveStore } = createApp({
+        getEngineArchiveTransport: (id) => id.startsWith('ses_cdx') ? {
+          archiveSession: async (sessionId) => {
+            if (sessionId === 'ses_cdx_failed') throw new Error('Engine unavailable');
+            native.push(sessionId);
+          },
+        } : null,
+      });
+      const response = await request(app).post('/api/openchamber/sessions/archive')
+        .send({ ids: ['ses_cdx_ok', 'ses_cdx_failed', 'ses_open'], archivedAt: 1700 }).expect(200);
+      expect(response.body.failedIds).toEqual(['ses_cdx_failed']);
+      expect(native).toEqual(['ses_cdx_ok']);
+      await expect(archiveStore.getAll()).resolves.toEqual({ ses_cdx_ok: 1700, ses_open: 1700 });
+    });
+
     it('archives every id and reports what it stored', async () => {
       const { app, archiveStore, broadcastGlobalUiEvent } = createApp();
       const response = await request(app)
@@ -374,7 +411,7 @@ describe('openchamber session routes', () => {
     });
   });
 
-  describe('session metadata OpenChamber owns', () => {
+  describe('session metadata Multichamber owns', () => {
     it('merges a patch onto the OpenCode record and writes it back with PATCH', async () => {
       sessionGetMock.mockImplementationOnce(async ({ sessionID }) => ({
         id: sessionID,
@@ -888,7 +925,7 @@ describe('openchamber session routes', () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = vi.fn(async (url) => {
       if (String(url).endsWith('/prompt')) {
-        return new Response('<!doctype html><title>OpenChamber</title>', {
+        return new Response('<!doctype html><title>Multichamber</title>', {
           status: 200,
           headers: { 'content-type': 'text/html; charset=utf-8' },
         });
@@ -1059,7 +1096,7 @@ describe('openchamber session routes', () => {
 
   it('moves a session to the folder of the project that holds it, also from a subfolder, when projects share a repository', async () => {
     const resolveWorktreeTopLevel = vi.fn(async (directory) => ({ root: '/repo', prefix: directory.replace('/repo/', '') }));
-    const service = createOpenChamberSessionService({
+    const service = createMultichamberSessionService({
       readSettingsFromDiskMigrated: async () => ({ projects: [
         { id: 'proj_web', path: '/repo/web' },
         { id: 'proj_ai', path: '/repo/ai' },
@@ -1097,7 +1134,7 @@ describe('openchamber session routes', () => {
         ? { root: '/repo/worktrees/wt-a', prefix: 'ai/src' }
         : { root: '/repo', prefix: directory.replace(/^\/repo\/?/, '') }
     ));
-    const service = createOpenChamberSessionService({
+    const service = createMultichamberSessionService({
       readSettingsFromDiskMigrated: async () => ({ projects: [
         { id: 'proj_repo', path: '/repo' },
         { id: 'proj_ai', path: '/repo/ai' },
@@ -1633,8 +1670,8 @@ describe('openchamber session routes', () => {
 
 describe('openchamber session service directory resolution', () => {
   const createService = async (overrides = {}) => {
-    const { createOpenChamberSessionService } = await import('./routes.js');
-    return createOpenChamberSessionService({
+    const { createMultichamberSessionService } = await import('./routes.js');
+    return createMultichamberSessionService({
       archiveStore: createMemoryArchiveStore(),
       sessionMetadataStore: createMemorySessionMetadataStore(),
       readSettingsFromDiskMigrated: async () => ({ projects: [{ id: 'proj_1', path: '/repo/app' }] }),

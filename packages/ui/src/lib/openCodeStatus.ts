@@ -17,7 +17,7 @@ type ProbeResult = {
   summary: string;
 };
 
-type OpenChamberHealthSnapshot = {
+type MultichamberHealthSnapshot = {
   openCodePort?: unknown;
   openCodeRunning?: unknown;
   openCodeSecureConnection?: unknown;
@@ -36,7 +36,7 @@ type OpenChamberHealthSnapshot = {
   bunBinaryResolved?: unknown;
 };
 
-type OpenChamberOpencodeResolution = {
+type MultichamberOpencodeResolution = {
   configured?: unknown;
   resolved?: unknown;
   resolvedDir?: unknown;
@@ -174,7 +174,7 @@ export const buildOpenCodeStatusReport = async (): Promise<string> => {
   const apiBase = urls.api('/api/');
 
 
-  const openChamberHealth: OpenChamberHealthSnapshot | null = await (async () => {
+  const multichamberHealth: MultichamberHealthSnapshot | null = await (async () => {
     if (!healthUrl) return null;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
@@ -187,7 +187,7 @@ export const buildOpenCodeStatusReport = async (): Promise<string> => {
       if (!resp.ok) return null;
       const json = (await resp.json().catch(() => null)) as unknown;
       if (!json || typeof json !== 'object' || Array.isArray(json)) return null;
-      return json as OpenChamberHealthSnapshot;
+      return json as MultichamberHealthSnapshot;
     } catch {
       return null;
     } finally {
@@ -195,8 +195,8 @@ export const buildOpenCodeStatusReport = async (): Promise<string> => {
     }
   })();
 
-  const openChamberOpencodeResolutionResult: {
-    data: OpenChamberOpencodeResolution | null;
+  const multichamberOpencodeResolutionResult: {
+    data: MultichamberOpencodeResolution | null;
     status: number | null;
     error: string | null;
   } = await (async () => {
@@ -228,7 +228,7 @@ export const buildOpenCodeStatusReport = async (): Promise<string> => {
       if (!json || typeof json !== 'object' || Array.isArray(json)) {
         return { data: null, status: resp.status, error: `invalid json-shape content-type=${contentType}` };
       }
-      return { data: json as OpenChamberOpencodeResolution, status: resp.status, error: null };
+      return { data: json as MultichamberOpencodeResolution, status: resp.status, error: null };
     } catch (error) {
       return {
         data: null,
@@ -286,31 +286,31 @@ export const buildOpenCodeStatusReport = async (): Promise<string> => {
 
   const lines: string[] = [];
   lines.push(`Time: ${now.toISOString()}`);
-  lines.push(`OpenChamber version: ${appVersion}`);
+  lines.push(`Multichamber version: ${appVersion}`);
   lines.push(`Runtime: ${origin || '(unknown)'} (api=${apiBase || '(unknown)'})`);
   lines.push(`OpenCode SDK base: ${opencodeClient.getBaseUrl()}`);
   lines.push(`Event stream: ${eventStreamStatus}`);
   lines.push(`Directory: ${directory || '(none)'}`);
   lines.push(`Platform: ${platform}`);
 
-  const runtimeOpenCodePort = normalizePort(openChamberHealth?.openCodePort);
+  const runtimeOpenCodePort = normalizePort(multichamberHealth?.openCodePort);
   lines.push(`OpenCode runtime port: ${runtimeOpenCodePort ?? '(unknown)'}`);
-  if (typeof openChamberHealth?.openCodeRunning === 'boolean') {
-    lines.push(`OpenCode runtime running: ${openChamberHealth.openCodeRunning ? 'yes' : 'no'}`);
+  if (typeof multichamberHealth?.openCodeRunning === 'boolean') {
+    lines.push(`OpenCode runtime running: ${multichamberHealth.openCodeRunning ? 'yes' : 'no'}`);
   }
-  if (typeof openChamberHealth?.openCodeSecureConnection === 'boolean') {
-    lines.push(`Secure OpenCode connection: ${openChamberHealth.openCodeSecureConnection ? 'true' : 'false'}`);
+  if (typeof multichamberHealth?.openCodeSecureConnection === 'boolean') {
+    lines.push(`Secure OpenCode connection: ${multichamberHealth.openCodeSecureConnection ? 'true' : 'false'}`);
   }
-  if (typeof openChamberHealth?.openCodeAuthSource === 'string' && openChamberHealth.openCodeAuthSource.trim()) {
-    lines.push(`OpenCode auth source: ${openChamberHealth.openCodeAuthSource}`);
+  if (typeof multichamberHealth?.openCodeAuthSource === 'string' && multichamberHealth.openCodeAuthSource.trim()) {
+    lines.push(`OpenCode auth source: ${multichamberHealth.openCodeAuthSource}`);
   }
 
   // What the managed OpenCode process last said for itself. A turn that stops
   // with nothing on screen usually left its reason here or in the session
   // errors below, not in the UI.
-  const lastOpenCodeError = formatUnknown(openChamberHealth?.lastOpenCodeError, '');
-  const managedProcess = isRecord(openChamberHealth?.lastManagedOpenCodeProcess)
-    ? openChamberHealth.lastManagedOpenCodeProcess
+  const lastOpenCodeError = formatUnknown(multichamberHealth?.lastOpenCodeError, '');
+  const managedProcess = isRecord(multichamberHealth?.lastManagedOpenCodeProcess)
+    ? multichamberHealth.lastManagedOpenCodeProcess
     : null;
   const stderrTail = managedProcess && typeof managedProcess.stderrTail === 'string'
     ? managedProcess.stderrTail.trim()
@@ -355,11 +355,11 @@ export const buildOpenCodeStatusReport = async (): Promise<string> => {
   lines.push(`- OpenCode: ${opencodeHome ? joinPath(opencodeHome, '.local/share/opencode/log', isWindows) : '<home>/.local/share/opencode/log'} (or $XDG_DATA_HOME/opencode/log when set)`);
   if (isDesktop) {
     const isMacDesktop = /Mac OS X|Macintosh/.test(platform);
-    lines.push(`- OpenChamber desktop: ${isWindows
-      ? '%APPDATA%\\OpenChamber\\logs\\main.log'
+    lines.push(`- Multichamber desktop: ${isWindows
+      ? '%APPDATA%\\Multichamber\\logs\\main.log'
       : isMacDesktop
-        ? '~/Library/Logs/OpenChamber/main.log'
-        : '~/.config/OpenChamber/logs/main.log'}`);
+        ? '~/Library/Logs/Multichamber/main.log'
+        : '~/.config/Multichamber/logs/main.log'}`);
   }
 
   if (typeof window !== 'undefined') {
@@ -374,58 +374,58 @@ export const buildOpenCodeStatusReport = async (): Promise<string> => {
     lines.push('');
     lines.push('OpenCode CLI resolution:');
 
-    const launchDiagnostics = isRecord(openChamberHealth?.lastOpenCodeLaunchDiagnostics)
-      ? openChamberHealth.lastOpenCodeLaunchDiagnostics
+    const launchDiagnostics = isRecord(multichamberHealth?.lastOpenCodeLaunchDiagnostics)
+      ? multichamberHealth.lastOpenCodeLaunchDiagnostics
       : null;
     const actualLaunchArgs = launchDiagnostics && Array.isArray(launchDiagnostics.args)
       ? launchDiagnostics.args.filter((value): value is string => typeof value === 'string')
       : [];
-    const openChamberOpencodeResolution = openChamberOpencodeResolutionResult.data;
+    const multichamberOpencodeResolution = multichamberOpencodeResolutionResult.data;
     const configured =
-      openChamberOpencodeResolution && typeof openChamberOpencodeResolution.configured === 'string'
-        ? openChamberOpencodeResolution.configured
+      multichamberOpencodeResolution && typeof multichamberOpencodeResolution.configured === 'string'
+        ? multichamberOpencodeResolution.configured
         : null;
     const resolved =
-      openChamberOpencodeResolution && typeof openChamberOpencodeResolution.resolved === 'string'
-        ? openChamberOpencodeResolution.resolved
-        : (openChamberHealth && typeof openChamberHealth.opencodeBinaryResolved === 'string' ? openChamberHealth.opencodeBinaryResolved : '');
+      multichamberOpencodeResolution && typeof multichamberOpencodeResolution.resolved === 'string'
+        ? multichamberOpencodeResolution.resolved
+        : (multichamberHealth && typeof multichamberHealth.opencodeBinaryResolved === 'string' ? multichamberHealth.opencodeBinaryResolved : '');
     const resolvedDir =
-      openChamberOpencodeResolution && typeof openChamberOpencodeResolution.resolvedDir === 'string'
-        ? openChamberOpencodeResolution.resolvedDir
+      multichamberOpencodeResolution && typeof multichamberOpencodeResolution.resolvedDir === 'string'
+        ? multichamberOpencodeResolution.resolvedDir
         : '';
     const source =
-      openChamberOpencodeResolution && typeof openChamberOpencodeResolution.source === 'string'
-        ? openChamberOpencodeResolution.source
-        : (openChamberHealth && typeof openChamberHealth.opencodeBinarySource === 'string' ? openChamberHealth.opencodeBinarySource : '');
+      multichamberOpencodeResolution && typeof multichamberOpencodeResolution.source === 'string'
+        ? multichamberOpencodeResolution.source
+        : (multichamberHealth && typeof multichamberHealth.opencodeBinarySource === 'string' ? multichamberHealth.opencodeBinarySource : '');
     const configuredLaunchBinary =
-      openChamberOpencodeResolution && typeof openChamberOpencodeResolution.launchBinary === 'string'
-        ? openChamberOpencodeResolution.launchBinary
-        : (openChamberHealth && typeof openChamberHealth.opencodeLaunchBinary === 'string' ? openChamberHealth.opencodeLaunchBinary : '');
+      multichamberOpencodeResolution && typeof multichamberOpencodeResolution.launchBinary === 'string'
+        ? multichamberOpencodeResolution.launchBinary
+        : (multichamberHealth && typeof multichamberHealth.opencodeLaunchBinary === 'string' ? multichamberHealth.opencodeLaunchBinary : '');
     const configuredLaunchWrapperType =
-      openChamberOpencodeResolution && typeof openChamberOpencodeResolution.launchWrapperType === 'string'
-        ? openChamberOpencodeResolution.launchWrapperType
-        : (openChamberHealth && typeof openChamberHealth.opencodeLaunchWrapperType === 'string' ? openChamberHealth.opencodeLaunchWrapperType : '');
+      multichamberOpencodeResolution && typeof multichamberOpencodeResolution.launchWrapperType === 'string'
+        ? multichamberOpencodeResolution.launchWrapperType
+        : (multichamberHealth && typeof multichamberHealth.opencodeLaunchWrapperType === 'string' ? multichamberHealth.opencodeLaunchWrapperType : '');
     const configuredLaunchArgs =
-      openChamberOpencodeResolution && Array.isArray(openChamberOpencodeResolution.launchArgs)
-        ? openChamberOpencodeResolution.launchArgs.filter((value): value is string => typeof value === 'string')
-        : (openChamberHealth && Array.isArray(openChamberHealth.opencodeLaunchArgs)
-          ? openChamberHealth.opencodeLaunchArgs.filter((value): value is string => typeof value === 'string')
+      multichamberOpencodeResolution && Array.isArray(multichamberOpencodeResolution.launchArgs)
+        ? multichamberOpencodeResolution.launchArgs.filter((value): value is string => typeof value === 'string')
+        : (multichamberHealth && Array.isArray(multichamberHealth.opencodeLaunchArgs)
+          ? multichamberHealth.opencodeLaunchArgs.filter((value): value is string => typeof value === 'string')
           : []);
     const node =
-      openChamberOpencodeResolution && typeof openChamberOpencodeResolution.node === 'string'
-        ? openChamberOpencodeResolution.node
-        : (openChamberHealth && typeof openChamberHealth.nodeBinaryResolved === 'string' ? openChamberHealth.nodeBinaryResolved : '');
+      multichamberOpencodeResolution && typeof multichamberOpencodeResolution.node === 'string'
+        ? multichamberOpencodeResolution.node
+        : (multichamberHealth && typeof multichamberHealth.nodeBinaryResolved === 'string' ? multichamberHealth.nodeBinaryResolved : '');
     const bun =
-      openChamberOpencodeResolution && typeof openChamberOpencodeResolution.bun === 'string'
-        ? openChamberOpencodeResolution.bun
-        : (openChamberHealth && typeof openChamberHealth.bunBinaryResolved === 'string' ? openChamberHealth.bunBinaryResolved : '');
+      multichamberOpencodeResolution && typeof multichamberOpencodeResolution.bun === 'string'
+        ? multichamberOpencodeResolution.bun
+        : (multichamberHealth && typeof multichamberHealth.bunBinaryResolved === 'string' ? multichamberHealth.bunBinaryResolved : '');
     const detectedNow =
-      openChamberOpencodeResolution && typeof openChamberOpencodeResolution.detectedNow === 'string'
-        ? openChamberOpencodeResolution.detectedNow
+      multichamberOpencodeResolution && typeof multichamberOpencodeResolution.detectedNow === 'string'
+        ? multichamberOpencodeResolution.detectedNow
         : '';
     const detectedSourceNow =
-      openChamberOpencodeResolution && typeof openChamberOpencodeResolution.detectedSourceNow === 'string'
-        ? openChamberOpencodeResolution.detectedSourceNow
+      multichamberOpencodeResolution && typeof multichamberOpencodeResolution.detectedSourceNow === 'string'
+        ? multichamberOpencodeResolution.detectedSourceNow
         : '';
 
     if (configured !== null) {
@@ -458,8 +458,8 @@ export const buildOpenCodeStatusReport = async (): Promise<string> => {
       lines.push(`- launch-args: ${configuredLaunchArgs.length ? configuredLaunchArgs.join(' ') : '(none)'}`);
       lines.push(`- runtime: ${formatLaunchRuntime(configuredLaunchWrapperType || '', node, bun)}`);
     }
-    if (!openChamberOpencodeResolution && openChamberOpencodeResolutionResult.error) {
-      lines.push(`- resolution-endpoint: ${openChamberOpencodeResolutionResult.error}`);
+    if (!multichamberOpencodeResolution && multichamberOpencodeResolutionResult.error) {
+      lines.push(`- resolution-endpoint: ${multichamberOpencodeResolutionResult.error}`);
     }
   }
 

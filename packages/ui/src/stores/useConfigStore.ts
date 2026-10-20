@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { probeNativeHarnessAvailability } from '@/lib/nativeHarnessAvailability';
 import { listModelVariantIds, modelVariantNames } from "@/lib/modelVariants";
 import { AUTO_MODEL_ID, AUTO_PROVIDER_ID, isAutoModel } from '@/lib/routing/autoModel';
 import { selectAutoReady, useRoutingStore } from '@/stores/useRoutingStore';
@@ -34,7 +35,7 @@ import { getRuntimeKey, subscribeRuntimeEndpointChanged } from "@/lib/runtime-sw
 import { readCachedCatalog, shouldHoldFirstLoadAgainstCache, writeCachedCatalogWhenSettled, type CachedCatalog } from "./configCatalogCache";
 
 const MODELS_DEV_API_URL = "https://models.dev/api.json";
-const MODELS_DEV_PROXY_URL = "/api/openchamber/models-metadata";
+const MODELS_DEV_PROXY_URL = "/api/multichamber/models-metadata";
 
 const FALLBACK_PROVIDER_ID = "opencode";
 const FALLBACK_MODEL_ID = "big-pickle";
@@ -48,7 +49,7 @@ const PROVIDER_CONFIG_REFRESH_CONCURRENCY = 4;
 const PROVIDERS_RETRY_SOURCE = "loadProviders:retryAfterFailure";
 const PROVIDERS_RETRY_DELAY_MS = 3000;
 
-interface OpenChamberDefaults {
+interface MultichamberDefaults {
     defaultModel?: string;
     defaultVariant?: string;
     defaultAgent?: string;
@@ -65,7 +66,7 @@ interface OpenChamberDefaults {
     sttLanguage?: string;
 }
 
-// Directory activation re-reads the OpenChamber defaults, which are global,
+// Directory activation re-reads the Multichamber defaults, which are global,
 // not per directory: one request serves the switches that land inside this
 // window, and concurrent activations share the in-flight one.
 const OPENCHAMBER_DEFAULTS_FRESH_MS = 15_000;
@@ -86,47 +87,47 @@ const isSameConfigRuntimeContext = (left: ConfigRuntimeContext, right: ConfigRun
     left.runtimeKey === right.runtimeKey && left.generation === right.generation
 );
 
-let openChamberDefaultsCache: {
+let multichamberDefaultsCache: {
     at: number;
     context: ConfigRuntimeContext;
-    request: Promise<OpenChamberDefaults | null>;
+    request: Promise<MultichamberDefaults | null>;
 } | null = null;
-let openChamberDefaultsUserRevision = 0;
+let multichamberDefaultsUserRevision = 0;
 
-const invalidateOpenChamberDefaultsCache = (): void => {
-    openChamberDefaultsCache = null;
+const invalidateMultichamberDefaultsCache = (): void => {
+    multichamberDefaultsCache = null;
 };
 
-const recordOpenChamberDefaultsChange = (): void => {
-    openChamberDefaultsUserRevision += 1;
-    invalidateOpenChamberDefaultsCache();
+const recordMultichamberDefaultsChange = (): void => {
+    multichamberDefaultsUserRevision += 1;
+    invalidateMultichamberDefaultsCache();
 };
 
-const fetchOpenChamberDefaults = (context: ConfigRuntimeContext): Promise<OpenChamberDefaults | null> => {
+const fetchMultichamberDefaults = (context: ConfigRuntimeContext): Promise<MultichamberDefaults | null> => {
     const now = Date.now();
     if (
-        openChamberDefaultsCache
-        && isSameConfigRuntimeContext(openChamberDefaultsCache.context, context)
-        && now - openChamberDefaultsCache.at < OPENCHAMBER_DEFAULTS_FRESH_MS
+        multichamberDefaultsCache
+        && isSameConfigRuntimeContext(multichamberDefaultsCache.context, context)
+        && now - multichamberDefaultsCache.at < OPENCHAMBER_DEFAULTS_FRESH_MS
     ) {
-        return openChamberDefaultsCache.request;
+        return multichamberDefaultsCache.request;
     }
-    const request = requestOpenChamberDefaults(context);
+    const request = requestMultichamberDefaults(context);
     const cacheEntry = { at: now, context, request };
-    openChamberDefaultsCache = cacheEntry;
+    multichamberDefaultsCache = cacheEntry;
     void request.then((result) => {
         // A failed settings read must not become a 15-second authoritative
         // empty result. The next directory activation should retry it.
-        if (result === null && openChamberDefaultsCache === cacheEntry) {
-            openChamberDefaultsCache = null;
+        if (result === null && multichamberDefaultsCache === cacheEntry) {
+            multichamberDefaultsCache = null;
         }
     }).catch(() => {
-        if (openChamberDefaultsCache === cacheEntry) openChamberDefaultsCache = null;
+        if (multichamberDefaultsCache === cacheEntry) multichamberDefaultsCache = null;
     });
     return request;
 };
 
-const toOpenChamberDefaults = (data: DesktopSettings): OpenChamberDefaults => {
+const toMultichamberDefaults = (data: DesktopSettings): MultichamberDefaults => {
     const defaultModel = data.defaultModel?.trim() ?? '';
     const defaultVariant = data.defaultVariant?.trim() ?? '';
     const defaultAgent = data.defaultAgent?.trim() ?? '';
@@ -150,10 +151,10 @@ const toOpenChamberDefaults = (data: DesktopSettings): OpenChamberDefaults => {
     };
 };
 
-const requestOpenChamberDefaults = async (context: ConfigRuntimeContext): Promise<OpenChamberDefaults | null> => {
+const requestMultichamberDefaults = async (context: ConfigRuntimeContext): Promise<MultichamberDefaults | null> => {
     markStartupTrace('config.defaults:start');
     const started = typeof performance !== 'undefined' ? performance.now() : Date.now();
-    const finish = (source: string, result: OpenChamberDefaults | null) => {
+    const finish = (source: string, result: MultichamberDefaults | null) => {
         const ended = typeof performance !== 'undefined' ? performance.now() : Date.now();
         markStartupTrace('config.defaults:end', {
             source,
@@ -172,7 +173,7 @@ const requestOpenChamberDefaults = async (context: ConfigRuntimeContext): Promis
             return finish('settings-unavailable', null);
         }
 
-        return finish('settings', toOpenChamberDefaults(data));
+        return finish('settings', toMultichamberDefaults(data));
     } catch (error) {
         markStartupTrace('config.defaults:error', { error: error instanceof Error ? error.message : String(error) });
         return finish('error', null);
@@ -1183,7 +1184,7 @@ const clearProjectConfigError = (directoryKey: string): void => {
 
 subscribeRuntimeEndpointChanged((detail) => {
     configRuntimeGeneration += 1;
-    invalidateOpenChamberDefaultsCache();
+    invalidateMultichamberDefaultsCache();
     _providersLoadedAt.clear();
     _agentsLoadedAt.clear();
     _providersStaleAt.clear();
@@ -1224,6 +1225,7 @@ subscribeRuntimeEndpointChanged((detail) => {
         agentSelectionSource: 'auto',
         isInitialized: false,
         isConnected: false,
+        nativeReadyRuntimeKey: null,
     });
 });
 
@@ -1360,7 +1362,7 @@ type SelectionField = typeof SELECTION_FIELDS[number];
  * Whether writing `next` would leave both the top-level selection and the
  * active directory's snapshot as they are. The persist middleware writes the
  * whole store after every `set()`, even one whose updater returns the same
- * state, and VS Code delivers each `config-store` write to every OpenChamber
+ * state, and VS Code delivers each `config-store` write to every Multichamber
  * webview in every window. So a setter makes this check before it calls
  * `set()`. A missing snapshot is a change: the write would create it.
  */
@@ -1468,6 +1470,8 @@ interface ConfigStore {
     selectionSource: "auto" | "manual";
     agentSelectionSource: "auto" | "manual";
     isConnected: boolean;
+    /** A live native-engine response for this runtime; never persisted or reused across hosts. */
+    nativeReadyRuntimeKey: string | null;
     hasEverConnected: boolean;
     connectionPhase: "connecting" | "connected" | "reconnecting";
     lastDisconnectReason: string | null;
@@ -1477,7 +1481,7 @@ interface ConfigStore {
     projectConfigErrors: Record<string, ProjectConfigError>;
     isInitialized: boolean;
     modelsMetadata: Map<string, ModelMetadata>;
-    // OpenChamber settings-based defaults (take precedence over agent preferences)
+    // Multichamber settings-based defaults (take precedence over agent preferences)
     settingsDefaultModel: string | undefined; // format: "provider/model"
     settingsDefaultsLoaded: boolean;
     settingsDefaultVariant: string | undefined;
@@ -1770,6 +1774,7 @@ export const useConfigStore = create<ConfigStore>()(
                 selectionSource: "auto",
                 agentSelectionSource: "auto",
                 isConnected: false,
+                nativeReadyRuntimeKey: null,
                 hasEverConnected: false,
                 connectionPhase: "connecting",
                 lastDisconnectReason: null,
@@ -2765,12 +2770,12 @@ export const useConfigStore = create<ConfigStore>()(
 
                 loadSessionDefaults: async () => {
                     const runtimeContext = captureConfigRuntimeContext();
-                    const revision = openChamberDefaultsUserRevision;
-                    const defaults = await fetchOpenChamberDefaults(runtimeContext);
+                    const revision = multichamberDefaultsUserRevision;
+                    const defaults = await fetchMultichamberDefaults(runtimeContext);
                     if (!isConfigRuntimeContextCurrent(runtimeContext) || !defaults) return false;
 
                     set((state) => {
-                        const edited = revision !== openChamberDefaultsUserRevision;
+                        const edited = revision !== multichamberDefaultsUserRevision;
                         const next: Partial<ConfigStore> = {
                             configRuntimeKey: runtimeContext.runtimeKey,
                             settingsDefaultsLoaded: true,
@@ -2858,7 +2863,7 @@ export const useConfigStore = create<ConfigStore>()(
 
                     for (let attempt = 0; attempt < 3; attempt++) {
                         try {
-                            // Fetch agents and OpenChamber settings in parallel. OpenCode config
+                            // Fetch agents and Multichamber settings in parallel. OpenCode config
                             // comes from sync state if it is already available; it must not block
                             // the agent refresh path.
                             const configDirectoryPath = fromDirectoryKey(directoryKey);
@@ -3302,10 +3307,10 @@ export const useConfigStore = create<ConfigStore>()(
                             selState.saveSessionAgentSelection(currentSessionId, agentName);
                         }
 
-                        if (currentSessionId && useSessionUIStore.getState().isOpenChamberCreatedSession(currentSessionId)) {
+                        if (currentSessionId && useSessionUIStore.getState().isMultichamberCreatedSession(currentSessionId)) {
                             const existingAgentModel = selState.getAgentModelForSession(currentSessionId, agentName);
                             if (!existingAgentModel) {
-                                useSessionUIStore.getState().initializeNewOpenChamberSession(currentSessionId, agents);
+                                useSessionUIStore.getState().initializeNewMultichamberSession(currentSessionId, agents);
                             }
                         }
                     }
@@ -3801,19 +3806,19 @@ export const useConfigStore = create<ConfigStore>()(
                 },
 
                  setSettingsDefaultModel: (model: string | undefined) => {
-                     recordOpenChamberDefaultsChange();
+                     recordMultichamberDefaultsChange();
                      set({ settingsDefaultModel: model });
                      if (!useSessionUIStore.getState().currentSessionId) get().applyDefaultModelAgentSelection();
                  },
 
                  setSettingsDefaultVariant: (variant: string | undefined) => {
-                     recordOpenChamberDefaultsChange();
+                     recordMultichamberDefaultsChange();
                      set({ settingsDefaultVariant: variant });
                      if (!useSessionUIStore.getState().currentSessionId) get().applyDefaultModelAgentSelection();
                  },
  
                  setSettingsDefaultAgent: (agent: string | undefined) => {
-                     recordOpenChamberDefaultsChange();
+                     recordMultichamberDefaultsChange();
                      set({ settingsDefaultAgent: agent });
                      if (!useSessionUIStore.getState().currentSessionId) get().applyDefaultModelAgentSelection();
                  },
@@ -4174,14 +4179,22 @@ export const useConfigStore = create<ConfigStore>()(
                             const debug = streamDebugEnabled();
                             if (debug) console.log("Starting app initialization...");
 
-                            // OpenChamber preferences do not depend on OpenCode health
+                            // Multichamber preferences do not depend on OpenCode health
                             // or project discovery. Publish a known choice immediately.
                             void get().loadSessionDefaults();
+                            const nativeReady = probeNativeHarnessAvailability().catch(() => false).then((ready) => {
+                                if (isConfigRuntimeContextCurrent(runtimeContext)) {
+                                    set({ nativeReadyRuntimeKey: ready ? runtimeContext.runtimeKey : null, ...(ready ? { isInitialized: true } : {}) });
+                                }
+                                return ready;
+                            });
                             const isConnected = await get().checkConnection();
                             if (!isConfigRuntimeContextCurrent(runtimeContext)) return;
                             if (debug) console.log("Connection check result:", isConnected);
 
                             if (!isConnected) {
+                                await nativeReady;
+                                if (!isConfigRuntimeContextCurrent(runtimeContext)) return;
                                 if (debug) console.log("Server not connected");
                                 // checkConnection already set lastDisconnectReason; do not overwrite.
                                 set({
@@ -4260,6 +4273,7 @@ export const useConfigStore = create<ConfigStore>()(
                                     markStartupTrace('initializeApp:projectDirectoryMissing', { configDirectoryKey });
                                 } else {
                                     set({ lastInitFailure: { step: 'loadAgents', message: _agentsLoadErrors.get(configDirectoryKey) || null } });
+                                    if (await nativeReady && isConfigRuntimeContextCurrent(runtimeContext)) set({ isInitialized: true });
                                     return;
                                 }
                             }
@@ -4374,7 +4388,7 @@ export const useConfigStore = create<ConfigStore>()(
                         }
                     }
 
-                    const merged = { ...currentState, ...persisted, directoryScoped };
+                    const merged = { ...currentState, ...persisted, directoryScoped, nativeReadyRuntimeKey: null };
                     if (persisted.providers !== undefined && !hasCompatibleCachedVariants(persisted.providers)) {
                         merged.providers = currentState.providers;
                         merged.providersLoaded = currentState.providersLoaded;
@@ -4383,7 +4397,7 @@ export const useConfigStore = create<ConfigStore>()(
                     return hydrateActiveDirectorySnapshot(merged);
                 },
                 // Selections only. The provider and agent catalogs are not
-                // persisted: VS Code gives every OpenChamber webview one origin,
+                // persisted: VS Code gives every Multichamber webview one origin,
                 // so each write reaches every webview in every window as a
                 // StorageEvent carrying the old and the new value, and with the
                 // catalogs a write was tens of megabytes. On a cold start the

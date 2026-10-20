@@ -10,10 +10,10 @@ thinking variant and agent. In a session whose permission mode is `safety`
 (`../permission-auto-accept/DOCUMENTATION.md`), the same kind of call decides
 whether a permission is accepted or stays on screen for the user.
 
-Routing needs the OpenChamber server, so it is present wherever that server is
+Routing needs the Multichamber server, so it is present wherever that server is
 and absent everywhere else: VS Code talks to OpenCode directly and never offers
 Auto. There is no env gate — the feature shipped dark behind
-`OPENCHAMBER_ROUTING_ENABLE` until Jev stopped needing a key of the user's own
+`MULTICHAMBER_ROUTING_ENABLE` until Jev stopped needing a key of the user's own
 (see "Where a Jev request goes"), which was the reason to hide it.
 
 ## Files
@@ -30,7 +30,7 @@ Auto. There is no env gate — the feature shipped dark behind
   `routing-auth.json` (the TypeSafe key alone, mode 0600),
   `classification.json` (the classification provider pick) and
   `classifier-endpoint.json` (the custom endpoint, mode 0600) in the
-  OpenChamber data dir. An unreadable pick file reads as no pick, an
+  Multichamber data dir. An unreadable pick file reads as no pick, an
   unreadable endpoint file as no endpoint. `resolveEffectiveConfig` merges built-ins with stored overrides;
   `toStoredConfig` is its inverse. A missing file is the defaults, a malformed
   one throws.
@@ -73,7 +73,7 @@ Auto. There is no env gate — the feature shipped dark behind
   forwarded. Both sit ahead of the generic proxy, which replays a parsed body.
   The message queue calls `resolveAutoSelection` itself and applies the answer
   with the model/agent switches it already makes. Without a fallback model the
-  runtime throws 400 rather than forwarding. The OpenChamber session service
+  runtime throws 400 rather than forwarding. The Multichamber session service
   (`openchamber-sessions/routes.js`) talks to OpenCode through the SDK and can
   pick Auto up from Session Defaults, so it calls `resolveAutoSelection` itself
   before switching the session.
@@ -111,12 +111,12 @@ Auto. There is no env gate — the feature shipped dark behind
   and neither is a send routed to a user category, a fallback for low
   confidence or an error, or a hold that would change the agent (another
   agent is another system prompt, which misses the cache anyway). Warm means
-  within 5 minutes of the last answer finishing; for a session OpenChamber
+  within 5 minutes of the last answer finishing; for a session Multichamber
   keeps warm itself (`../session-warming`, `isSessionWarm`), until its warm
   window ends plus 5 minutes; otherwise, when OpenCode's `warming` is on for the
   directory, within its `duration` (30 minutes for `true`) plus 5 minutes. The
   config is read only after the first 5 minutes, and not for a session
-  OpenChamber keeps warm; an unreadable one counts as warming off. The decision event names the category the send
+  Multichamber keeps warm; an unreadable one counts as warming off. The decision event names the category the send
   ran as and carries `cacheHold.requested`, the one Jev chose.
 - Auto is offered (`autoReady`) with a usable classification provider
   (`jevAvailable`), `enabled`, a fallback model and at least two enabled
@@ -167,13 +167,13 @@ Classification providers:
   a missing `key` keeps the saved one, null removes it without changing the
   pick.
   An administrator can pin the endpoint (`readPinnedCustomEndpoint`): `jev` in
-  the machine policy file, else `OPENCHAMBER_JEV_URL`, `OPENCHAMBER_JEV_MODEL`
-  defaulting to `jev-latest`, optional `OPENCHAMBER_JEV_API_KEY` (source rules
+  the machine policy file, else `MULTICHAMBER_JEV_URL`, `MULTICHAMBER_JEV_MODEL`
+  defaulting to `jev-latest`, optional `MULTICHAMBER_JEV_API_KEY` (source rules
   in `../enterprise-mode.js`). The pin
   replaces the saved endpoint, `customEndpoint.pinned` tells the page to show
   it read-only, and `setCustomEndpoint` / `clearCustomEndpoint` answer 409.
 
-In enterprise mode (policy file or `OPENCHAMBER_ENTERPRISE_MODE`, `../enterprise-mode.js`)
+In enterprise mode (policy file or `MULTICHAMBER_ENTERPRISE_MODE`, `../enterprise-mode.js`)
 `resolveAccess` treats the pick as `off` whatever is stored (the stored pick is
 kept for when the mode is lifted), `setClassifierSource` refuses anything but
 `off` and `setToken` and `setCustomEndpoint` refuse every write with 403, and `describe` reports
@@ -189,7 +189,7 @@ default was `zen-promo`, which sent every message of users who never opened
 this page to zen (#4109); an install without a stored pick now reads as `off`
 with no conversion. A pick that cannot be used falls back to the first usable
 key (`typesafe`, `custom`, `openrouter`, `vercel`, `zen-key`: what the user set
-up in OpenChamber for Jev before keys borrowed from OpenCode); none usable
+up in Multichamber for Jev before keys borrowed from OpenCode); none usable
 means no Jev.
 `zen-promo` needs no credential, so it is never a fallback: only an explicit
 pick sends anything there, and `off` never falls back.
@@ -217,7 +217,7 @@ limited time", and the keys are what users fall back to when it ends.
 
 ## Events
 
-Broadcast on the OpenChamber control stream: `openchamber:routing.updated`
+Broadcast on the Multichamber control stream: `openchamber:routing.updated`
 (availability, including `jevAvailable`), `openchamber:routing.decision` (per
 send), `openchamber:routing.permission-held`,
 `openchamber:routing.safety-skipped`. Showing the held request itself is not

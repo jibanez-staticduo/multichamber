@@ -51,6 +51,7 @@ import { HeaderSessionArchiveMenuItem } from './HeaderSessionArchiveMenuItem';
 import { canUseElectronDesktopIPC, getMiniChatRuntimeArgs, invokeDesktop, isDesktopShell, isVSCodeRuntime, startDesktopWindowDrag } from '@/lib/desktop';
 import { Icon } from "@/components/icon/Icon";
 import { getInlineStartSide, useI18n } from '@/lib/i18n';
+import { nativeSessionLabel } from '@/lib/nativeSessionLabel';
 import { useShallow } from 'zustand/react/shallow';
 import { toast } from '@/components/ui';
 import { copyTextToClipboard } from '@/lib/clipboard';
@@ -86,6 +87,7 @@ const normalize = (value: string): string => {
 
 type HeaderSessionSnapshot = {
   title: string | null;
+  displayTitle: string;
   directory: string | null;
   created: number | null;
   slug: string | null;
@@ -113,13 +115,14 @@ export const Header: React.FC = () => {
       const record = session as typeof session & { directory?: string | null; slug?: string | null };
       return {
         title: session.title ?? null,
+        displayTitle: nativeSessionLabel(session, t('sessions.sidebar.session.untitled')),
         directory: record.directory ?? null,
         created: session.time?.created ?? null,
         slug: record.slug ?? null,
         parentId: session.parentID ?? null,
       };
     },
-    [currentSessionId],
+    [currentSessionId, t],
   )));
   const activeProject = useProjectsStore(useShallow((state) => {
     if (!state.activeProjectId) {
@@ -395,11 +398,10 @@ export const Header: React.FC = () => {
 
   const currentSessionTitle = React.useMemo(() => {
     if (!currentSessionId) {
-      return activeProjectLabel ?? 'OpenChamber';
+      return activeProjectLabel ?? 'Multichamber';
     }
-    const trimmedTitle = currentSession?.title?.trim();
-    return trimmedTitle && trimmedTitle.length > 0 ? trimmedTitle : 'Untitled Session';
-  }, [activeProjectLabel, currentSession?.title, currentSessionId]);
+    return currentSession?.displayTitle || t('sessions.sidebar.session.untitled');
+  }, [activeProjectLabel, currentSession, currentSessionId, t]);
   const loadSessionRecords = useSessionMessageRecordsForExport();
   const updateSessionTitle = useSessionUIStore((state) => state.updateSessionTitle);
   const archiveSessions = useSessionUIStore((state) => state.archiveSessions);
@@ -492,12 +494,12 @@ export const Header: React.FC = () => {
       toast.error(t('sessions.sidebar.session.export.nothingToExport'));
       return;
     }
-    const markdown = formatSessionAsMarkdown(records, currentSession?.title ?? null);
-    const filename = buildExportFilename(currentSession?.title ?? null);
+    const markdown = formatSessionAsMarkdown(records, currentSessionTitle);
+    const filename = buildExportFilename(currentSessionTitle);
     const savedPath = await saveAsMarkdownDesktop(markdown, filename);
     if (!savedPath) downloadAsMarkdown(markdown, filename);
     toast.success(t('sessions.sidebar.session.export.success'));
-  }, [currentSession?.title, currentSessionId, loadSessionRecords, openDirectory, t]);
+  }, [currentSessionTitle, currentSessionId, loadSessionRecords, openDirectory, t]);
 
   // Extension session actions on the current session. The conversation is
   // loaded the same way Export as Markdown loads it.

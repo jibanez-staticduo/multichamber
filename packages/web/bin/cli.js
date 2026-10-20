@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import '../server/lib/multichamber-env.js';
 import fs from 'fs';
 import path from 'path';
 import { spawnSync } from 'child_process';
@@ -48,7 +49,7 @@ import { createTunnelCommand, isValidTunnelDoctorResponse, shouldDisplayTunnelQr
 import {
   resolveDoctorPortStatuses,
   discoverRunningInstances,
-  discoverOpenChamberInstanceOnPort,
+  discoverMultichamberInstanceOnPort,
   discoverLifecycleInstances,
   discoverUnconfirmedRegistryInstanceOnPort,
   resolveTunnelProviders,
@@ -455,7 +456,7 @@ export {
   fetchTunnelProvidersFromPort,
   fetchSystemInfoFromPort,
   discoverRunningInstances,
-  discoverOpenChamberInstanceOnPort,
+  discoverMultichamberInstanceOnPort,
   discoverLifecycleInstances,
   discoverUnconfirmedRegistryInstanceOnPort,
   ensureTunnelProfilesMigrated,

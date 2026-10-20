@@ -19,8 +19,8 @@ const outPath = resolve(repoRoot, "packages/ui/src/components/icon/sprite.ts")
 
 const customIconData = new Map([
   [
-    "openchamber",
-    `<polygon points="12 2.5 3.5 7.4 3.5 17.2 12 22.1 20.5 17.2 20.5 7.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="3.5 7.4 12 12.3 20.5 7.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="12.3" x2="12" y2="22.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="m12 5.5 3.7 2.1L12 9.7 8.3 7.6 12 5.5Zm0 1.5-1 .6 1 .6 1-.6-1-.6Z" fill="currentColor" fill-rule="evenodd"/>`,
+    "multichamber",
+    `<g transform="scale(0.375)"><path d="M8 10 22 20 32 27 42 20 56 10v40L42 58 32 51 22 58 8 50Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/><path d="M22 20v38M42 20v38" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M12 17 19 22v29l-7-4Z" fill="currentColor"/><path d="m45 22 7-5v30l-7 4Z" fill="currentColor"/></g>`,
   ],
   // Command Code — corner squares + center square (official logo geometry).
   [

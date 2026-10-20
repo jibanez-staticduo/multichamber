@@ -9,7 +9,7 @@ export const createBootstrapRuntime = (dependencies) => {
     registerAuthAndAccessRoutes,
     registerTtsRoutes,
     registerNotificationRoutes,
-    registerOpenChamberRoutes,
+    registerMultichamberRoutes,
     registerAgentToolRoutes = () => {},
     express,
   } = dependencies;
@@ -158,7 +158,7 @@ export const createBootstrapRuntime = (dependencies) => {
       setAutoAcceptSession,
     });
 
-    registerOpenChamberRoutes(app, {
+    registerMultichamberRoutes(app, {
       fs,
       os,
       path,

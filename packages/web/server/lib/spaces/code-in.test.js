@@ -147,7 +147,7 @@ describe('takeSnapshot', () => {
     expect(snapshot).toMatchObject({ base: head, branch: 'main', objectFormat: 'sha1', identity: { name: 'Bait Author', email: 'bait@example.invalid' } });
     expect(g(['rev-parse', `${snapshot.staged}^`]).trim()).toBe(head);
     expect(g(['rev-parse', `${snapshot.start}^`]).trim()).toBe(snapshot.staged);
-    expect(g(['log', '-1', '--format=%an <%ae>', snapshot.start]).trim()).toBe('OpenChamber <spaces@openchamber.invalid>');
+    expect(g(['log', '-1', '--format=%an <%ae>', snapshot.start]).trim()).toBe('Multichamber <spaces@openchamber.invalid>');
 
     const start = readTree(g, snapshot.start);
     expect(start['run.sh'].mode).toBe('100755');

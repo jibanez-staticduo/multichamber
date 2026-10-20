@@ -418,7 +418,7 @@ export interface GitNetworkRedactedEndpoint {
   fingerprint: string;
 }
 
-export interface GitNetworkRedactedDestination {
+interface GitNetworkRedactedDestination {
   displayName: string;
   fingerprint: string;
 }
@@ -429,7 +429,7 @@ interface GitNetworkRuntimeIdentity {
   label?: string;
 }
 
-export type GitNetworkTransportActor =
+type GitNetworkTransportActor =
   | {
       kind: 'provider';
       provider: string;
@@ -442,7 +442,7 @@ export type GitNetworkTransportActor =
       fingerprint: string;
     };
 
-export type GitNetworkTransport =
+type GitNetworkTransport =
   | { mode: 'anonymous'; verification: { status: 'anonymous' } }
   | {
       mode: 'managed';
@@ -582,7 +582,7 @@ export type GitManagedSshResult =
   | { status: 'rejected'; reason: 'candidate-expired' | 'candidate-changed' | 'fingerprint-mismatch' | 'candidate-unavailable' | 'inventory-full' }
   | { status: 'unsupported'; reason: 'host-setup-required' };
 
-export type GitNetworkOperationTarget =
+type GitNetworkOperationTarget =
   | {
       operation: 'push';
       repositoryId: string;
@@ -665,9 +665,9 @@ export type GitNetworkOperationStep =
   | 'checked-out'
   | 'cleaned-up';
 
-export type GitNetworkSyncStepStatus = 'succeeded' | 'skipped' | 'conflicted' | 'failed' | 'cancelled';
+type GitNetworkSyncStepStatus = 'succeeded' | 'skipped' | 'conflicted' | 'failed' | 'cancelled';
 
-export interface GitNetworkSyncStepResult {
+interface GitNetworkSyncStepResult {
   step: 'fetch' | 'pull' | 'push';
   status: GitNetworkSyncStepStatus;
   error?: GitNetworkOperationError;

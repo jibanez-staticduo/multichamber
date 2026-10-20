@@ -886,7 +886,7 @@ describe("archiving a batch through the server", () => {
 
     expect(result).toEqual({ archivedIds: ["session-a", "session-b"], failedIds: [] })
     expect(openchamberRouteRequests).toHaveLength(1)
-    expect(openchamberRouteRequests[0].path).toBe("/api/openchamber/sessions/archive")
+    expect(openchamberRouteRequests[0].path).toBe("/api/multichamber/sessions/archive")
     expect(openchamberRouteRequests[0].body).toMatchObject({ directory: "/test/project", ids: ["session-a", "session-b"] })
     // The point of the batch: no per-session SDK call, and one store write for
     // the whole set instead of one per session.
@@ -909,7 +909,7 @@ describe("archiving a batch through the server", () => {
 
     expect(result).toEqual({ archivedIds: ["session-a"], failedIds: [] })
     expect(openchamberRouteRequests).toHaveLength(1)
-    expect(openchamberRouteRequests[0].path).toBe("/api/openchamber/sessions/archive")
+    expect(openchamberRouteRequests[0].path).toBe("/api/multichamber/sessions/archive")
     expect(openchamberRouteRequests[0].body).toMatchObject({ directory: "/test/project", ids: ["session-a"] })
     expect(replyCalls.filter((call) => call.method === "session.rename")).toEqual([])
   })
@@ -939,7 +939,7 @@ describe("archiving a batch through the server", () => {
 
     const result = await archiveSessions(["session-a", "session-b"])
 
-    // Archive is OpenChamber's own route now, so a runtime that does not serve
+    // Archive is Multichamber's own route now, so a runtime that does not serve
     // it cannot archive at all — the sessions stay put rather than vanishing
     // locally on an unconfirmed write.
     expect(result.archivedIds).toEqual([])
@@ -1049,7 +1049,7 @@ describe("linking items through the server", () => {
     const updated = await setLinkedIssue("session-a", "/test/project", guestEntry, true)
 
     expect(openchamberRouteRequests).toHaveLength(1)
-    expect(openchamberRouteRequests[0].path).toBe("/api/openchamber/sessions/session-a/links")
+    expect(openchamberRouteRequests[0].path).toBe("/api/multichamber/sessions/session-a/links")
     expect(openchamberRouteRequests[0].body).toEqual({ entries: [guestEntry], linked: true })
     // No session read is spent computing the list.
     expect(replyCalls.filter((call) => call.method === "session.get")).toEqual([])
@@ -1180,7 +1180,7 @@ describe("session restore (unarchive)", () => {
 
     expect(await unarchiveSession("session-a")).toBe(true)
     expect(openchamberRouteRequests).toHaveLength(1)
-    expect(openchamberRouteRequests[0].path).toBe("/api/openchamber/sessions/unarchive")
+    expect(openchamberRouteRequests[0].path).toBe("/api/multichamber/sessions/unarchive")
     expect(openchamberRouteRequests[0].body).toMatchObject({ ids: ["session-a"] })
     expect((globalUpsertedSessions[0] as Session)?.time?.archived).toBeUndefined()
     expect((globalUpsertedSessions[0] as Session)?.title).toBe("Title session-a")

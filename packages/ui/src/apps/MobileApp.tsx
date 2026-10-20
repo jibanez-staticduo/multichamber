@@ -1,12 +1,15 @@
+import { CodexSessionCreationDialogs } from '@/components/session/CodexSessionCreationDialogs';
+import { ClaudeSessionCreationDialogs } from '@/components/session/ClaudeSessionCreationDialogs';
 import { OpenCodeCompatibilityGate } from '@/components/update/OpenCodeCompatibilityGate';
+import { useNativeHarnessBootstrap } from '@/hooks/useNativeHarnessBootstrap';
 import React from 'react';
 
-import { AboutSettings } from '@/components/sections/openchamber/AboutSettings';
+import { AboutSettings } from '@/components/sections/multichamber/AboutSettings';
 import { OpenCodeUpdateToast } from '@/components/update/OpenCodeUpdateToast';
 import { MobileAppUpdateToast } from '@/components/update/MobileAppUpdateToast';
 import { ConfigUpdateOverlay } from '@/components/ui/ConfigUpdateOverlay';
 import { Button } from '@/components/ui/button';
-import { OpenChamberLogo } from '@/components/ui/OpenChamberLogo';
+import { MultichamberLogo } from '@/components/ui/MultichamberLogo';
 import { AppStartupOverlay } from '@/components/ui/AppStartupOverlay';
 import { ChatView } from '@/components/views/ChatView';
 import { PlanView } from '@/components/views/PlanView';
@@ -39,8 +42,8 @@ import type { ProjectRef } from '@/lib/projectContextApi';
 import { readTabletLayout, useOrientation, useTabletLayout } from '@/lib/device';
 import { useHardwareKeyboard } from '@/lib/hardwareKeyboard';
 import { useI18n } from '@/lib/i18n';
-import { subscribeOpenchamberEvents } from '@/lib/openchamberEvents';
-import { getRuntimeApiBaseUrl, subscribeRuntimeEndpointChanged, switchRuntimeEndpoint, MOBILE_DISCONNECTED_RUNTIME_KEY } from '@/lib/runtime-switch';
+import { subscribeOpenchamberEvents } from '@/lib/multichamberEvents';
+import { getRuntimeApiBaseUrl, getRuntimeKey, subscribeRuntimeEndpointChanged, switchRuntimeEndpoint, MOBILE_DISCONNECTED_RUNTIME_KEY } from '@/lib/runtime-switch';
 import { subscribeActiveRelayTunnelStatus } from '@/lib/relay/runtime-tunnel';
 import { isRelayLimitReached } from '@/lib/relay/tunnel-client';
 import { useGlobalSessionsStore } from '@/stores/useGlobalSessionsStore';
@@ -794,6 +797,9 @@ function MobileAppContent({ apis }: MobileAppProps) {
   const initializeApp = useConfigStore((state) => state.initializeApp);
   const isInitialized = useConfigStore((state) => state.isInitialized);
   const isConnected = useConfigStore((state) => state.isConnected);
+  const nativeReadyRuntimeKey = useConfigStore((state) => state.nativeReadyRuntimeKey);
+  const hostReady = isConnected || nativeReadyRuntimeKey === getRuntimeKey();
+  useNativeHarnessBootstrap(!isConnected && hostReady);
   const connectionPhase = useConfigStore((state) => state.connectionPhase);
   const providersCount = useConfigStore((state) => state.providers.length);
   const agentsCount = useConfigStore((state) => state.agents.length);
@@ -1301,7 +1307,7 @@ function MobileAppContent({ apis }: MobileAppProps) {
     // Native: only while an instance is selected and reconnecting. Browser: the
     // runtime is same-origin (no explicit base URL), so any not-connected spell
     // counts — the splash holds until this fires, then the error screen shows.
-    const waitingOnConnection = !isConnected && (isNativeMobileApp ? Boolean(getRuntimeApiBaseUrl()) : true);
+    const waitingOnConnection = !hostReady && (isNativeMobileApp ? Boolean(getRuntimeApiBaseUrl()) : true);
     if (!waitingOnConnection) {
       setShowConnectionRecovery(false);
       return;
@@ -1313,7 +1319,7 @@ function MobileAppContent({ apis }: MobileAppProps) {
       setShowConnectionRecovery(true);
     }, isNativeMobileApp ? 4000 : 8000);
     return () => window.clearTimeout(timeout);
-  }, [isConnected, isNativeMobileApp, connectionEpoch, runtimeEndpointEpoch]);
+  }, [hostReady, isNativeMobileApp, connectionEpoch, runtimeEndpointEpoch]);
 
   useAppFontEffects();
   usePushVisibilityBeacon({ enabled: true });
@@ -1350,7 +1356,7 @@ function MobileAppContent({ apis }: MobileAppProps) {
   if (!fontsReady) {
     return (
       <main className="flex min-h-dvh items-center justify-center bg-[var(--splash-background,var(--surface-background))] text-foreground">
-        <OpenChamberLogo width={120} height={120} isAnimated variant="splash" />
+        <MultichamberLogo width={120} height={120} isAnimated variant="splash" />
       </main>
     );
   }
@@ -1361,14 +1367,14 @@ function MobileAppContent({ apis }: MobileAppProps) {
   // be poisoned by a bootstrap that ran against the webview's own origin).
   const hasRuntimeEndpoint = Boolean(getRuntimeApiBaseUrl());
 
-  if (isNativeMobileApp && (!hasRuntimeEndpoint || (!isConnected && !isReconnecting))) {
+  if (isNativeMobileApp && (!hasRuntimeEndpoint || (!hostReady && !isReconnecting))) {
     // A runtime endpoint is already selected (first connect or switching instances):
     // show a loader while it re-bootstraps instead of flashing the onboarding screen.
     if (hasRuntimeEndpoint) {
       return (
         <main className="flex min-h-dvh items-center justify-center bg-[var(--splash-background,var(--surface-background))] px-6 text-center text-foreground">
           <div className="flex max-w-sm flex-col items-center gap-4">
-            <OpenChamberLogo width={120} height={120} isAnimated={!showConnectionRecovery} variant="splash" />
+            <MultichamberLogo width={120} height={120} isAnimated={!showConnectionRecovery} variant="splash" />
             {showConnectionRecovery ? (
               <>
                 <div className="space-y-2">
@@ -1399,7 +1405,7 @@ function MobileAppContent({ apis }: MobileAppProps) {
     if (autoConnectPhase !== 'done') {
       return (
         <main className="relative flex min-h-dvh items-center justify-center bg-[var(--splash-background,var(--surface-background))] text-foreground">
-          <OpenChamberLogo width={120} height={120} isAnimated variant="splash" />
+          <MultichamberLogo width={120} height={120} isAnimated variant="splash" />
           {/* Absolutely positioned below the (still perfectly centered) logo so
               the text never pushes it up. 50% + half the 120px logo + a gap. */}
           {autoConnectLabel ? (
@@ -1424,14 +1430,14 @@ function MobileAppContent({ apis }: MobileAppProps) {
     );
   }
 
-  if (!isConnected && !isReconnecting) {
+  if (!hostReady && !isReconnecting) {
     // Browser: the initial connect takes a beat — hold the logo splash instead
     // of flashing the unreachable-server error while it resolves. The error
     // only shows once the recovery delay has expired (genuinely unreachable).
     if (!showConnectionRecovery) {
       return (
         <main className="flex min-h-dvh items-center justify-center bg-[var(--splash-background,var(--surface-background))] text-foreground">
-          <OpenChamberLogo width={120} height={120} isAnimated variant="splash" />
+          <MultichamberLogo width={120} height={120} isAnimated variant="splash" />
         </main>
       );
     }
@@ -1464,7 +1470,7 @@ function MobileAppContent({ apis }: MobileAppProps) {
                 switchRuntimeEndpoint({ apiBaseUrl: '', clientToken: null, runtimeKey: MOBILE_DISCONNECTED_RUNTIME_KEY });
                 setConnectionEpoch((value) => value + 1);
               }} />
-              <AppLinkConfirmDialog />
+              <CodexSessionCreationDialogs /><ClaudeSessionCreationDialogs /><AppLinkConfirmDialog />
               <SharedTrustConfirmDialog />
               {isolatedSpacesEnabled ? <><SpaceAccessDialog /><SpaceActionsSheet /><SpaceApplyDialog /><SpaceDeleteDialog /><SpaceSetupOutputDialog /></> : null}
               <MobileToaster />

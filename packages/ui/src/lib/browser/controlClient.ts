@@ -36,7 +36,7 @@
  * another session's tab are refused, never closed.
  */
 import { runtimeFetch } from '@/lib/runtime-fetch';
-import { subscribeOpenchamberEvents, type BrowserControlRequestContext } from '@/lib/openchamberEvents';
+import { subscribeOpenchamberEvents, type BrowserControlRequestContext } from '@/lib/multichamberEvents';
 import { normalizeContextPanelDirectoryKey } from '@/stores/useUIStore';
 import { canDriveBrowserPage } from './hostCapability';
 

@@ -19,7 +19,7 @@ const createApp = (overrides = {}) => {
   return { app, dependencies };
 };
 
-describe('OpenChamber project directory route', () => {
+describe('Multichamber project directory route', () => {
   it('creates and activates a requested project outside the active workspace', async () => {
     const { app, dependencies } = createApp();
 

@@ -121,7 +121,7 @@ describe('settings helpers', () => {
     expect(helpers.formatSettingsResponse(next).workStatusHiddenSectionsExplicit).toBe(true);
     expect(helpers.sanitizeSettingsUpdate({ workStatusHiddenSectionsExplicit: 'true' }).workStatusHiddenSectionsExplicit).toBeUndefined();
   });
-  it('imports from the packed @openchamber/web tarball without escaping the published package', async () => {
+  it('imports from the packed @multichamber/web tarball without escaping the published package', async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'settings-helpers-pack-'));
     const packDir = join(tempRoot, 'pack');
     const extractDir = join(tempRoot, 'extract');
@@ -857,6 +857,8 @@ describe('settings registry gate', () => {
     fontSize: 100, terminalFontSize: 14, editorFontSize: 14, uiFont: 'inter', monoFont: 'jetbrains-mono', customUiFont: 'Maple Mono NF CN', customMonoFont: 'Maple Mono', padding: 100, cornerRadius: 8,
     shortcutOverrides: { 'chat.send': 'mod+enter' },
     defaultModel: 'anthropic/claude', defaultVariant: 'high', defaultAgent: 'build', smallModelUseDefault: false, smallModelOverride: 'anthropic/haiku',
+    defaultHarness: 'codex', codexDefaultModel: 'gpt-test', codexDefaultEffort: 'high', codexDefaultMode: 'full-access',
+    claudeDefaultModel: 'opus', claudeDefaultEffort: 'high', claudeDefaultMode: 'default', claudeAskSessionDefaults: false,
     walkthroughModelOverride: 'anthropic/claude', zenModel: 'zen/model',
     favoriteModels: [{ providerID: 'anthropic', modelID: 'claude' }], hiddenModels: [{ providerID: 'openai', modelID: 'gpt' }], collapsedModelProviders: ['openai'],
     recentModels: [{ providerID: 'anthropic', modelID: 'claude' }], lastSelectedModel: 'anthropic/claude', recentAgents: ['build'], favoriteAgents: ['build'], recentEfforts: { 'anthropic/claude': ['high'] }, providerOrder: ['anthropic'],
@@ -867,7 +869,7 @@ describe('settings registry gate', () => {
     usageDisplayMode: 'usage', usageDropdownProviders: ['anthropic'], usageSelectedModels: { anthropic: ['claude'] }, usageCollapsedFamilies: { anthropic: ['f'] },
     usageExpandedFamilies: { anthropic: ['f'] }, usageModelGroups: { anthropic: { customGroups: [{ id: 'g', label: 'G', models: ['claude'], order: 0 }] } },
     globalBehaviorPrompt: 'Be brief.', responseStyleEnabled: true, responseStylePreset: 'concise', responseStyleCustomInstructions: 'x',
-    pwaAppName: 'OpenChamber', pwaOrientation: 'portrait', mobileKeyboardMode: 'native', desktopWindowControlsPosition: 'left', desktopWindowControlsStyle: 'classic',
+    pwaAppName: 'Multichamber', pwaOrientation: 'portrait', mobileKeyboardMode: 'native', desktopWindowControlsPosition: 'left', desktopWindowControlsStyle: 'classic',
     inputBarOffset: 10,
     customProviderIcons: { 'campus-llm': 'cloud' },
   };

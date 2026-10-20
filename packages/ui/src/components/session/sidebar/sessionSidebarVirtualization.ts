@@ -36,7 +36,7 @@ type SectionSpacing = keyof typeof SECTION_SPACING_ESTIMATE;
  * user's scroll gesture.
  */
 export const sessionSidebarRowSizeKey = (row: SessionSidebarRow): string => (
-  `${row.kind}:${'renderContext' in row ? row.renderContext : ''}`
+  `${row.kind}:${'renderContext' in row ? row.renderContext : ''}:${row.estimateSize}`
 );
 
 /**
@@ -48,7 +48,7 @@ export const sessionSidebarRowSizeKey = (row: SessionSidebarRow): string => (
  * key takes the size estimate above, exact once a row like it was measured.
  */
 export const sessionSidebarRowVirtualKey = (row: SessionSidebarRow, nextRow: SessionSidebarRow | undefined): string => (
-  `${row.key}|${sectionSpacingAfter(row, nextRow) ?? ''}`
+  `${row.key}|${row.estimateSize}|${sectionSpacingAfter(row, nextRow) ?? ''}`
 );
 
 /**

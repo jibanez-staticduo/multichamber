@@ -378,7 +378,7 @@ jobs:
           output="$RUNNER_TEMP/review.jsonl"
 
           set +e
-          timeout --signal=TERM --kill-after=30s "$REVIEW_TIMEOUT" opencode run --standalone --format json --agent pr-review-bot -m "$review_model" "A pull request in the OpenChamber repository needs one unified correctness, repository-guidance, contribution-quality, and evidence review. Its data is in .oc-context/.
+          timeout --signal=TERM --kill-after=30s "$REVIEW_TIMEOUT" opencode run --standalone --format json --agent pr-review-bot -m "$review_model" "A pull request in the Multichamber repository needs one unified correctness, repository-guidance, contribution-quality, and evidence review. Its data is in .oc-context/.
 
           This may be a repeated review request. Before writing a new review, inspect prior PR comments, bot comments, reviews, inline comments, and the commit timeline. Compare prior findings against commits pushed after those comments, then only repeat findings that still exist in the current diff/current file state.
 
@@ -486,7 +486,7 @@ jobs:
             | jq -s --arg started_at "$REVIEW_STARTED_AT" '[.[][] | select(.created_at >= $started_at and .user.login == "openchamber-bot[bot]" and (.body | contains("<h3>Code Review Summary</h3>")) and (.body | contains("<!-- oc-review-meta ")))] | last // empty')"
 
           if [ -z "$review_json" ]; then
-            fail_automation "Review completed without creating a new structured OpenChamber Bot PR comment."
+            fail_automation "Review completed without creating a new structured Multichamber Bot PR comment."
           fi
 
           if ! metadata="$(printf '%s' "$review_json" | jq -er '.body | capture("<!-- oc-review-meta (?<json>\\{[^\\n]+\\}) -->").json | fromjson')"; then
@@ -552,7 +552,7 @@ jobs:
           fi
 
           {
-            echo "### OpenChamber review verdict"
+            echo "### Multichamber review verdict"
             echo
             echo "- HEAD: \`$REVIEW_HEAD_SHA\`"
             echo "- Verdict: \`$verdict\`"

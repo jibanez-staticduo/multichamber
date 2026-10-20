@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createOpenChamberControlService } from './service.js';
-import { OpenChamberControlError } from './error.js';
+import { createMultichamberControlService } from './service.js';
+import { MultichamberControlError } from './error.js';
 import { createMemoryProjectResolver } from '../agent-memory/project-resolution.js';
 import { createProjectIdFromPath } from '../projects/project-id.js';
 
@@ -25,14 +25,14 @@ const setup = (overrides = {}) => {
     resolvePrimaryWorktreeRoot: async () => ({ root: '/repo' }),
     managedProjectRoots: ['/chats'],
   });
-  const service = createOpenChamberControlService({
+  const service = createMultichamberControlService({
     projectContextRuntime: runtime,
     resolveProjectContextId,
     sessionService: { resolveDirectory: async ({ projectId }) => {
       if (projectId === 'configured-repo') return '/repo';
       if (projectId === 'configured-worktree') return '/registered-worktree';
-      if (projectId === 'missing-folder') throw new OpenChamberControlError('Project folder missing', 400);
-      throw new OpenChamberControlError('Project not found', 404);
+      if (projectId === 'missing-folder') throw new MultichamberControlError('Project folder missing', 400);
+      throw new MultichamberControlError('Project not found', 404);
     } },
     ...overrides,
   });
@@ -205,7 +205,7 @@ describe('project knowledge control actions', () => {
       ['knowledge.delete', { kind: 'note', id: 'missing' }], ['knowledge.delete', { kind: 'plan', id: 'missing' }],
       ['knowledge.save', { kind: 'todo', id: 'missing', completed: true }], ['knowledge.delete', { kind: 'todo', id: 'missing' }],
     ]) await expect(service.execute(action, input, '/repo')).rejects.toMatchObject({ statusCode: 404 });
-    runtime.updatePlan.mockRejectedValue(new OpenChamberControlError('Plan changed', 409));
+    runtime.updatePlan.mockRejectedValue(new MultichamberControlError('Plan changed', 409));
     await expect(service.execute('knowledge.save', { kind: 'plan', id: 'plan-1', body: '# P', expected: '' }, '/repo')).rejects.toMatchObject({ statusCode: 409 });
     runtime.updateNote.mockRejectedValue(Object.assign(new Error('Note changed'), { status: 409 }));
     await expect(service.execute('knowledge.save', { kind: 'note', id: 'note-1', body: 'New', expected: 'Note' }, '/repo')).rejects.toMatchObject({ statusCode: 409 });

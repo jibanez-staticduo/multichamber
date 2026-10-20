@@ -1,26 +1,21 @@
 ---
 title: 快速开始
-description: 快速启动 OpenChamber，并为任务选择合适的应用。
+description: 启动 Multichamber 服务器并选择原生会话引擎。
 ---
 
 # 快速开始
 
-## 最快路径
+在服务器上安装 OpenCode 和 Node.js 24.14 或更新版本。如需 Claude Code 或 Codex，请在该服务器上安装并登录。然后使用以下命令安装 Multichamber。
 
-1. 安装 [OpenCode](https://opencode.ai)。
-2. 安装 OpenChamber CLI（一行命令见[安装](/zh-cn/install/)）。
-3. 运行 `openchamber --ui-password be-creative-here`。
-4. 打开 CLI 输出的 URL（通常是 `http://localhost:3000`）。
-5. 想在手机上使用，启动一个[隧道](/zh-cn/tunnels/)并扫描二维码。
+```bash
+curl -fsSL https://raw.githubusercontent.com/jibanez-staticduo/multichamber/main/scripts/install.sh | bash
+multichamber --ui-password be-creative-here
+```
 
-你应该会在浏览器中看到 OpenChamber 会话列表。如果它能加载出来，说明你已经成功运行起来了。
+打开显示的地址，通常为 `http://localhost:3000`。为新会话选择可用引擎。设置会分别保存各引擎的模型和权限默认值。
 
-请使用强 UI 密码，尤其是当你打算将实例开放到互联网时。
+允许远程访问前，请设置强 UI 密码。
 
-如果页面无法加载，请查看[问题排查](/zh-cn/troubleshooting/)。
+使用 macOS、Windows 或 Linux 桌面应用，或运行网页/PWA 服务器。iOS 和 Android 构建连接到现有服务器。本分支不提供 VS Code 扩展。
 
-## 我应该使用哪个应用？
-
-- 在 macOS、Windows 或 Linux 上的日常工作中使用 **桌面**
-- 在远程访问和移动端审查时使用 **Web**
-- 在代码旁进行会话时使用 **VS Code**
+[安装](/install/)

@@ -84,7 +84,7 @@ mock.module('@/lib/modelIdentifier', () => ({
   parseModelIdentifier: () => null,
 }));
 
-mock.module('@/lib/openchamberConfig', () => ({
+mock.module('@/lib/multichamberConfig', () => ({
   getWorktreeSetupWaitEnabled: async () => false,
 }));
 
@@ -93,9 +93,6 @@ mock.module('@/lib/sharedTrustConfirmation', () => ({
   resolveWorktreeSetupCommandsOrCancel: async () => resolvedCommands,
 }));
 
-mock.module('@/lib/pathNormalization', () => ({
-  normalizePath: (value: string | null) => value,
-}));
 
 mock.module('@/lib/projectResolution', () => ({
   resolveProjectForDirectory: () => null,
@@ -168,6 +165,9 @@ mock.module('@/stores/useDirectoryStore', () => ({
     }),
   },
 }));
+
+const persistence = await import('@/lib/persistence');
+mock.module('@/lib/persistence', () => ({ ...persistence, loadDesktopSettings: async () => ({ defaultHarness: 'opencode' }) }));
 
 const { createQuickWorktree, createWorktreeDraft } = await import('./worktreeSessionCreator');
 

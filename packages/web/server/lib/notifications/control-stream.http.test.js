@@ -21,14 +21,14 @@ describe('notifications over the authenticated control stream', () => {
       getDesktopNotifyEnabled: () => false,
       desktopNotifyPrefix: '',
       getUiNotificationClients: () => new Set(),
-      getOpenChamberEventClients: () => clients,
+      getMultichamberEventClients: () => clients,
     });
     const app = express();
     app.use(express.json());
     app.post('/auth/url-token', auth.handleUrlAuthToken);
     app.use('/api', auth.requireAuth);
     registerScheduledTaskRoutes(app, {
-      getOpenChamberEventClients: () => clients,
+      getMultichamberEventClients: () => clients,
       writeSseEvent: emitter.writeSseEvent,
     });
     const server = createServer(app);

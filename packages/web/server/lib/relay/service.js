@@ -3,7 +3,7 @@
 //
 // Config lives in the server settings file as `settings.privateRelay =
 // { enabled, relayUrl }` (same storage precedent as tunnels/notifications).
-// Routes are registered with the other OpenChamber feature routes, before the
+// Routes are registered with the other Multichamber feature routes, before the
 // generic OpenCode proxy, and are covered by the same global UI auth gate.
 //
 // Cross-runtime parity note: relay host mode intentionally targets the web
@@ -17,7 +17,7 @@ import { createRelayIdentityRuntime } from './identity.js';
 import { describeRelayError, startRelayHost } from './host-client.js';
 import { isEnterpriseMode, readEnterprisePolicy } from '../enterprise-mode.js';
 
-export const DEFAULT_RELAY_URL = 'wss://relay.openchamber.dev/ws';
+export const DEFAULT_RELAY_URL = '';
 
 const isValidRelayUrl = (value) => {
   if (typeof value !== 'string') return false;
@@ -132,8 +132,8 @@ export const createRelayService = ({
   const standbyStatus = (holder) => ({
     state: 'standby',
     lastError: holder?.host
-      ? `relay host is owned by another OpenChamber process sharing this data dir (pid ${holder.pid} on ${holder.host})`
-      : 'relay host is owned by another OpenChamber process sharing this data dir',
+      ? `relay host is owned by another Multichamber process sharing this data dir (pid ${holder.pid} on ${holder.host})`
+      : 'relay host is owned by another Multichamber process sharing this data dir',
     connectedClients: 0,
   });
 
@@ -189,6 +189,7 @@ export const createRelayService = ({
 
   const start = async (relayUrl, { claim = 'try' } = {}) => {
     if (hostClient) return;
+    if (!relayUrl) { status = { state: 'disabled', lastError: 'Relay is not configured. Set MULTICHAMBER_RELAY_URL to your relay endpoint.', connectedClients: 0 }; return; }
     // Every path into the relay host passes here: boot, demand, enable, pairing.
     if (relayBlockedByEnterprise()) {
       status = { state: 'disabled', lastError: RELAY_BLOCKED_ERROR, connectedClients: 0 };
@@ -249,6 +250,11 @@ export const createRelayService = ({
     try {
       const demand = await hasRelayDemand();
       const config = await readConfig();
+      if (demand && !config.relayUrl) {
+        stop();
+        await start(config.relayUrl);
+        return;
+      }
       if (demand) {
         if (!config.enabled) await writeConfig({ enabled: true, relayUrl: config.relayUrl });
         if (!hostClient) {
@@ -279,6 +285,7 @@ export const createRelayService = ({
     const live = hostClient ? hostClient.getStatus() : status;
     return {
       enabled: config.enabled,
+      configured: Boolean(config.relayUrl),
       // Without a host client the service is either off or standing by while
       // another local process owns the machine's relay host claim.
       state: hostClient ? live.state : (status.state === 'standby' ? 'standby' : 'disabled'),
@@ -314,7 +321,7 @@ export const createRelayService = ({
 
   const getPairingCandidate = async () => {
     const config = await readConfig();
-    if (!config.enabled || relayBlockedByEnterprise()) return null;
+    if (!config.enabled || !config.relayUrl || relayBlockedByEnterprise()) return null;
     return buildPairingCandidate();
   };
 
@@ -326,6 +333,7 @@ export const createRelayService = ({
     // Direct pairing still works: the pairing route drops a failed relay candidate.
     if (relayBlockedByEnterprise()) throw Object.assign(new Error(RELAY_BLOCKED_ERROR), { statusCode: 403 });
     const config = await readConfig();
+    if (!config.relayUrl) throw Object.assign(new Error('Relay is not configured. Set MULTICHAMBER_RELAY_URL to your relay endpoint.'), { statusCode: 409, code: 'relay_unconfigured' });
     if (!config.enabled) {
       await writeConfig({ enabled: true, relayUrl: config.relayUrl });
     }
@@ -366,6 +374,7 @@ export const createRelayService = ({
       try {
         const current = await readConfig();
         const relayUrl = typeof req.body?.relayUrl === 'string' ? normalizeRelayUrl(req.body.relayUrl) : current.relayUrl;
+        if (!relayUrl) return res.status(409).json({ code: 'relay_unconfigured', error: 'Configure your relay endpoint before enabling it.' });
         await writeConfig({ enabled: true, relayUrl });
         if (hostClient) stop();
         // Explicit user action: take the machine's host claim like pairing does.

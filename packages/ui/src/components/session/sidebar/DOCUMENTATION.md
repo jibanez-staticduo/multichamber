@@ -647,7 +647,7 @@ matching and ordering. Search does not fetch sessions or broaden list membership
 - Opening the root-session `Move to worktree` submenu force-refreshes the owning project's worktree topology so externally created worktrees appear without a full reload. While that refresh runs, the menu keeps the last known primary/linked topology visible; if the refresh fails, the stale topology remains and the load failure state stays explicit. Failure cleanup never removes or manages an existing destination worktree. The owning project resolves from the row's project id, then from the session's directory, then from the session's worktree metadata `projectDirectory` — the last step keeps sibling destinations listed for a restored session whose own worktree directory was deleted.
 - Unarchiving a session whose directory the server confirms missing (its worktree was removed while it sat in the archive, by this app, by hand or by git) moves it, with its subsessions in that directory, to its project root (`lib/worktrees/relocateRestoredSession.ts`, maintainer decision 2026-10-02). OpenCode cannot run a prompt in a missing directory (it answers 500), while `session.move` works from one and appends a `location-switched` record that tells the model its working directory changed. The project root comes from the same ownership index as grouping (directory first, then OpenCode project metadata), so it survives a restart. A toast names the cause, the missing folder, not an action of this app. An unknown availability answer, an unresolved project or a missing project root leaves the session where it is; a rejected move shows an error toast.
 - Cleanup after a PR merge is opt-in (`mergedWorktreeCleanupEnabled`, Settings → Sessions, off by default; maintainer decision 2026-10-02). `hooks/useMergedWorktreeCleanup.ts` reads the branch PR status the sidebar already keeps fresh for each discovered linked worktree, asking GitHub nothing itself, and `lib/worktrees/mergedWorktreeCleanup.ts` decides: wait while any session there is not confirmed idle, is the open session, or the worktree is the directory on screen; otherwise archive its sessions, and remove the worktree with its local branch only when the checkout is clean and has no commit outside the merged PR's head commit (`head..HEAD` is empty, so a checkout behind a PR that gained commits on the host qualifies). When this clone never fetched that commit, a branch whose upstream it is not ahead of qualifies too; with neither answer the worktree stays. Sessions are archived once per worktree and PR pair (remembered in local storage), so work continued in a kept worktree is never archived again. A kept worktree without sessions is checked again on every pass and removed once nothing there can be lost; sessions in a kept worktree mean the work went on, and it is left alone. It runs on desktop and web only; VS Code has no worktrees and a phone would race the desktop it drives. Only worktrees of projects whose worktrees the sidebar has discovered are covered.
-- CLI/server-created sessions use the low-frequency OpenChamber control event stream to refresh only the created session directory. The same event re-lists the worktrees of the session's project, or of every project when the session's directory is not a project root or a known worktree, so a newly created external worktree gains ownership without a view reload; it does not re-enable broad session or streaming subscriptions.
+- CLI/server-created sessions use the low-frequency Multichamber control event stream to refresh only the created session directory. The same event re-lists the worktrees of the session's project, or of every project when the session's directory is not a project root or a known worktree, so a newly created external worktree gains ownership without a view reload; it does not re-enable broad session or streaming subscriptions.
 - A successful restore on the current runtime promotes only the session's ephemeral list-order rank. It does not change timestamps or live status, and it resets on a runtime switch.
 - `useProjectRepoStatus` reads Git status once per project path while the sidebar is visible. A change to the project list that adds no path (collapse, rename, color, last opened) reads nothing; an added project reads only its own status; a failed read is retried on the next list change. New paths are first read together through `GitAPI.prefetchProjectStatuses`, one batched request that warms the status cache, so the per-project reads after it are cache hits; VS Code has no batched read and reads one by one. Hiding the sidebar or switching runtime starts over.
 - Structural updates rebuild grouped nodes only for projects whose local sessions, worktrees, repository state, branch, or worktree-ordering ranks changed; unchanged project sections preserve references so memoized group/session descendants skip the update wave. The grouping builder therefore keeps its identity across inputs the section cache compares per project: it reads git branches and lifecycle ranks at call time, and keeps the session ownership map while every session's scope directory is unchanged (the ownership index itself is rebuilt on any session-list change). Without a search query every group shares one empty search-data map, so a rebuilt section does not invalidate the others' group headers.
@@ -693,17 +693,17 @@ session list instead of reading the order the sidebar last drew, because the
 sidebar is not mounted on every surface (the phone drawer while closed,
 another VS Code webview).
 
-### Why the list by time has three-line rows and not the two-line mixed row
+### Why timeline row height follows structural detail
 
-Pinned and In work name the project with an icon on the branch line, because
-the name does not fit there next to the branch. That works for a short zone,
-but a list of every session from every project leans on the project name, and
-projects that share the default folder icon look the same. The list by time
-therefore gives the name its own line, as the pre-2.3.0 Timeline did. That
-Timeline dropped its third line when a row had no branch, PR, goal, badge or
-model, so rows changed height while git status loaded; here every line is
-always rendered at a fixed height, and the virtualizer's per-kind estimate
-stays exact.
+Engine and live-state marks share the title/time cluster, so a logo or a newly
+arriving badge never creates a line. A branch, mixed-project icon or run lane
+lead keeps its detail line. The list by time still names its project above the
+title. With no structural detail that last line is absent.
+
+The row model resolves the same branch metadata as the renderer. Its estimate
+and both virtualizer cache identities distinguish rows with and without that
+17px line, so a previously measured rich row cannot pad a plain row. Run rows
+retain their lane-count line. Runtime measurements remain authoritative.
 
 ### Why List search skips subsessions and does not reveal them
 

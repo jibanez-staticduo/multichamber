@@ -1,3 +1,6 @@
+import { SessionSourcePicker } from '@/components/session/SessionSourcePicker';
+import { useMobileSessionSourceFilter } from './useMobileSessionSourceFilter';
+import { EngineSessionMenu } from '@/components/session/EngineSessionMenu';
 import React from 'react';
 import { useSessionTurnActivity } from '@/sync/global-session-status';
 import { SessionActivityIndicator } from '@/components/session/SessionActivityIndicator';
@@ -1026,7 +1029,7 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
    * session event itself, and a directory store can keep an old copy of a session it
    * does not own.
    */
-  const sessions = React.useMemo(() => {
+  const unfilteredSessions = React.useMemo(() => {
     const merged = [...globalActiveSessions];
     const seenIds = new Set(merged.map((session) => session.id));
     for (const session of liveSessions) {
@@ -1040,6 +1043,8 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
     // once the lists catch up.
     return merged.filter((session) => !session.time?.archived);
   }, [globalActiveSessions, liveSessions]);
+
+  const { filteredSessions: sessions } = useMobileSessionSourceFilter(unfilteredSessions);
 
   // Archive and delete take a session's subagents with it. Lineage is resolved
   // over the whole active list rather than the rendered bucket: a subagent can
@@ -2322,7 +2327,7 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
               auto-scroll to the current session naturally tucks it away, and
               scrolling to the very top brings it back. */}
           <div className={cn('px-4 pb-2 pt-1', editingOrder && 'hidden')}>
-            <SessionSearchInput
+            <SessionSourcePicker /><SessionSearchInput
               value={query}
               onSearch={setQuery}
               active={open || variant === 'sidebar'}
@@ -2409,11 +2414,11 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
                         {project.isGitRepo ? (
                           <NewWorktreeIconButton onClick={() => handleNewWorktree(project.id)} />
                         ) : null}
-                        <NewSessionIconButton
+                        <EngineSessionMenu directory={project.path} onOpenCode={() => handleNewSessionInProject(project)}><NewSessionIconButton
                           className="me-2"
                           label={t('mobile.sessions.newSessionInProjectAria', { label: project.label })}
                           onClick={() => handleNewSessionInProject(project)}
-                        />
+                        /></EngineSessionMenu>
                       </div>
                     ))}
                   </div>
@@ -2596,11 +2601,11 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
                         {node.project.isGitRepo ? (
                           <NewWorktreeIconButton onClick={() => handleNewWorktree(node.project.id)} />
                         ) : null}
-                        <NewSessionIconButton
+                        <EngineSessionMenu directory={node.project.path} onOpenCode={() => handleNewSessionInProject(node.project)}><NewSessionIconButton
                           className="me-2"
                           label={t('mobile.sessions.newSessionInProjectAria', { label: node.project.label })}
                           onClick={() => handleNewSessionInProject(node.project)}
-                        />
+                        /></EngineSessionMenu>
                       </div>
                     </MobileSwipeActionsRow>
 

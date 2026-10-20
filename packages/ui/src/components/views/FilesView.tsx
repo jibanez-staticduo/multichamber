@@ -72,7 +72,7 @@ import { EMPTY_CANVAS_READ, shouldShowFileCanvas, type FileCanvasHandle } from '
 import { GuestFileEditor } from '@/components/views/files/GuestFileEditor';
 import { findGuestFileEditor, useGuestFileEditor } from '@/lib/guests/file-editors';
 import { useGuestsStore } from '@/lib/guests/store';
-import { GUEST_FILE_EDITOR_CONTENT_MAX } from '@openchamber/sdk';
+import { GUEST_FILE_EDITOR_CONTENT_MAX } from '@multichamber/sdk';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { EditorView } from '@codemirror/view';
 import type { Extension } from '@codemirror/state';

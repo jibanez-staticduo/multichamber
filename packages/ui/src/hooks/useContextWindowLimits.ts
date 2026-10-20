@@ -1,3 +1,6 @@
+import { getClaudeEngineState } from '@/lib/claudeSessionMetadata';
+import { readCodexContext, getCodexEngineState } from '@/lib/codexSessionMetadata';
+import { resolveSessionEngine } from '@/lib/sessionEngine';
 import React from 'react';
 
 import {
@@ -35,6 +38,12 @@ export const useContextWindowLimits = (sessionId: string | null, directory?: str
     ), [sessionId]),
     directory,
   );
+  const nativeWindow = useDirectorySync(React.useCallback((state) => {
+    const session = state.session.find((entry) => entry.id === sessionId);
+    if (!session) return sessionId?.startsWith('ses_cdx') ? 0 : null;
+    if (resolveSessionEngine(session) === 'opencode') return null;
+    return (readCodexContext(session.metadata)?.window ?? (resolveSessionEngine(session) === 'claude' ? getClaudeEngineState(session).contextWindow : getCodexEngineState(session).contextWindow)) ?? 0;
+  }, [sessionId]), directory);
   const answeringModelKey = useDirectorySync(
     React.useCallback((state) => (
       sessionId ? findAnsweringModelKey(state.message[sessionId] ?? []) : null
@@ -43,6 +52,7 @@ export const useContextWindowLimits = (sessionId: string | null, directory?: str
   );
 
   return React.useMemo(() => {
+    if (nativeWindow !== null) return { context: nativeWindow, output: 0 };
     const onRecord = limitsForAnsweringModel(sessionModelKey, providers);
     if (onRecord.context > 0) return onRecord;
     const answering = limitsForAnsweringModel(answeringModelKey, providers);
@@ -50,5 +60,16 @@ export const useContextWindowLimits = (sessionId: string | null, directory?: str
     const limit = getCurrentModel()?.limit;
     return { context: limit?.context ?? 0, output: limit?.output ?? 0 };
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- the getter's output tracks the selected model ids
-  }, [sessionModelKey, answeringModelKey, currentProviderId, currentModelId, getCurrentModel, providers]);
+  }, [nativeWindow, sessionModelKey, answeringModelKey, currentProviderId, currentModelId, getCurrentModel, providers]);
 };
+
+
+/** Leaf subscription to native current context, including a compaction newer than history. */
+export function useNativeContextFill(sessionId: string | null, directory?: string) {
+  const key = useDirectorySync(React.useCallback((state) => {
+    const session = state.session.find((entry) => entry.id === sessionId);
+    const context = readCodexContext(session?.metadata);
+    return context ? JSON.stringify(context) : null;
+  }, [sessionId]), directory);
+  return React.useMemo(() => key ? readCodexContext({ codex: { context: JSON.parse(key) } }) : null, [key]);
+}

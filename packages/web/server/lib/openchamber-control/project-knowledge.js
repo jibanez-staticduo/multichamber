@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { asNonEmptyString } from '../shared/guards.js';
 import { parsePlanMarkdown } from '../project-context/runtime.js';
 import { parsePlanProgress } from '../project-context/plan-progress.js';
-import { OpenChamberControlError } from './error.js';
+import { MultichamberControlError } from './error.js';
 
 const stringInput = z.string();
 const completedInput = z.boolean();
@@ -16,11 +16,11 @@ const PLAN_MAX_LENGTH = 200_000;
 const requiredString = (input, field, maxLength, allowEmpty = false) => {
   const parsed = stringInput.safeParse(input[field]);
   if (!parsed.success || (!allowEmpty && !parsed.data.trim())) {
-    throw new OpenChamberControlError(`${field} must be ${allowEmpty ? 'a string' : 'a non-empty string'}`, 400);
+    throw new MultichamberControlError(`${field} must be ${allowEmpty ? 'a string' : 'a non-empty string'}`, 400);
   }
   const value = parsed.data;
   if (maxLength && value.length > maxLength) {
-    throw new OpenChamberControlError(`${field} must be at most ${maxLength} characters`, 400);
+    throw new MultichamberControlError(`${field} must be at most ${maxLength} characters`, 400);
   }
   return value;
 };
@@ -28,7 +28,7 @@ const requiredString = (input, field, maxLength, allowEmpty = false) => {
 const kindOf = (input, allowed) => {
   const parsed = kindInput.safeParse(input.kind);
   if (!parsed.success || !allowed.includes(parsed.data)) {
-    throw new OpenChamberControlError(`kind must be ${allowed.join(', ')}`, 400);
+    throw new MultichamberControlError(`kind must be ${allowed.join(', ')}`, 400);
   }
   return parsed.data;
 };
@@ -36,14 +36,14 @@ const kindOf = (input, allowed) => {
 const idOf = (input) => requiredString(input, 'id').trim();
 
 const found = (value, kind, id) => {
-  if (!value) throw new OpenChamberControlError(`${kind} not found: ${id}`, 404);
+  if (!value) throw new MultichamberControlError(`${kind} not found: ${id}`, 404);
   return value;
 };
 
 const completedOf = (input) => {
   if (input.completed === undefined) return undefined;
   const completed = completedInput.safeParse(input.completed);
-  if (!completed.success) throw new OpenChamberControlError('completed must be a boolean', 400);
+  if (!completed.success) throw new MultichamberControlError('completed must be a boolean', 400);
   return completed.data;
 };
 
@@ -57,7 +57,7 @@ const expectedOf = (input) => (input.expected === undefined ? undefined : requir
  */
 const rejectExpectedOnCreate = (input) => {
   if (input.expected !== undefined && input.id === undefined) {
-    throw new OpenChamberControlError('expected requires an id: pass the id of the note or plan you are replacing, or leave expected out to create', 400);
+    throw new MultichamberControlError('expected requires an id: pass the id of the note or plan you are replacing, or leave expected out to create', 400);
   }
 };
 
@@ -72,16 +72,16 @@ export const createProjectKnowledgeActions = ({ projectContextRuntime: runtime, 
       if (input[field] !== undefined) requiredString(input, field);
     }
     if (input.projectId !== undefined && input.directory !== undefined) {
-      throw new OpenChamberControlError('Provide only one of projectId or directory', 400);
+      throw new MultichamberControlError('Provide only one of projectId or directory', 400);
     }
     const directory = input.projectId !== undefined
       ? await resolveDirectory({ projectId: input.projectId.trim() })
       : (asNonEmptyString(input.directory) || asNonEmptyString(contextDirectory));
     if (!directory || !path.isAbsolute(directory)) {
-      throw new OpenChamberControlError('An absolute project or calling-session directory is required', 400);
+      throw new MultichamberControlError('An absolute project or calling-session directory is required', 400);
     }
     const projectId = asNonEmptyString(await resolveProjectContextId(directory));
-    if (!projectId) throw new OpenChamberControlError('Project context owner not found', 404);
+    if (!projectId) throw new MultichamberControlError('Project context owner not found', 404);
     return { projectId, directory };
   };
 
@@ -123,7 +123,7 @@ export const createProjectKnowledgeActions = ({ projectContextRuntime: runtime, 
     const body = requiredString(input, 'body', NOTE_MAX_LENGTH);
     if (input.id === undefined) {
       const sessionId = asNonEmptyString(contextSessionId);
-      if (!sessionId) throw new OpenChamberControlError('Creating a note requires a calling session', 400);
+      if (!sessionId) throw new MultichamberControlError('Creating a note requires a calling session', 400);
       const { note } = await runtime.createNote(projectId, { body, source: 'agent', origin: { sessionId } });
       return { projectId, note };
     }
@@ -135,7 +135,7 @@ export const createProjectKnowledgeActions = ({ projectContextRuntime: runtime, 
 
   const saveTodo = async (projectId, input) => {
     if (input.expected !== undefined) {
-      throw new OpenChamberControlError('expected applies to notes and plans; a todo save changes only the fields it names', 400);
+      throw new MultichamberControlError('expected applies to notes and plans; a todo save changes only the fields it names', 400);
     }
     const completed = completedOf(input);
     if (input.id === undefined) {
@@ -147,7 +147,7 @@ export const createProjectKnowledgeActions = ({ projectContextRuntime: runtime, 
     if (input.body !== undefined) patch.text = requiredString(input, 'body', TODO_MAX_LENGTH);
     if (completed !== undefined) patch.completed = completed;
     if (patch.text === undefined && patch.completed === undefined) {
-      throw new OpenChamberControlError('body or completed is required to change a todo', 400);
+      throw new MultichamberControlError('body or completed is required to change a todo', 400);
     }
     const { todos } = await runtime.updateTodo(projectId, id, patch);
     return { projectId, todo: todos.find((entry) => entry.id === id) };
@@ -158,7 +158,7 @@ export const createProjectKnowledgeActions = ({ projectContextRuntime: runtime, 
     const body = requiredString(input, 'body', PLAN_MAX_LENGTH);
     if (input.id === undefined) {
       if (!/^\s*#\s+\S/.test(body)) {
-        throw new OpenChamberControlError('A plan starts with a # title line', 400);
+        throw new MultichamberControlError('A plan starts with a # title line', 400);
       }
       // The first heading is the title, as it is when the user edits a plan.
       const { plan } = await runtime.createPlan(projectId, parsePlanMarkdown(body));
@@ -187,7 +187,7 @@ export const createProjectKnowledgeActions = ({ projectContextRuntime: runtime, 
   const show = async (projectId, directory, input, contextSessionId) => {
     kindOf(input, ['plan']);
     const id = idOf(input);
-    if (!showPlan) throw new OpenChamberControlError('Showing a plan is not available on this server', 503);
+    if (!showPlan) throw new MultichamberControlError('Showing a plan is not available on this server', 503);
     const plan = found(await runtime.readPlan(projectId, id), 'Plan', id);
     const delivered = showPlan({
       projectId,
@@ -196,16 +196,16 @@ export const createProjectKnowledgeActions = ({ projectContextRuntime: runtime, 
       directory,
       sessionId: asNonEmptyString(contextSessionId) ?? null,
     });
-    if (delivered === 0) throw new OpenChamberControlError('No OpenChamber window is connected to show the plan', 503);
+    if (delivered === 0) throw new MultichamberControlError('No Multichamber window is connected to show the plan', 503);
     return { projectId, planId: plan.id, shown: true };
   };
 
   const execute = async (action, input, contextDirectory, contextSessionId) => {
     if (!runtime || !resolveProjectContextId) {
-      throw new OpenChamberControlError('Project knowledge is not available on this server', 503);
+      throw new MultichamberControlError('Project knowledge is not available on this server', 503);
     }
     if (!await isEnabled()) {
-      throw new OpenChamberControlError('The project knowledge tool is turned off in OpenChamber settings', 403);
+      throw new MultichamberControlError('The project knowledge tool is turned off in Multichamber settings', 403);
     }
     const { projectId, directory } = await ownerOf(input, contextDirectory);
     switch (action) {
@@ -218,7 +218,7 @@ export const createProjectKnowledgeActions = ({ projectContextRuntime: runtime, 
       }
       case 'knowledge.delete': return remove(projectId, input);
       case 'knowledge.show': return show(projectId, directory, input, contextSessionId);
-      default: throw new OpenChamberControlError(`Unsupported project knowledge action: ${action}`, 400);
+      default: throw new MultichamberControlError(`Unsupported project knowledge action: ${action}`, 400);
     }
   };
   return { execute };

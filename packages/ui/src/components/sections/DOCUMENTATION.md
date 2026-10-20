@@ -114,7 +114,7 @@ OpenCode config only when they are known (saved config, discovery, or the
 user's edit, `capabilitiesKnown`); otherwise the key is left out so a save
 never replaces what OpenCode knows about a model with a text-only default.
 
-Custom-provider icons are OpenChamber profile preferences, keyed by provider
+Custom-provider icons are Multichamber profile preferences, keyed by provider
 ID. They are not written into OpenCode config because OpenCode has no provider
 icon field. "Default" stores nothing, so the provider's own logo (or the
 generic fallback) still shows; `ProviderLogo` reads a chosen icon before trying
@@ -292,3 +292,12 @@ Project colours are six-digit hex from the same presets as agents
 (`iconBackgroundForProjectColor`). Projects saved by older builds may carry a
 theme key; `resolveProjectColor` in `lib/projectMeta.ts` still paints those,
 and the colour field shows them as a selected swatch until the user picks again.
+
+
+## Session engines
+
+The Sessions page keeps shared session preferences alongside separate OpenCode,
+Claude Code and Codex defaults. `openchamber/HarnessSettings.tsx` owns native
+catalog selectors, the default engine and runtime version checks. About reuses
+its runtime section. OpenCode provider, agent and tool pages remain scoped to
+OpenCode. Shared display preferences apply to every engine.

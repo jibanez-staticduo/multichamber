@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ToastRequest } from '@openchamber/sdk';
+import type { ToastRequest } from '@multichamber/sdk';
 import { toast, type ExternalToast } from 'sonner';
 
 import { GuestToastActions } from '@/components/layout/GuestToastActions';

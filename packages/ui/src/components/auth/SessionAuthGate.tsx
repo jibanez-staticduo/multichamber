@@ -9,7 +9,7 @@ import { syncDesktopSettings, initializeAppearancePreferences } from '@/lib/pers
 import { applyPersistedDirectoryPreferences } from '@/lib/directoryPersistence';
 import { ensureHomeDirectoryResolved, useDirectoryStore } from '@/stores/useDirectoryStore';
 import { DesktopHostSwitcherInline } from '@/components/desktop/DesktopHostSwitcher';
-import { OpenChamberLogo } from '@/components/ui/OpenChamberLogo';
+import { MultichamberLogo } from '@/components/ui/MultichamberLogo';
 import { Icon } from "@/components/icon/Icon";
 import { useI18n } from '@/lib/i18n';
 import { runtimeFetch } from '@/lib/runtime-fetch';
@@ -132,7 +132,7 @@ const submitPassword = async (password: string, trustDevice: boolean): Promise<R
       password,
       trustDevice,
       issueClientToken,
-      clientLabel: 'OpenChamber Desktop',
+      clientLabel: 'Multichamber Desktop',
       ...desktopClientAuthMetadata(),
     }),
   });
@@ -151,7 +151,7 @@ const issueDesktopClientToken = async (): Promise<string> => {
       'Content-Type': 'application/json',
       Accept: 'application/json',
     },
-    body: JSON.stringify({ label: 'OpenChamber Desktop', ...desktopClientAuthMetadata() }),
+    body: JSON.stringify({ label: 'Multichamber Desktop', ...desktopClientAuthMetadata() }),
   }).catch(() => null);
   if (!response?.ok) {
     return '';
@@ -292,7 +292,7 @@ const AuthShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 const LoadingScreen: React.FC = () => (
   <div className="flex min-h-dvh items-center justify-center bg-[var(--splash-background,var(--surface-background))] text-foreground">
-    <OpenChamberLogo width={120} height={120} variant="splash" />
+    <MultichamberLogo width={120} height={120} variant="splash" />
   </div>
 );
 
@@ -824,7 +824,7 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({
     try {
       const payload = await authenticateWithPasskey(trustDevice, {
         issueClientToken: shouldIssueDesktopClientToken(),
-        clientLabel: 'OpenChamber Desktop',
+        clientLabel: 'Multichamber Desktop',
         ...desktopClientAuthMetadata(),
       }) as { clientToken?: unknown } | null;
       const clientToken = shouldIssueDesktopClientToken() && typeof payload?.clientToken === 'string' && payload.clientToken.trim()

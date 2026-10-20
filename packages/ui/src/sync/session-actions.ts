@@ -1,3 +1,5 @@
+import { EngineUnsupportedError } from '@/lib/sessionEngine';
+import { engineInfoForSession } from '@/stores/useEngineStore';
 /**
  * Session actions — SDK-calling operations for session management.
  * Replaces the action methods from the old useSessionStore.
@@ -331,6 +333,8 @@ export async function moveSessionToDirectory(
   destinationDirectory: string,
   expectedRuntimeKey?: string,
 ): Promise<void> {
+  const engine = engineInfoForSession(session)
+  if (!engine.capabilities.move) throw new EngineUnsupportedError(engine, "move")
   await opencodeClient.moveSession(session.id, destinationDirectory)
 
   // If the runtime changed during the move request, the server move
@@ -1037,13 +1041,74 @@ export async function createSession(
       getImperativeSessionMessageLoader()?.initializeCreatedSession({ directory: sessionDirectory, sessionID: session.id })
     }
     if (navigation === "open") useSessionUIStore.getState().setCurrentSession(session.id, sessionDirectory, selectionTransition)
-    useSessionUIStore.getState().markSessionAsOpenChamberCreated(session.id)
+    useSessionUIStore.getState().markSessionAsMultichamberCreated(session.id)
     useGlobalSessionsStore.getState().upsertSession(session)
     return session
   } catch (error) {
     console.error("[session-actions] createSession failed", error)
     return null
   }
+}
+
+/**
+ * Creates a Claude Code session through the Claude surface of the server.
+ *
+ * The server intercepts `POST /api/session` when the body carries
+ * `metadata.backend === "claude"` (lib/claude/routes.js) and answers with a
+ * `ses_ccc…` session that has no transcript yet: the first prompt spawns the
+ * live `claude` process under this directory, and with
+ * OPENCHAMBER_CLAUDE_REMOTE_CONTROL=1 that process links to claude.ai.
+ */
+/**
+ * What the first turn of a new Claude session runs on, picked where the
+ * session is created. `model` is a Claude catalog id (`opus`, a full model id),
+ * `effort` a thinking level (`low`…`max`), `mode` a permission mode
+ * (`default`, `acceptEdits`, `plan`, `auto`, `bypassPermissions`). The server
+ * keeps only the values this host offers; anything left out falls through to
+ * Multichamber's defaults for Claude, then to Claude Code's own settings.
+ */
+export type ClaudeSessionSelection = { model?: string; effort?: string; mode?: string }
+
+const engineSelectionMetadata = (selection?: ClaudeSessionSelection): Metadata | undefined => {
+  if (!selection) return undefined
+  const picked = Object.fromEntries(
+    Object.entries(selection).filter(([, value]) => typeof value === "string" && value.trim().length > 0),
+  )
+  return Object.keys(picked).length > 0 ? picked as Metadata : undefined
+}
+
+export async function createClaudeSession(
+  directory?: string | null,
+  selection?: ClaudeSessionSelection,
+): Promise<Session | null> {
+  const claude = engineSelectionMetadata(selection)
+  return createSession(undefined, directory, claude ? { backend: "claude", claude } : { backend: "claude" })
+}
+
+/**
+ * A new Claude session, asked from anywhere: where the new-session dialog is
+ * mounted it picks the model, thinking level and mode first; a surface without
+ * it (no dialog mounted to answer) creates the session on this host's defaults
+ * rather than dropping the click.
+ */
+export function requestNewClaudeSession(directory?: string | null, onCreated?: (session: Session | null) => void): void {
+  if (!directory) return
+  void import('@/lib/sessionCreation').then(({ requestSessionCreation }) => requestSessionCreation({ harness: 'claude', directoryOverride: directory, target: 'project', onCreated })).catch((error) => { useSessionUIStore.setState({ error: error instanceof Error ? error.message : String(error) }); onCreated?.(null) })
+}
+
+export type CodexSessionSelection = { model?: string; effort?: string; mode?: string }
+
+export async function createCodexSession(
+  directory?: string | null,
+  selection?: CodexSessionSelection,
+): Promise<Session | null> {
+  const codex = engineSelectionMetadata(selection)
+  return createSession(undefined, directory, codex ? { backend: "codex", codex } : { backend: "codex" })
+}
+
+export function requestNewCodexSession(directory?: string | null, onCreated?: (session: Session | null) => void): void {
+  if (!directory) return
+  void import('@/lib/sessionCreation').then(({ requestSessionCreation }) => requestSessionCreation({ harness: 'codex', directoryOverride: directory, target: 'project', onCreated })).catch((error) => { useSessionUIStore.setState({ error: error instanceof Error ? error.message : String(error) }); onCreated?.(null) })
 }
 
 /**
@@ -1103,7 +1168,7 @@ export async function patchSessionMetadata(
   if (isStaleRuntime(expectedRuntimeKey)) throw new Error("runtime changed")
   const currentMetadata = getSessionMetadata(current)
   const nextMetadata = updater(currentMetadata)
-  // OpenCode 2.x only accepts metadata at session creation, so OpenChamber
+  // OpenCode 2.x only accepts metadata at session creation, so Multichamber
   // keeps it (see session-archive-batch). The store applies a merge patch, so
   // only the difference travels and a key the updater dropped is deleted
   // explicitly. A runtime without that route cannot persist the change, and
@@ -1122,7 +1187,7 @@ export async function patchSessionMetadata(
 
 /**
  * Link or unlink one item on a session. The list transform lives on the
- * OpenChamber server now, decided there from a fresh read inside the
+ * Multichamber server now, decided there from a fresh read inside the
  * session's write queue: a UI request and an agent's `session.link` can no
  * longer wipe each other, whichever write lands first.
  */
@@ -1794,8 +1859,8 @@ function commitArchivedSessions(stamps: SessionArchiveStamp[], directory: string
  * Same contract as `archiveSession`: waits for server confirmation before
  * reconciling stores, and rejects stale runtimes so a response produced by a
  * previous runtime cannot mutate the current runtime's state. Archive state is
- * OpenChamber's own (OpenCode has no route for it), so this goes to the
- * OpenChamber unarchive route rather than the OpenCode client.
+ * Multichamber's own (OpenCode has no route for it), so this goes to the
+ * Multichamber unarchive route rather than the OpenCode client.
  *
  * A subsession is the agent's: under an archived parent it is never restored
  * on its own. Restoring a top-level session brings its archived subsessions
@@ -2016,7 +2081,7 @@ export async function optimisticSend(input: {
   }
 
   assertRuntimeUnchanged()
-  await waitForConnectionOrThrow()
+  if (!engineInfoForSession({ id: input.sessionId }).ownModelCatalog) await waitForConnectionOrThrow()
   input.beforeOptimisticInsert?.()
   assertRuntimeUnchanged()
   input.appendSubmissions?.()
@@ -2300,7 +2365,7 @@ export async function respondToPermission(
   response: "once" | "always" | "reject",
   directoryOverride?: string,
 ): Promise<void> {
-  await waitForConnectionOrThrow()
+  if (!engineInfoForSession({ id: sessionId }).ownModelCatalog) await waitForConnectionOrThrow()
   const directory = directoryOverride
     || resolveDirectoryForBlockingRequest("permission", sessionId, requestId)
     || getSessionDirectory(sessionId)
@@ -2322,7 +2387,7 @@ export async function dismissPermission(
   sessionId: string,
   requestId: string,
 ): Promise<void> {
-  await waitForConnectionOrThrow()
+  if (!engineInfoForSession({ id: sessionId }).ownModelCatalog) await waitForConnectionOrThrow()
   const directory = resolveDirectoryForBlockingRequest("permission", sessionId, requestId)
     || getSessionDirectory(sessionId)
     || dir()
@@ -2416,7 +2481,7 @@ export async function replyToForm(
   formId: string,
   answer: FormAnswer,
 ): Promise<void> {
-  await waitForConnectionOrThrow()
+  if (!engineInfoForSession({ id: sessionId }).ownModelCatalog) await waitForConnectionOrThrow()
   const directory = getRequestReplyDirectory("form", sessionId, formId)
   try {
     if (await opencodeClient.replyToForm(sessionId, formId, answer, directory) !== true) {
@@ -2440,7 +2505,7 @@ export async function replyToForm(
 }
 
 export async function cancelForm(sessionId: string, formId: string): Promise<void> {
-  await waitForConnectionOrThrow()
+  if (!engineInfoForSession({ id: sessionId }).ownModelCatalog) await waitForConnectionOrThrow()
   const directory = getRequestReplyDirectory("form", sessionId, formId)
   try {
     if (await opencodeClient.cancelForm(sessionId, formId, directory) !== true) {
@@ -2538,6 +2603,8 @@ export async function dismissOpenFormsForSession(sessionId: string): Promise<boo
  * 5. Set pendingInputText so the reverted message text appears in the input
  */
 export async function revertToMessage(sessionId: string, messageId: string): Promise<void> {
+  const engine = engineInfoForSession({ id: sessionId })
+  if (!engine.capabilities.revert) throw new EngineUnsupportedError(engine, "revert")
   const { store, directory } = dirStoreForSession(sessionId)
   const state = store.getState()
 
@@ -2737,6 +2804,8 @@ const isTurnBoundary = (message: Message): boolean =>
  * rewrite.
  */
 export async function forkAfterMessage(sessionId: string, messageId: string): Promise<Session | null> {
+  const engine = engineInfoForSession({ id: sessionId })
+  if (!engine.capabilities.forkAtMessage) throw new EngineUnsupportedError(engine, "forkAtMessage")
   const expectedRuntimeKey = getRuntimeKey()
   const { store, directory } = dirStoreForSession(sessionId)
   const messages = store.getState().message[sessionId] ?? []
@@ -2809,6 +2878,15 @@ export class NothingToForkError extends Error {
  * in the source session is left alone and not copied.
  */
 export async function forkFromLastCompletedTurn(sessionId: string): Promise<Session | null> {
+  const engine = engineInfoForSession({ id: sessionId })
+  if (!engine.capabilities.fork) throw new EngineUnsupportedError(engine, "fork")
+  if (!engine.capabilities.forkAtMessage) {
+    const { store, directory } = dirStoreForSession(sessionId)
+    const forked = await opencodeClient.forkSession(sessionId, { directory })
+    openForkedSession(store, forked, directory)
+    return forked
+  }
+
   const { store } = dirStoreForSession(sessionId)
   const state = store.getState()
   const status = state.session_status?.[sessionId]
@@ -2827,6 +2905,8 @@ export async function forkFromLastCompletedTurn(sessionId: string): Promise<Sess
  * 4. Switch to the new session and stage its composer replay
  */
 export async function forkFromMessage(sessionId: string, messageId: string): Promise<void> {
+  const engine = engineInfoForSession({ id: sessionId })
+  if (!engine.capabilities.forkAtMessage) throw new EngineUnsupportedError(engine, "forkAtMessage")
   const expectedRuntimeKey = getRuntimeKey()
   const { store, directory } = dirStoreForSession(sessionId)
   const state = store.getState()

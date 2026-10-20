@@ -1,11 +1,11 @@
-import { getRuntimeExtraHeadersSync, refreshLocalRuntimeUrlAuthToken, refreshRuntimeUrlAuthToken, setRuntimeBearerToken, setRuntimeExtraHeaders } from '@openchamber/ui/lib/runtime-auth';
-import { installRuntimeFetchBridge } from '@openchamber/ui/lib/runtime-fetch';
-import { initializeRuntimeEndpoint } from '@openchamber/ui/lib/runtime-switch';
-import { warmDesktopHostStatuses } from '@openchamber/ui/lib/desktopHostStatus';
-import { restoreDesktopRelayRuntime } from '@openchamber/ui/lib/desktopRelayRestore';
-import { getInjectedBootOutcome } from '@openchamber/ui/lib/desktopBoot';
-import { configureRuntimeUrlResolver } from '@openchamber/ui/lib/runtime-url';
-import { opencodeClient } from '@openchamber/ui/lib/opencode/client';
+import { getRuntimeExtraHeadersSync, refreshLocalRuntimeUrlAuthToken, refreshRuntimeUrlAuthToken, setRuntimeBearerToken, setRuntimeExtraHeaders } from '@multichamber/ui/lib/runtime-auth';
+import { installRuntimeFetchBridge } from '@multichamber/ui/lib/runtime-fetch';
+import { initializeRuntimeEndpoint } from '@multichamber/ui/lib/runtime-switch';
+import { warmDesktopHostStatuses } from '@multichamber/ui/lib/desktopHostStatus';
+import { restoreDesktopRelayRuntime } from '@multichamber/ui/lib/desktopRelayRestore';
+import { getInjectedBootOutcome } from '@multichamber/ui/lib/desktopBoot';
+import { configureRuntimeUrlResolver } from '@multichamber/ui/lib/runtime-url';
+import { opencodeClient } from '@multichamber/ui/lib/opencode/client';
 import { createWebAPIs } from './api';
 
 // The switcher's statuses are warmed after boot settles, not during it.

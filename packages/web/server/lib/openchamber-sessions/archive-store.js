@@ -1,9 +1,9 @@
 /**
- * OpenChamber-owned session archive state.
+ * Multichamber-owned session archive state.
  *
  * OpenCode 2.x still carries `SessionInfo.time.archived` on the wire (sessions
  * migrated from v1 keep the flag) but has no route that sets or clears it, so
- * archiving is an OpenChamber capability now. The state lives beside the
+ * archiving is an Multichamber capability now. The state lives beside the
  * OpenCode instance it describes — one JSON file per data dir,
  * `{ [sessionID]: archivedAt | null }` — and the proxy folds it back onto the
  * session records it serves: a number archives, `null` is an explicit
@@ -34,7 +34,7 @@ const asIdList = (ids) => {
 
 /**
  * @param {object} options
- * @param {string} options.dataDir OpenChamber data directory for this instance.
+ * @param {string} options.dataDir Multichamber data directory for this instance.
  * @param {typeof fsDefault.promises} [options.fsPromises]
  * @param {typeof pathDefault} [options.path]
  * @param {() => number} [options.now]

@@ -1,4 +1,4 @@
-import { GUEST_REQUEST_TIMEOUT_MS, OPENCHAMBER_SDK_API_VERSION, OPENCHAMBER_SDK_CHANNEL, type ActionResultPayload, type GuestActionItem, type HostActionMessage } from '@openchamber/sdk';
+import { GUEST_REQUEST_TIMEOUT_MS, OPENCHAMBER_SDK_API_VERSION, OPENCHAMBER_SDK_CHANNEL, type ActionResultPayload, type GuestActionItem, type HostActionMessage } from '@multichamber/sdk';
 import { toast } from 'sonner';
 import { create } from 'zustand';
 

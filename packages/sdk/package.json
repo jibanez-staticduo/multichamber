@@ -1,12 +1,12 @@
 {
-  "name": "@openchamber/sdk",
-  "version": "2.5.0",
-  "description": "Contract for OpenChamber guests: manifest parse and iframe host bridge.",
+  "name": "@multichamber/sdk",
+  "version": "2.6.0",
+  "description": "Contract for Multichamber guests: manifest parse and iframe host bridge.",
   "private": false,
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openchamber/openchamber.git",
+    "url": "git+https://github.com/jibanez-staticduo/multichamber.git",
     "directory": "packages/sdk"
   },
   "type": "module",
@@ -27,7 +27,7 @@
     }
   },
   "bin": {
-    "openchamber-guest-bundle": "./scripts/bundle-guest.ts"
+    "multichamber-guest-bundle": "./scripts/bundle-guest.ts"
   },
   "publishConfig": {
     "access": "public"

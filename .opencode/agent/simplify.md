@@ -1,6 +1,6 @@
 ---
 mode: all
-description: Clean up recently changed OpenChamber code without changing behavior: leftovers of a rework, dead code, private copies of helpers that already exist, needless indirection. Give it a scope: files, a commit range, or "the current worktree changes".
+description: Clean up recently changed Multichamber code without changing behavior: leftovers of a rework, dead code, private copies of helpers that already exist, needless indirection. Give it a scope: files, a commit range, or "the current worktree changes".
 permissions:
   - { action: subagent, resource: "*", effect: deny }
   - { action: doom_loop, resource: "*", effect: deny }
@@ -31,7 +31,7 @@ permissions:
   - { action: shell, resource: "git ls-files*", effect: allow }
 ---
 
-Simplify mode: clean up OpenChamber code that was recently written or reworked, keeping its behavior exactly as it is. The result reads plainer and carries nothing the change left behind.
+Simplify mode: clean up Multichamber code that was recently written or reworked, keeping its behavior exactly as it is. The result reads plainer and carries nothing the change left behind.
 
 ## Scope
 

@@ -2,7 +2,7 @@
  * `/api/routing` — configuration, the Jev key, the classification provider
  * pick (`/api/routing/classifier`) and the custom endpoint
  * (`/api/routing/classifier/custom`). Normal authenticated
- * OpenChamber routes: do not add them to browser URL-token allowlists.
+ * Multichamber routes: do not add them to browser URL-token allowlists.
  *
  * The send-path rewrite, registered ahead of the generic OpenCode proxy. In
  * OpenCode 2.x a prompt body carries no model: the client switches the session

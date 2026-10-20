@@ -4,7 +4,7 @@ import { createSessionGoalRuntime, normalizeMaxAutoTurns } from './runtime.js';
 
 /**
  * The goal record — status, turns, token accounting — lives in
- * OpenChamber's own session metadata store, because OpenCode 2.x accepts
+ * Multichamber's own session metadata store, because OpenCode 2.x accepts
  * session metadata only when a session is created. `readSessionMetadata` and
  * `persistSessionGoal` are the seams.
  *
@@ -580,7 +580,7 @@ describe('session goal runtime', () => {
     const upstream = globalThis.fetch;
     const fetchMock = vi.fn(async (input, init) => {
       if (new URL(input).pathname.endsWith('/prompt')) {
-        return new Response('<!doctype html><title>OpenChamber</title>', { status: 200, headers: { 'content-type': 'text/html' } });
+        return new Response('<!doctype html><title>Multichamber</title>', { status: 200, headers: { 'content-type': 'text/html' } });
       }
       return upstream(input, init);
     });

@@ -10,7 +10,7 @@ const writeBuiltGuest = async (root) => {
   await fs.writeFile(path.join(root, 'panel', 'index.html'), '<script src="./main.js"></script>');
   await fs.writeFile(path.join(root, 'panel', 'main.js'), 'console.log("hello")');
   await fs.writeFile(path.join(root, 'package.json'), JSON.stringify({
-    name: '@openchamber/hello',
+    name: '@multichamber/hello',
     openchamber: {
       apiVersion: 1,
       contributes: {
@@ -20,6 +20,23 @@ const writeBuiltGuest = async (root) => {
     },
   }));
 };
+
+test('applies canonical host engine requirements and retains legacy installed manifests', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'mc-canonical-guest-'));
+  try {
+    await writeBuiltGuest(root);
+    const file = path.join(root, 'package.json');
+    const legacy = JSON.parse(await fs.readFile(file, 'utf8'));
+    legacy.version = '1.0.0';
+    legacy.openchamber.engines = { openchamber: '>=2.0.0' };
+    await fs.writeFile(file, JSON.stringify(legacy));
+    expect((await inspectGuestPackage(root, { openchamberVersion: '2.5.0' })).ok).toBe(true);
+    const canonical = { version: legacy.version, multichamber: { ...legacy.openchamber, engines: { multichamber: '>=3.0.0' } } };
+    await fs.writeFile(file, JSON.stringify(canonical));
+    expect(await inspectGuestPackage(root, { openchamberVersion: '2.5.0' })).toMatchObject({ ok: false, code: 'host-too-old', required: '3.0.0' });
+    expect((await inspectGuestPackage(root, { openchamberVersion: '3.0.0' })).ok).toBe(true);
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
+});
 
 describe('resolveGuestAssetPath', () => {
   test('stays inside the package and rejects escapes', async () => {
@@ -127,7 +144,7 @@ describe('listInstalledGuests', () => {
     await fs.mkdir(path.join(guestRoot, 'panel'), { recursive: true });
     await fs.writeFile(path.join(guestRoot, 'panel', 'index.html'), '<html></html>');
     await fs.writeFile(path.join(guestRoot, 'package.json'), JSON.stringify({
-      name: '@openchamber/clone-hello',
+      name: '@multichamber/clone-hello',
       openchamber: {
         apiVersion: 1,
         contributes: {
@@ -152,7 +169,7 @@ describe('listInstalledGuests', () => {
     await fs.writeFile(path.join(guestRoot, 'panel', 'index.html'), '<script src="./main.js"></script>');
     await fs.writeFile(path.join(guestRoot, 'panel', 'main.ts'), 'console.log(1)');
     await fs.writeFile(path.join(guestRoot, 'package.json'), JSON.stringify({
-      name: '@openchamber/source-only',
+      name: '@multichamber/source-only',
       openchamber: {
         apiVersion: 1,
         contributes: {
@@ -171,7 +188,7 @@ describe('listInstalledGuests', () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'oc-guest-'));
     const guestRoot = path.join(dir, 'tasks');
     const writeManifest = async () => fs.writeFile(path.join(guestRoot, 'package.json'), JSON.stringify({
-      name: '@openchamber/tasks',
+      name: '@multichamber/tasks',
       version: '1.0.0',
       openchamber: {
         apiVersion: 1,
@@ -214,7 +231,7 @@ describe('listInstalledGuests', () => {
     await fs.writeFile(path.join(guestRoot, 'panel', 'main.js'), 'console.log("strip")');
     await fs.writeFile(path.join(guestRoot, 'service.js'), 'console.log("service")');
     await fs.writeFile(path.join(guestRoot, 'package.json'), JSON.stringify({
-      name: '@openchamber/sim',
+      name: '@multichamber/sim',
       version: '1.0.0',
       openchamber: {
         apiVersion: 1,
@@ -311,7 +328,7 @@ describe('page-less packages', () => {
     await fs.writeFile(path.join(guestRoot, 'stray.html'), '<script src="./stray.js"></script>');
     await fs.writeFile(path.join(guestRoot, 'stray.js'), 'console.log(1)');
     await fs.writeFile(path.join(guestRoot, 'package.json'), JSON.stringify({
-      name: '@openchamber/tools-only',
+      name: '@multichamber/tools-only',
       version: '1.0.0',
       openchamber: {
         apiVersion: 1,
@@ -356,7 +373,7 @@ describe('page-less packages', () => {
     const guestRoot = path.join(dir, 'no-entry');
     await fs.mkdir(guestRoot, { recursive: true });
     await fs.writeFile(path.join(guestRoot, 'package.json'), JSON.stringify({
-      name: '@openchamber/no-entry',
+      name: '@multichamber/no-entry',
       version: '1.0.0',
       openchamber: {
         apiVersion: 1,
@@ -411,7 +428,7 @@ describe('grant scopes', () => {
     await fs.writeFile(path.join(root, 'panel', 'index.html'), '<script src="./main.js"></script>');
     await fs.writeFile(path.join(root, 'panel', 'main.js'), 'console.log("hello")');
     await fs.writeFile(path.join(root, 'package.json'), JSON.stringify({
-      name: '@openchamber/scoped',
+      name: '@multichamber/scoped',
       version: '1.0.0',
       openchamber: {
         apiVersion: 1,

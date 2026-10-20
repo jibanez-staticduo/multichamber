@@ -299,7 +299,7 @@ export type PersistedDirCache = {
 /** Read all cached metadata for a directory */
 /**
  * The fields the stores dereference before bootstrap replaces a cached list.
- * localStorage is shared by every OpenChamber build that ran on this origin,
+ * localStorage is shared by every Multichamber build that ran on this origin,
  * so a record written by another version is data, not a `Session`: a record
  * missing any of these is dropped instead of crashing the first render.
  */

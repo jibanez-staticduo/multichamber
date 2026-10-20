@@ -1,3 +1,5 @@
+import { filterSessionsBySource } from '@/lib/sessionSourceFilter';
+import { useSessionSourceFilterStore } from '@/stores/useSessionSourceFilterStore';
 import React from 'react';
 import type { Session } from '@/lib/opencode/model';
 import { useLiveSessionsExcluding } from '@/sync/sync-context';
@@ -160,6 +162,7 @@ type SidebarSessionProjectionArgs = ProjectSidebarActiveSessionsArgs & {
 type SidebarSessionStructureArgs = Omit<ProjectSidebarActiveSessionsArgs, 'globalActiveSessions'> & {
   globalActiveSessions?: readonly Session[];
   globalStructure?: GlobalSessionStructure;
+  sourceFilter?: import('@/lib/sessionSourceFilter').SessionSourceFilter;
 };
 
 const buildSidebarSessionStructure = ({
@@ -168,10 +171,11 @@ const buildSidebarSessionStructure = ({
   knownDirectories,
   isVSCode,
   globalStructure,
+  sourceFilter = 'all',
 }: SidebarSessionStructureArgs) => {
   countSyncPerformance('sidebarStructureBuilds');
   const indexedGlobalSessions = globalActiveSessions ?? [];
-  const visibleSessions = mergeSidebarSessionSources(indexedGlobalSessions, liveSessions);
+  const visibleSessions = filterSessionsBySource(mergeSidebarSessionSources(indexedGlobalSessions, liveSessions), sourceFilter);
   const partition = partitionSidebarSessions(visibleSessions, isVSCode);
   const knownDirectoryKeys = new Set([...knownDirectories].map((directory) => directory.toLowerCase()));
   const projectSessions = partition.projectSessions
@@ -266,6 +270,7 @@ export const useSessionProjectCollection = ({
   isVSCode,
   isVisible,
 }: UseSessionProjectCollectionArgs) => {
+  const sourceFilter = useSessionSourceFilterStore((state) => state.filter);
   const globalActiveSessions = useGlobalSessionsStore((state) => state.activeSessions);
   const globalStructure = useGlobalSessionsStore((state) => state.structure);
   const archivedSessions = useGlobalSessionsStore((state) => state.archivedSessions);
@@ -286,10 +291,11 @@ export const useSessionProjectCollection = ({
   const structure = React.useMemo(() => buildSidebarSessionStructure({
     globalActiveSessions,
     globalStructure,
+    sourceFilter,
     liveSessions: liveGapSessions,
     knownDirectories,
     isVSCode,
-  }), [globalActiveSessions, globalStructure, isVSCode, knownDirectories, liveGapSessions]);
+  }), [globalActiveSessions, globalStructure, isVSCode, knownDirectories, liveGapSessions, sourceFilter]);
   const ordering = React.useMemo(
     () => orderSidebarSessionStructure(structure, pinnedSessionIds, sessionOrderRanks),
     [pinnedSessionIds, sessionOrderRanks, structure],

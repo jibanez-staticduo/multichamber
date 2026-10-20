@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { GUEST_ITEM_MESSAGE_TEXT_MAX, GUEST_ITEM_SESSION_MAX } from '@openchamber/sdk';
+import { GUEST_ITEM_MESSAGE_TEXT_MAX, GUEST_ITEM_SESSION_MAX } from '@multichamber/sdk';
 import type { Message, Part, SyntheticMessage } from '@/lib/opencode/model';
 
 import {

@@ -1,54 +1,49 @@
 # Docs Source Deployment
 
-This repo publishes docs **source artifacts**.
+This repository packages Multichamber documentation sources. It does not deploy
+a hosted website by default.
 
-Rendering and hosting still happen in `openchamber-website` (`apps/docs`).
+## Source archive workflow
 
-## Workflow
+[docs-source.yml](../../.github/workflows/docs-source.yml) runs on:
 
-Use `.github/workflows/docs-source.yml`.
+- pushes to `main` that change docs, validation scripts or the root manifest;
+- published releases;
+- manual dispatch, optionally naming a release tag for the archive upload.
 
-Triggers:
+It validates the source with `bun run docs:validate`, creates
+`multichamber-docs-source-<sha>.tar.gz`, and uploads the workflow artifact named
+`multichamber-docs-source`. Releases and manual runs with `release_tag` also
+attach that archive to the selected release. These are source artifacts, not a
+built or hosted website.
 
-- push to `main` when docs source changes
-- release published
-- manual `workflow_dispatch`
+## Optional website notification
 
-Outputs:
+To notify a separate website, configure both in this repository:
 
-- validates docs (`bun run docs:validate`)
-- creates `openchamber-docs-source-<sha>.tar.gz`
-- uploads archive as workflow artifact
-- on release/manual with tag, uploads archive to release assets
+| Setting | Purpose |
+| --- | --- |
+| Repository variable `MULTICHAMBER_DOCS_WEBSITE_REPO` | Explicit destination in `owner/repository` form |
+| Secret `MULTICHAMBER_DOCS_WEBSITE_REPO_TOKEN` | Credential allowed to send repository dispatches to that destination |
 
-## Cross-repo sync trigger
+There is no upstream or other default destination. If either value is absent,
+the step logs that website sync is unconfigured and succeeds without sending a
+request. Configuring a destination authorizes notification, not deployment from
+this workflow. The receiving repository owns its renderer, build, hosting and
+credentials.
 
-After validating and packaging, the workflow sends a `repository_dispatch` event
-to `openchamber-website` so it re-syncs and redeploys the docs. This fires on
-**every** trigger above — push to `main` (docs changes), release, and manual
-`workflow_dispatch` — so a normal commit to docs auto-updates the live site.
+The notification keeps the existing consumer contract:
 
-Required secret in this repo:
+- `event_type`: `docs_source_updated`;
+- `client_payload.source_repo`: the repository running this workflow;
+- `client_payload.source_ref`: the release tag for a release event, otherwise
+  the selected branch or tag name;
+- `client_payload.archive_name`: the generated archive filename.
 
-- `OPENCHAMBER_WEBSITE_REPO_TOKEN` — a token with `contents: write` (classic
-  `repo` scope, or fine-grained with Contents: read & write) on
-  `openchamber/openchamber-website`. **Without it the dispatch step is skipped**
-  (it logs "not set" and exits cleanly), so the site will never auto-update.
-  This is the most common reason the pipeline silently does nothing.
+A manual `release_tag` selects the release receiving the archive; it does not
+change the checked-out source or `source_ref`. Select the intended source ref
+when dispatching the workflow.
 
-Event sent:
-
-- `event_type: docs_source_updated`
-
-Payload includes:
-
-- `source_repo`
-- `source_ref` — the ref the website checks out from `openchamber` (`main` on a
-  push, the tag on a release)
-- `archive_name`
-
-`openchamber-website`'s `deploy-docs.yml` listens for this event
-(`repository_dispatch: types: [docs_source_updated]`), checks out
-`openchamber` at `source_ref`, runs `docs:sync`, builds `apps/docs`, and deploys
-to Cloudflare Pages. That repo needs its own secrets: `OPENCHAMBER_REPO_TOKEN`
-(read access to this repo), `CLOUDFLARE_API_TOKEN`, and `CLOUDFLARE_ACCOUNT_ID`.
+The receiving repository must opt into `docs_source_updated` and resolve the
+source repository and ref from the payload. No particular website repository,
+Cloudflare account or published site is assumed here.

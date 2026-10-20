@@ -12,7 +12,7 @@ import { importVSCodeTheme } from '../packages/ui/src/lib/theme/vscode/import';
 import { compactTheme, requireTheme, type ThemeDefinition } from '../packages/ui/src/lib/theme/definition';
 import { mixColor, onColor, readableText } from '../packages/ui/src/lib/theme/color';
 
-// The source checkout must be installed beside OpenChamber. It is read-only.
+// The source checkout must be installed beside Multichamber. It is read-only.
 const sourceRoot = resolve(import.meta.dirname, '../../opencode/packages/ui/src');
 const sourceDirectory = join(sourceRoot, 'theme/themes');
 const defaultOutput = join(homedir(), '.config/openchamber/themes');
@@ -195,7 +195,7 @@ async function main() {
     help: { type: 'boolean', short: 'h', default: false },
   }, allowPositionals: false });
   if (values.help) {
-    console.log(`Convert OpenCode App themes to OpenChamber custom themes.
+    console.log(`Convert OpenCode App themes to Multichamber custom themes.
 
 bun run themes:port:opencode [options]
 
@@ -206,7 +206,7 @@ bun run themes:port:opencode [options]
   --list           List available theme IDs
   --help           Show this help
 
-Requires an installed OpenCode checkout at ../opencode beside OpenChamber.
+Requires an installed OpenCode checkout at ../opencode beside Multichamber.
 Existing identical files are skipped. Different files are never overwritten.`);
     return;
   }

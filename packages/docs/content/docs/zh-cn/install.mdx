@@ -1,38 +1,36 @@
 ---
 title: 安装
-description: 在桌面、Web、VS Code 或手机上安装 OpenChamber。
+description: 安装适用于桌面、网页或手机的 Multichamber。
 ---
 
 # 安装
 
-选择适合你工作方式的应用：
+## 选择应用
 
-- 面向 macOS、Windows 和 Linux 的桌面应用
-- 由 CLI 运行的 Web 应用，可以像手机应用一样安装（即 PWA）
-- VS Code 扩展，也适用于 Cursor、Windsurf 和 Trae
-- 面向 iPhone 和 Android 的移动应用，处于公开测试阶段
+使用 macOS、Windows 或 Linux 桌面应用，或运行网页/PWA 服务器。iOS 和 Android 构建连接到现有服务器。本分支不提供 VS Code 扩展。
 
-## 桌面
+桌面应用自带 OpenCode。网页服务器需要 OpenCode 和 Node.js 24.14 或更新版本。要使用 Claude Code 或 Codex，请在服务器上分别安装并登录其原生 CLI；OpenCode 不包含这些程序。
 
-从[下载页面](https://openchamber.dev/download/)或 [GitHub Releases](https://github.com/openchamber/openchamber/releases/latest) 下载最新版本并打开。Linux 版本提供 `.deb`、`.rpm` 和 AppImage。
+[Multichamber](https://github.com/jibanez-staticduo/multichamber/releases)
 
-桌面应用自带一份 [OpenCode](https://opencode.ai)（OpenChamber 所基于的 AI 编程智能体），无需另外安装。
-
-## Web + PWA
-
-Web 应用需要在运行它的机器上安装 [OpenCode](https://opencode.ai) 和 Node.js 24.14 或更高版本。
+## Web / PWA
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/openchamber/openchamber/main/scripts/install.sh | bash
-openchamber --ui-password be-creative-here
+curl -fsSL https://raw.githubusercontent.com/jibanez-staticduo/multichamber/main/scripts/install.sh | bash
+multichamber --ui-password be-creative-here
 ```
 
-打开 CLI 输出的 URL（通常是 `http://localhost:3000`），你应该能看到 OpenChamber 的会话列表。想随时打开的话，可以用浏览器地址栏里的“安装”选项把它添加为应用。
+## iOS / Android
 
-## VS Code
+仅使用为本分支发布的文件或分发链接。iOS 需要签名和授权的 TestFlight 或 App Store 分发，不承诺公开测试版。Android 需要兼容的签名 APK。无需原生构建也可使用手机网页。
 
-从 [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=fedaykindev.openchamber) 安装 OpenChamber。Cursor、Windsurf 和 Trae 从 [Open VSX](https://open-vsx.org/extension/FedaykinDev/openchamber) 安装。扩展需要已安装 [OpenCode](https://opencode.ai)，之后 OpenChamber 视图会出现在侧边栏中。
+## Nix
 
-## 移动应用
+```bash
+nix run github:jibanez-staticduo/multichamber
+nix run github:jibanez-staticduo/multichamber#gui
+```
 
-通过 TestFlight 安装 iPhone 应用，或从最新版本下载 Android 应用，然后将它与你的电脑配对。[移动应用与 PWA](/zh-cn/mobile/) 介绍了这两个步骤。
+`packages.multichamber` · `packages.multichamber-desktop` · `nixosModules.multichamber`
+
+Nix 管理其存储中的应用更新。请使用更新后的 flake 重新构建；OpenCode 更新程序无法修改 Nix 存储路径。

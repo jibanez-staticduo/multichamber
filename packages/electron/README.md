@@ -1,14 +1,35 @@
-# OpenChamber Desktop
+# Multichamber Desktop
 
-Electron desktop runtime for OpenChamber on macOS, Windows, and Linux.
+Electron desktop runtime for Multichamber on macOS, Windows, and Linux.
 
-This package owns the native shell: windows, menus, deep links, native notifications, auto-updates, host switching, SSH connections, tunnel helpers, and packaged desktop builds. The web UI and OpenChamber server logic still live in `packages/web` and shared React UI lives in `packages/ui`.
+This fork uses `jibanez-staticduo/multichamber` GitHub Releases for native
+updates. The runtime feed and electron-builder's embedded feed match. Architecture channels and platform installer behavior are preserved. The
+product name, app identifier, profiles, Linux launcher, and external link scheme
+belong to Multichamber, so installing it does not replace OpenChamber. The fork must supply its own signing credentials for
+signed releases. Native QA from the older fork does not validate this migrated
+candidate's installer or N-to-N+1 update path.
+
+This package owns the native shell: windows, menus, deep links, native notifications, auto-updates, host switching, SSH connections, tunnel helpers, and packaged desktop builds. The web UI and Multichamber server logic still live in `packages/web` and shared React UI lives in `packages/ui`.
+
+## Native engines and project provenance
+
+This shell is part of [Multichamber](../../README.md), derived from
+[OpenChamber](https://github.com/openchamber/openchamber) and the native Claude
+integration in [pocharlies-org/openchamber](https://github.com/pocharlies-org/openchamber).
+The shared UI uses the same engine routes as the web app. Bundled OpenCode does
+not supply Claude or Codex: install and authenticate their native runtimes on
+the server host. A remote host owns its engines and credentials.
+
+App updates use this fork's releases. Runtime checks and confirmed native-engine
+updates are separate and respect installation ownership. A shared Codex daemon
+is not restarted automatically. Build support is not evidence of a signed
+release or a passing update run on another OS.
 
 ## How It Runs
 
-Desktop starts the OpenChamber web server in the same Electron main process. There is no separate sidecar subprocess for the OpenChamber server.
+Desktop starts the Multichamber web server in the same Electron main process. There is no separate sidecar subprocess for the Multichamber server.
 
-`main.mjs` imports `@openchamber/web/server/index.js` and calls `startWebUiServer()`. The Electron window then loads the UI from the local server in development, or from packaged `resources/web-dist` assets in packaged builds.
+`main.mjs` imports `@multichamber/web/server/index.js` and calls `startWebUiServer()`. The Electron window then loads the UI from the local server in development, or from packaged `resources/web-dist` assets in packaged builds.
 
 Electron loads `entry.mjs`, not `main.mjs`. Electron holds `ready` until the
 entry module's import graph has evaluated, and importing the server module
@@ -51,7 +72,7 @@ confined to `<userData>/v8-compile-cache`, a root computed from userData and
 never from the directory Node reports; when Node's active directory is not a
 direct child of that root, nothing is removed.
 
-On a plain local launch with packaged UI (no `OPENCHAMBER_SERVER_URL`, no
+On a plain local launch with packaged UI (no `MULTICHAMBER_SERVER_URL`, no
 remote or SSH default instance, local server not skipped) main navigates the
 splash to the application as soon as the login-shell probe has resolved,
 before the local server is imported, and the renderer parses, fetches and
@@ -96,7 +117,7 @@ The HTML file preview runs in a sandboxed iframe without `allow-same-origin`, so
 
 PDF iframes also start with an opaque origin under the packaged UI protocol. The guard lets the main app frame load the HTTP `/api/fs/raw` route into an empty direct child, including under a host path prefix. This does not let loaded extensions, HTML previews, or nested frames navigate to raw files. Isolated-space raw routes are not part of this exception.
 
-The preload bridge exposes desktop-only APIs to the web UI through `window.__OPENCHAMBER_DESKTOP__`. Privileged commands are checked in `main.mjs`, not only in the UI.
+The preload bridge exposes desktop-only APIs to the web UI through `window.__MULTICHAMBER_DESKTOP__`. Privileged commands are checked in `main.mjs`, not only in the UI.
 
 Confirmed chat application links use the local-page-gated `desktop_open_external_url`
 command and the OS protocol handler. `external-url-policy.mjs` validates schemes
@@ -111,7 +132,7 @@ A window whose renderer crashes is reloaded (`renderer-recovery.mjs`). A crash
 counts as one in a row when it comes within two minutes of the previous one.
 The first two in a row reload as they are. The third reloads once in a safe
 start: preload asks main over sync IPC before any page script runs and exposes
-`window.__OPENCHAMBER_SAFE_START__`. The shared UI then forgets expanded
+`window.__MULTICHAMBER_SAFE_START__`. The shared UI then forgets expanded
 folders, open files and open panels before the first render, saves that, and
 says so in a toast. A fourth crash in a row leaves the window alone; View >
 Reload is still there. A quiet spell of two minutes starts the count again.
@@ -189,7 +210,7 @@ token. Older servers without identity metadata remain supported. HTTP 401 and
 
 `/api/version` must advertise `api.runtime-url.v1` and report an
 `openchamberVersion` of 2 or later, or the host is Incompatible and the app asks
-to update OpenChamber on the server. A server before 2.0 runs OpenCode 1.x with
+to update Multichamber on the server. A server before 2.0 runs OpenCode 1.x with
 the same API version and capabilities, so its own version is the only thing that
 tells it apart. A version that does not parse does not block.
 
@@ -236,11 +257,11 @@ bun run lint:electron
 
 `electron:dev:bundled` builds and uses packaged web assets instead of the HMR server. Use it when testing behavior closer to a packaged app.
 
-Both dev variants run the staged OpenCode CLI from `resources/opencode-cli` (the one `prepare:opencode-cli` stages and packaged builds ship), not the `opencode` on PATH. `electron-dev.mjs` passes the directory to the backend as `OPENCHAMBER_BUNDLED_OPENCODE_CLI_DIR`; when the binary is missing it warns and falls back to PATH.
+Both dev variants run the staged OpenCode CLI from `resources/opencode-cli` (the one `prepare:opencode-cli` stages and packaged builds ship), not the `opencode` on PATH. `electron-dev.mjs` passes the directory to the backend as `MULTICHAMBER_BUNDLED_OPENCODE_CLI_DIR`; when the binary is missing it warns and falls back to PATH.
 
 ## Packaging
 
-Built-in SDK extensions are built by the web build into `@openchamber/web/server/built-in-extensions`. Electron Builder unpacks that directory from ASAR, and `main.mjs` supplies its physical path to the backend. This keeps both iframe assets and future Node service entries usable. Sources and the registry live in `packages/extensions`; user data remains in the instance data directory.
+Built-in SDK extensions are built by the web build into `@multichamber/web/server/built-in-extensions`. Electron Builder unpacks that directory from ASAR, and `main.mjs` supplies its physical path to the backend. This keeps both iframe assets and future Node service entries usable. Sources and the registry live in `packages/extensions`; user data remains in the instance data directory.
 
 From the repo root:
 
@@ -259,7 +280,7 @@ That runs, in order:
 
 Build output goes to `packages/electron/dist`.
 
-Electron Builder copies the `@openchamber/web` workspace package whole, ignoring its `files` field, so `build.files` in `package.json` excludes what the packaged runtime never loads: the web package's `dist` (packaged builds serve `Resources/web-dist` through `OPENCHAMBER_DIST_DIR`), its `src`, configs, tests and stray tarballs; TypeScript sources, source maps and Markdown other than licenses from every dependency; `bun-pty`, which only the Bun runtime imports; luxon builds other than `build/node` (CommonJS, for cron-parser) and `build/es6` (ESM, for the server); and `node-pty` prebuilds other than `${platform}-${arch}` (the Electron-rebuilt `build/Release` binary loads first; `${platform}` is the build host, which matches the target because `rebuild:native` already builds for the host OS). Keep these exclusions in the top-level `files`: Electron Builder treats a platform-level `files` list as its own file set, and one holding only exclusions copies the whole package directory into the archive. The `afterPack` hook then reads the `app.asar` header (`scripts/packaged-app-contents.cjs`) and fails the build when anything outside `node_modules` other than the bundled main files, `preload.mjs` and `package.json` is packed, when the web `dist` is packed, or when the bundled main files, the web server entry and manifest, or the unpacked git helpers are missing.
+Electron Builder copies the `@multichamber/web` workspace package whole, ignoring its `files` field, so `build.files` in `package.json` excludes what the packaged runtime never loads: the web package's `dist` (packaged builds serve `Resources/web-dist` through `MULTICHAMBER_DIST_DIR`), its `src`, configs, tests and stray tarballs; TypeScript sources, source maps and Markdown other than licenses from every dependency; `bun-pty`, which only the Bun runtime imports; luxon builds other than `build/node` (CommonJS, for cron-parser) and `build/es6` (ESM, for the server); and `node-pty` prebuilds other than `${platform}-${arch}` (the Electron-rebuilt `build/Release` binary loads first; `${platform}` is the build host, which matches the target because `rebuild:native` already builds for the host OS). Keep these exclusions in the top-level `files`: Electron Builder treats a platform-level `files` list as its own file set, and one holding only exclusions copies the whole package directory into the archive. The `afterPack` hook then reads the `app.asar` header (`scripts/packaged-app-contents.cjs`) and fails the build when anything outside `node_modules` other than the bundled main files, `preload.mjs` and `package.json` is packed, when the web `dist` is packed, or when the bundled main files, the web server entry and manifest, or the unpacked git helpers are missing.
 
 macOS builds produce `dmg` and `zip` artifacts. Windows builds produce an NSIS installer. Linux builds produce an AppImage, a `.deb` and an `.rpm` for the native x64 or arm64 host; the `.rpm` needs `rpmbuild` on the build host.
 
@@ -269,13 +290,13 @@ macOS packaging needs Xcode/build tools for notarized builds and icon asset comp
 
 Windows packaging needs NSIS support through `electron-builder`. If no Windows signing env is set, `package.mjs` disables code signing and builds an unsigned installer. `build.nsis.include` adds `resources/installer.nsh`, which declares the installer and uninstaller DPI-aware; without it Windows scales their windows as a bitmap and they look blurred at a display scale above 100% (#5010). Windows updates use `latest.yml` for x64 and the `latest-arm64.yml` channel for ARM64 so each installation resolves an architecture-matching installer.
 
-Linux packages must be built natively. Set `OPENCHAMBER_TARGET_ARCH=x64` or `OPENCHAMBER_TARGET_ARCH=arm64` when packaging; the build rejects a target that does not match the Linux host. The same target selects the bundled OpenCode CLI, native Electron rebuild, and Electron Builder architecture. Linux identity is stable across architectures: executable `openchamber`, desktop file `openchamber.desktop`, icon `openchamber`, and `StartupWMClass=openchamber`.
+Linux packages must be built natively. Set `MULTICHAMBER_TARGET_ARCH=x64` or `MULTICHAMBER_TARGET_ARCH=arm64` when packaging; the build rejects a target that does not match the Linux host. The same target selects the bundled OpenCode CLI, native Electron rebuild, and Electron Builder architecture. Linux identity is stable across architectures: executable `openchamber`, desktop file `multichamber.desktop`, icon `openchamber`, and `StartupWMClass=multichamber`.
 
-The Linux icon is the 512×512 `resources/icons/app-icon.png`, which the AppImage carries at `usr/share/icons/hicolor/512x512/apps/openchamber.png`. Keep it a PNG of at most 512×512: electron-builder's default AppImage path puts an SVG at `hicolor/scalable/` without the `apps/` directory, and the hicolor theme declares no size above 512, so in both cases launchers cannot resolve `Icon=openchamber` (#4766, #2934).
+The Linux icon is the 512×512 `resources/icons/app-icon.png`, which the AppImage carries at `usr/share/icons/hicolor/512x512/apps/multichamber.png`. Keep it a PNG of at most 512×512: electron-builder's default AppImage path puts an SVG at `hicolor/scalable/` without the `apps/` directory, and the hicolor theme declares no size above 512, so in both cases launchers cannot resolve `Icon=openchamber` (#4766, #2934).
 
-GNOME 46+ shows a window's icon only through a `.desktop` file that matches its app id (`openchamber`); a window without one gets the generic executable icon on Wayland and XWayland alike. So a packaged AppImage started directly, with no integration tool, writes its own launcher entry at startup (`linux-desktop-entry.mjs`): `$XDG_DATA_HOME/applications/openchamber.desktop`, marked `X-OpenChamber-Managed=true`, with the image's 512×512 icon copied to `$XDG_DATA_HOME/icons/hicolor/512x512/apps/openchamber.png`. Each start rewrites `Exec` and `TryExec` if the AppImage moved; `TryExec` hides the entry once the file is deleted. The app never touches an entry without that marker, and it withdraws its own once another integration exists: a launch with `DESKTOPINTEGRATION` set (Gear Lever), or another entry in `$XDG_DATA_HOME/applications`, where those tools write theirs, that is named `openchamber.desktop`, claims `StartupWMClass=openchamber`, or starts this AppImage. An entry the user hid with a menu editor (`NoDisplay=true` or `Hidden=true`) is left as it is. GNOME re-matches open windows when the entry appears, so the first launch gets its icon a few seconds after start. The `.deb` and `.rpm` install their own `openchamber.desktop` under `/usr/share/applications`, which a user entry of the same name would hide. So while a system data directory holds `openchamber.desktop`, a packaged start that is not an AppImage removes the marked user entry and an AppImage start writes none. An extracted AppImage, which also runs without `APPIMAGE`, leaves the entry alone when no package is installed.
+GNOME 46+ shows a window's icon only through a `.desktop` file that matches its app id (`multichamber`); a window without one gets the generic executable icon on Wayland and XWayland alike. So a packaged AppImage started directly, with no integration tool, writes its own launcher entry at startup (`linux-desktop-entry.mjs`): `$XDG_DATA_HOME/applications/multichamber.desktop`, marked `X-Multichamber-Managed=true`, with the image's 512×512 icon copied to `$XDG_DATA_HOME/icons/hicolor/512x512/apps/multichamber.png`. Each start rewrites `Exec` and `TryExec` if the AppImage moved; `TryExec` hides the entry once the file is deleted. The app never touches an entry without that marker, and it withdraws its own once another integration exists: a launch with `DESKTOPINTEGRATION` set (Gear Lever), or another entry in `$XDG_DATA_HOME/applications`, where those tools write theirs, that is named `multichamber.desktop`, claims `StartupWMClass=multichamber`, or starts this AppImage. An entry the user hid with a menu editor (`NoDisplay=true` or `Hidden=true`) is left as it is. GNOME re-matches open windows when the entry appears, so the first launch gets its icon a few seconds after start. The `.deb` and `.rpm` install their own `multichamber.desktop` under `/usr/share/applications`, which a user entry of the same name would hide. So while a system data directory holds `multichamber.desktop`, a packaged start that is not an AppImage removes the marked user entry and an AppImage start writes none. An extracted AppImage, which also runs without `APPIMAGE`, leaves the entry alone when no package is installed.
 
-The `.deb` and `.rpm` install to `/opt/OpenChamber` and use their own `resources/linux/after-install.tpl` and `after-remove.tpl`: electron-builder's scripts minus the `/usr/bin/openchamber` link, because `openchamber` on `PATH` is the CLI of `@openchamber/web` and the link would replace it. The menu entry starts `/opt/OpenChamber/openchamber`. The package `Maintainer` and `Homepage` come from `linux.maintainer` and `homepage` in `package.json`; `fpm` refuses to build a `.deb` without them.
+The `.deb` and `.rpm` install to `/opt/Multichamber` and use their own `resources/linux/after-install.tpl` and `after-remove.tpl`: electron-builder's scripts minus the `/usr/bin/openchamber` link, because `openchamber` on `PATH` is the CLI of `@multichamber/web` and the link would replace it. The menu entry starts `/opt/Multichamber/openchamber`. The package `Maintainer` and `Homepage` come from `linux.maintainer` and `homepage` in `package.json`; `fpm` refuses to build a `.deb` without them.
 
 After packaging, run `bun run --cwd packages/electron verify:linux-appimage`. The verifier extracts the final AppImage and checks its ELF architecture, desktop identity, theme icon and `.DirIcon`, Electron executable, pinned OpenCode CLI version and architecture, and all packaged native `.node` modules.
 
@@ -283,7 +304,7 @@ Running a packaged Linux AppImage requires FUSE (`libfuse.so.2`, typically `libf
 
 Desktop clears AppImage `ARGV0` from `process.env` before probing the login shell and starting the in-process server. Leaving it set makes zsh rewrite argv[0] for integrated-terminal and managed-OpenCode child commands to the AppImage path.
 
-The variables Desktop sets for the in-process server (`OPENCHAMBER_RUNTIME`, `OPENCHAMBER_HOST`, the UI password, and the rest in `main.mjs`) go through `assignInjectedEnv` (`packages/web/server/lib/injected-env.js`), which records their names in `OPENCHAMBER_INJECTED_ENV`. The integrated terminal and agent shells inherit the record, so `openchamber startup enable` run from them keeps Desktop's configuration out of the startup service (#4604). Add a new variable the same way; a bare `process.env.X = ...` would leak into the service again.
+The variables Desktop sets for the in-process server (`MULTICHAMBER_RUNTIME`, `MULTICHAMBER_HOST`, the UI password, and the rest in `main.mjs`) go through `assignInjectedEnv` (`packages/web/server/lib/injected-env.js`), which records their names in `MULTICHAMBER_INJECTED_ENV`. The integrated terminal and agent shells inherit the record, so `openchamber startup enable` run from them keeps Desktop's configuration out of the startup service (#4604). Add a new variable the same way; a bare `process.env.X = ...` would leak into the service again.
 
 The AppImage launcher also prepends its own directories to `PATH`, `LD_LIBRARY_PATH`, `GSETTINGS_SCHEMA_DIR` and `XDG_DATA_DIRS`, leaving a trailing `:` when a variable was unset. Desktop keeps them in its own process and removes them only from the integrated terminal, the managed OpenCode server, and the git environment the server builds (`stripAppImageLauncherEnv` in `packages/web/server/lib/inherited-env.js`), so user tools, agent commands and git hooks started from those paths see the user's values (#4177). `XDG_DATA_DIRS` keeps the standard system directories the launcher adds around the user's value.
 
@@ -303,13 +324,13 @@ The macOS menu bar item is enabled by default and can be disabled in General set
 
 ## Bundled OpenCode CLI
 
-Packaged Desktop builds include the official OpenCode CLI release pinned by `opencodeCli.version` in `packages/electron/package.json` (OpenChamber requires OpenCode 2.x). OpenCode 2.x ships on npm rather than as GitHub release assets, so `prepare:opencode-cli` downloads the platform package tarball (`@opencode/cli-<os>-<arch>`, the same one OpenCode's own installer uses), caches it under `packages/electron/.cache/opencode-cli`, stages `opencode` or `opencode.exe` into `resources/opencode-cli`, and verifies `opencode --version` before packaging. Re-running the step is fast when the staged binary already matches the pinned version. The target architecture comes from `OPENCHAMBER_TARGET_ARCH` or `ELECTRON_BUILDER_ARCH`, falling back to the build host. A Windows build for another architecture does not run the binary, because the arm64 release job runs on an x64 runner that cannot start it; there the step checks the version in the package's `package.json` instead; on Windows `verify:opencode-cli` and `verify:opencode-cli:packaged` also read the binary's PE header (`scripts/windows-executable.mjs`) and fail when it was built for another architecture.
+Packaged Desktop builds include the official OpenCode CLI release pinned by `opencodeCli.version` in `packages/electron/package.json` (Multichamber requires OpenCode 2.x). OpenCode 2.x ships on npm rather than as GitHub release assets, so `prepare:opencode-cli` downloads the platform package tarball (`@opencode/cli-<os>-<arch>`, the same one OpenCode's own installer uses), caches it under `packages/electron/.cache/opencode-cli`, stages `opencode` or `opencode.exe` into `resources/opencode-cli`, and verifies `opencode --version` before packaging. Re-running the step is fast when the staged binary already matches the pinned version. The target architecture comes from `MULTICHAMBER_TARGET_ARCH` or `ELECTRON_BUILDER_ARCH`, falling back to the build host. A Windows build for another architecture does not run the binary, because the arm64 release job runs on an x64 runner that cannot start it; there the step checks the version in the package's `package.json` instead; on Windows `verify:opencode-cli` and `verify:opencode-cli:packaged` also read the binary's PE header (`scripts/windows-executable.mjs`) and fail when it was built for another architecture.
 
 Managed local Desktop startup prefers OpenCode binaries in this order:
 
 0. `opencodeBinary` in the machine policy file, when an administrator pinned one. It has no fallback: an unusable pin stops startup instead of trying the entries below (see `packages/web/server/lib/enterprise-mode.js`).
 1. `settings.opencodeBinary`.
-2. Environment overrides: `OPENCODE_BINARY`, `OPENCODE_PATH`, `OPENCHAMBER_OPENCODE_PATH`, or `OPENCHAMBER_OPENCODE_BIN`.
+2. Environment overrides: `OPENCODE_BINARY`, `OPENCODE_PATH`, `MULTICHAMBER_OPENCODE_PATH`, or `MULTICHAMBER_OPENCODE_BIN`.
 3. The bundled Desktop CLI in `process.resourcesPath/opencode-cli`.
 4. System installs discovered from PATH.
 5. Known npm/Bun/Homebrew/Scoop/Chocolatey and other standard install locations.
@@ -319,7 +340,7 @@ Use an explicit override when testing a different OpenCode CLI build or when a u
 
 ## Bundled ripgrep
 
-Find in files (the contents mode of the sidebar's file search) runs ripgrep, which `@openchamber/web` gets from `@vscode/ripgrep`. That package installs one platform package (`@vscode/ripgrep-<os>-<arch>`) for the machine running `bun install`, so a desktop build for the other architecture would ship the wrong binary. `prepare:ripgrep` downloads the target architecture's platform package tarball from npm at the version the lockfile pins, checks the tarball, downloaded or cached, against the sha512 that `bun.lock` records for that package, caches it under `packages/electron/.cache/ripgrep`, stages `rg` or `rg.exe` into `resources/ripgrep`, and runs `rg --version` on it. A Windows arm64 build runs on an x64 runner, so its workflow step passes `OPENCHAMBER_TARGET_ARCH` and the version run is skipped there. `extraResources` ships that directory as `Resources/ripgrep`, and `build.files` keeps every `@vscode/ripgrep-*` platform package out of the asar. The `afterPack` check fails the build when the staged binary is missing or a platform package was packed; the Linux AppImage verifier also checks the binary's ELF architecture.
+Find in files (the contents mode of the sidebar's file search) runs ripgrep, which `@multichamber/web` gets from `@vscode/ripgrep`. That package installs one platform package (`@vscode/ripgrep-<os>-<arch>`) for the machine running `bun install`, so a desktop build for the other architecture would ship the wrong binary. `prepare:ripgrep` downloads the target architecture's platform package tarball from npm at the version the lockfile pins, checks the tarball, downloaded or cached, against the sha512 that `bun.lock` records for that package, caches it under `packages/electron/.cache/ripgrep`, stages `rg` or `rg.exe` into `resources/ripgrep`, and runs `rg --version` on it. A Windows arm64 build runs on an x64 runner, so its workflow step passes `MULTICHAMBER_TARGET_ARCH` and the version run is skipped there. `extraResources` ships that directory as `Resources/ripgrep`, and `build.files` keeps every `@vscode/ripgrep-*` platform package out of the asar. The `afterPack` check fails the build when the staged binary is missing or a platform package was packed; the Linux AppImage verifier also checks the binary's ELF architecture.
 
 The server (`packages/web/server/lib/fs/ripgrep.js`) looks for ripgrep in this order: `Resources/ripgrep` in a packaged build, the installed `@vscode/ripgrep` platform package (desktop development, web installs, Docker), then `rg` on the PATH. Without any of them the search route answers 501 and the file tree says the server cannot search contents.
 
@@ -327,19 +348,19 @@ The server (`packages/web/server/lib/fs/ripgrep.js`) looks for ripgrep in this o
 
 | Variable | Use |
 |----------|-----|
-| `OPENCHAMBER_ELECTRON_DEV=1` | Marks the runtime as desktop development mode |
-| `OPENCHAMBER_ELECTRON_USE_BUNDLED_UI=1` | Uses staged web assets instead of the HMR dev server |
-| `OPENCHAMBER_SKIP_LOCAL_SERVER=1` | Skips the in-process local OpenChamber server and uses the configured default remote instance; Desktop imports this from the user's login-shell environment, and packaged/bundled UI remains available for connection recovery. The host switcher then lists no Local entry and names the window's address as the current instance. Every start that skips the server, or opens `OPENCHAMBER_SERVER_URL`, says so in `main.log`, because a launcher that inherits these variables leaves no other trace |
-| `OPENCHAMBER_HMR_UI_PORT` | Preferred Vite UI port for desktop dev, default `5173` |
-| `OPENCHAMBER_HMR_API_PORT` | Preferred API port for desktop dev, default `3901` |
-| `OPENCHAMBER_ELECTRON_REMOTE_DEBUGGING_PORT` | Development only: opens Chromium's DevTools protocol on this loopback port so a debugger can attach to the dev window; ignored in packaged builds |
-| `OPENCHAMBER_RUNTIME=desktop` | Set by Electron before starting the web server |
-| `OPENCHAMBER_OPENCODE_CLI_VERSION` | Optional packaging override for the bundled OpenCode CLI version; defaults to `opencodeCli.version` in `packages/electron/package.json` |
-| `OPENCHAMBER_TARGET_ARCH` | Explicit desktop package architecture (`x64` or `arm64`); Linux requires it to match the native host |
-| `OPENCHAMBER_DESKTOP_NOTIFY=true` | Enables desktop notification flow in the web server |
-| `OPENCHAMBER_SKIP_API_COMPRESSION=true` | Defaulted by Desktop to reduce local CPU overhead |
-| `OPENCHAMBER_STARTUP_PERF=1` | Enables privacy-safe startup phase timings in Desktop/server logs; disabled by default |
-| `OPENCHAMBER_DESKTOP_USER_DATA_DIR` | Test hook used by `profile:startup`: moves the Electron profile (single-instance lock, Chromium caches) so a measured launch does not share it with the installed app |
+| `MULTICHAMBER_ELECTRON_DEV=1` | Marks the runtime as desktop development mode |
+| `MULTICHAMBER_ELECTRON_USE_BUNDLED_UI=1` | Uses staged web assets instead of the HMR dev server |
+| `MULTICHAMBER_SKIP_LOCAL_SERVER=1` | Skips the in-process local Multichamber server and uses the configured default remote instance; Desktop imports this from the user's login-shell environment, and packaged/bundled UI remains available for connection recovery. The host switcher then lists no Local entry and names the window's address as the current instance. Every start that skips the server, or opens `MULTICHAMBER_SERVER_URL`, says so in `main.log`, because a launcher that inherits these variables leaves no other trace |
+| `MULTICHAMBER_HMR_UI_PORT` | Preferred Vite UI port for desktop dev, default `5173` |
+| `MULTICHAMBER_HMR_API_PORT` | Preferred API port for desktop dev, default `3901` |
+| `MULTICHAMBER_ELECTRON_REMOTE_DEBUGGING_PORT` | Development only: opens Chromium's DevTools protocol on this loopback port so a debugger can attach to the dev window; ignored in packaged builds |
+| `MULTICHAMBER_RUNTIME=desktop` | Set by Electron before starting the web server |
+| `MULTICHAMBER_OPENCODE_CLI_VERSION` | Optional packaging override for the bundled OpenCode CLI version; defaults to `opencodeCli.version` in `packages/electron/package.json` |
+| `MULTICHAMBER_TARGET_ARCH` | Explicit desktop package architecture (`x64` or `arm64`); Linux requires it to match the native host |
+| `MULTICHAMBER_DESKTOP_NOTIFY=true` | Enables desktop notification flow in the web server |
+| `MULTICHAMBER_SKIP_API_COMPRESSION=true` | Defaulted by Desktop to reduce local CPU overhead |
+| `MULTICHAMBER_STARTUP_PERF=1` | Enables privacy-safe startup phase timings in Desktop/server logs; disabled by default |
+| `MULTICHAMBER_DESKTOP_USER_DATA_DIR` | Test hook used by `profile:startup`: moves the Electron profile (single-instance lock, Chromium caches) so a measured launch does not share it with the installed app |
 | `OPENCODE_HOST` / `OPENCODE_PORT` / `OPENCODE_SKIP_START` | Connect Desktop to an external OpenCode server instead of starting one locally |
 
 ## Native Features Owned Here
@@ -385,7 +406,8 @@ The server (`packages/web/server/lib/fs/ripgrep.js`) looks for ripgrep in this o
 - SSH host import, connections, logs, and port forwarding.
 - SSH uses OpenSSH ControlMaster on macOS/Linux. Windows uses independent hidden OpenSSH processes for setup commands and each long-lived forward because Win32 OpenSSH does not support ControlMaster reliably.
 - With ControlMaster, every forward, the main one included, is added with `ssh -O forward`: the master holds the listener, and that command's exit status is the answer. A `-N -L` client through the master would open a remote login shell and exit with that shell's status, which says nothing about the forward. The connection monitor then watches the local port and the master.
-- A managed SSH instance runs one server per remote host. The server outlives the SSH session by default (`keepRunning`), so every connect first asks the remote CLI (`openchamber status --json`) what is already running and reuses a server that fits the instance's password. `/api/system/info` is public, so an answer proves nothing about the password: the server has to accept it on `/auth/session`, or have none when the instance has none. Among the servers that fit, a CLI-started daemon of another app version, or one whose bind address no longer matches the instance's network setting, is stopped and replaced. A registered server that is passed over gets a line in the connect log saying why. Foreground servers and servers with another password are neither reused nor stopped. With `keepRunning` off, disconnecting stops an adopted daemon the same way it stops one this session started. The server is shared by every client that fits it, so that stop also ends it for any other client still connected. Starting a server without this lookup leaks one server plus its opencode per reconnect.
+- Managed SSH installs use the exact `multichamber-web-<version>.tgz` release archive from `jibanez-staticduo/multichamber`, including its SDK. Discovery uses only the `multichamber` executable and a separate `~/.multichamber/npm-global` prefix. An official `openchamber` binary is never adopted just because its version matches. A completed install must expose the requested Multichamber version before a server can start.
+- A managed SSH instance runs one server per remote host. The server outlives the SSH session by default (`keepRunning`), so every connect first asks the remote CLI (`multichamber status --json`) what is already running and reuses a server that fits the instance's password. `/api/system/info` is public, so an answer proves nothing about the password: the server has to accept it on `/auth/session`, or have none when the instance has none. Among the servers that fit, a CLI-started daemon of another app version, or one whose bind address no longer matches the instance's network setting, is stopped and replaced. A registered server that is passed over gets a line in the connect log saying why. Foreground servers and servers with another password are neither reused nor stopped. With `keepRunning` off, disconnecting stops an adopted daemon the same way it stops one this session started. The server is shared by every client that fits it, so that stop also ends it for any other client still connected. Starting a server without this lookup leaks one server plus its opencode per reconnect.
 - Tunnel lifecycle integration through the web server runtime.
 - Remote dev-server previews use a direct WebSocket tunnel when the instance has an HTTP address. Relay-only instances keep the encrypted relay transport in the renderer and bridge its raw bytes to the browser panel through a local Electron listener.
 - Auto-update checks, downloads, and restart/apply flow.
@@ -433,15 +455,15 @@ Add new native capabilities in this order:
 
 ## Logs And Data
 
-Electron uses `electron-log`. In development, console logs are also visible in the terminal. In packaged apps, logs are written through the platform log path for the `OpenChamber` app name.
+Electron uses `electron-log`. In development, console logs are also visible in the terminal. In packaged apps, logs are written through the platform log path for the `Multichamber` app name.
 
-Development builds use a separate user data directory named `OpenChamber Dev`, so dev state does not overwrite normal packaged app state.
+Development builds use a separate user data directory named `Multichamber Dev`, so dev state does not overwrite normal packaged app state.
 
 ## Things To Be Careful With
 
 - Keep desktop-specific code in this package. Do not move OpenCode feature backend logic into Electron.
 - Use hidden Windows process launches for background helpers. Avoid visible console flashes.
-- Keep `@openchamber/web`, `bun-pty`, `node-pty`, and native modules external in `bundle-main.mjs`; bundling them can break Electron startup. Keep `early-startup.mjs` external too: the entry and main bundles must share its one instance.
+- Keep `@multichamber/web`, `bun-pty`, `node-pty`, and native modules external in `bundle-main.mjs`; bundling them can break Electron startup. Keep `early-startup.mjs` external too: the entry and main bundles must share its one instance.
 - Keep `entry.mjs` small. Anything imported there delays Electron's `ready`; everything else belongs behind the `main.mjs` import.
 - Rebuild native modules after dependency or Electron version changes.
 - Test both HMR dev mode and bundled UI mode when changing startup, preload, routing, or packaged asset behavior.
@@ -460,3 +482,12 @@ For full repo validation before shipping:
 bun run type-check
 bun run lint
 ```
+
+## Brand assets
+
+Run `node scripts/generate-brand-icons.mjs` from the repository root after changing
+`packages/ui/src/assets/multichamber-brand.png`. The script prepares web, mobile,
+and desktop icons from that image. On macOS, run `bun run generate:macos-icon`
+inside this package before packaging. Packaging rejects an asset catalog built
+from older icon inputs. Internal IPC and workspace names retain their legacy
+identifiers for compatibility; they do not select the installed app profile.

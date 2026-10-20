@@ -3384,7 +3384,7 @@ export function registerGitHubRoutes(app, options = {}) {
   return Object.freeze({
     /**
      * The account GitHub reads use when none is named: the gh login while the
-     * user has switched to it, else OpenChamber's active account. Null when
+     * user has switched to it, else Multichamber's active account. Null when
      * neither is there.
      */
     readCurrentAccountId: async () => {

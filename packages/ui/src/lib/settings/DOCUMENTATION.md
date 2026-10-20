@@ -2,13 +2,13 @@
 
 ## Purpose
 
-`packages/ui/src/lib/settings` owns what an OpenChamber setting *is*: its key, its scope, how a value is parsed at the boundary, and where the UI keeps its live copy. The storage and sync mechanics (debounced writes, mirrors, bootstrap adoption) live in `lib/persistence.ts` and consume this module; the Settings pages consume the stores.
+`packages/ui/src/lib/settings` owns what an Multichamber setting *is*: its key, its scope, how a value is parsed at the boundary, and where the UI keeps its live copy. The storage and sync mechanics (debounced writes, mirrors, bootstrap adoption) live in `lib/persistence.ts` and consume this module; the Settings pages consume the stores.
 
 ## Modules
 
 - `registry.ts` — the settings registry. One `SETTINGS_REGISTRY` table plus two key lists (`LOCAL_DEVICE_KEYS`, `DESKTOP_SHELL_KEYS`) and the derived helpers other modules use: `DesktopSettings` (the document type), `parseSettingsDocument`, `applySettingsToStores`, `AUTO_SAVE_KEYS` / `readAutoSaveSnapshot`, `MIRRORED_KEYS`, `buildSettingsRegistrySnapshot`.
 - `parsers.ts` — value-level boundary parsers (zod schemas wrapped as `SettingsParser<T>`). `undefined` means "reject", never "default".
-- `registry-snapshot.ts` — renders the plain-JSON snapshot for the two consumers that cannot import the UI's TypeScript: the OpenChamber server (`packages/web/server/lib/opencode/settings-registry.json`) and the VS Code extension host (`packages/vscode/src/settings-registry.json`). Regenerate with `bun run settings-registry:generate`; `registry.test.ts` fails when a checked-in copy is stale.
+- `registry-snapshot.ts` — renders the plain-JSON snapshot for the two consumers that cannot import the UI's TypeScript: the Multichamber server (`packages/web/server/lib/opencode/settings-registry.json`) and the VS Code extension host (`packages/vscode/src/settings-registry.json`). Regenerate with `bun run settings-registry:generate`; `registry.test.ts` fails when a checked-in copy is stale.
 - `metadata.ts`, `search.ts` — Settings page metadata and the search index (unchanged by the registry; see `.agents/skills/settings-ui-patterns`).
 
 ## Invariants
@@ -32,3 +32,18 @@
 4. Add the Settings control and search entry per `.agents/skills/settings-ui-patterns`.
 
 `DesktopSettings`, `SettingsPayload`, the client sanitizer, the mirror, the apply step and the auto-save all follow from step 1; there is no second list to update.
+
+
+## Session engine defaults
+
+`defaultHarness` selects the engine for new sessions. `claudeDefaultModel`,
+`claudeDefaultEffort`, `claudeDefaultMode` and the corresponding `codexDefault*`
+keys are independent profile preferences. They never change the active session
+or OpenCode provider configuration. Empty values clear a preference; the native
+catalog supplies the effective fallback. The server validates explicit values.
+
+`harnesses.ts` parses the server's `/api/harnesses` status and native catalogs.
+The Sessions and About sections check updates only on user request. Native
+updates appear only for an available update and require confirmation; OpenCode
+keeps its existing update flow. Manual owners show their installation command. Runtime switches discard old status responses. Native
+credentials remain with each engine's CLI.

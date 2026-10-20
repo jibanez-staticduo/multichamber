@@ -1,7 +1,7 @@
 ---
 name: communication-style
 description: Rules for everything a person reads, from your own replies in a session to documentation, UI copy, PR and issue comments, release notes, and posts. Strips AI-generated patterns so the text reads like a person wrote it.
-author: poteto (pstack), extended with OpenChamber's own drafts
+author: poteto (pstack), extended with Multichamber's own drafts
 ---
 
 # Communication style

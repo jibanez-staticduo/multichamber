@@ -10,7 +10,7 @@ const identity: Omit<MultiRunIdentity, 'key'> = {
 
 const recordSchema = z.record(z.string(), z.json());
 
-/** The RFC 7386 merge the OpenChamber metadata route performs server-side. */
+/** The RFC 7386 merge the Multichamber metadata route performs server-side. */
 const mergePatch = (current: Metadata, patch: Metadata): Metadata => {
   const base: Metadata = { ...current };
   for (const [key, value] of Object.entries(patch)) {
@@ -28,12 +28,14 @@ let stored: Metadata = {};
 type CreationFailure = { rejectUpdate?: boolean; omitSavedMarker?: boolean; switchAfterCreate?: boolean };
 let options: CreationFailure = {};
 let current = true;
+let createdSelection: { model?: { providerID: string; id: string; variant?: string }; agent?: string; metadata?: Metadata } = {};
 
 mock.module('@/lib/opencode/client', () => ({
   opencodeClient: {
-    createSession: async (params: { title?: string; metadata?: Metadata }, directory?: string | null): Promise<Session> => {
+    createSession: async (params: { title?: string; metadata?: Metadata; model?: { providerID: string; id: string; variant?: string }; agent?: string }, directory?: string | null): Promise<Session> => {
       expect(directory).toBe('/repo');
       calls.push('create');
+      createdSelection = params;
       // What another feature already stored for this session before creation.
       stored = mergePatch({
         external: 'preserve',
@@ -85,6 +87,32 @@ describe('multi-run creation', () => {
     expect(result.metadata?.openchamber).toMatchObject({ goal: { status: 'active' }, reviewSessionID: 'review-id' });
     expect(getMultiRunIdentity({ ...result, id: 'fork' })).toBeNull();
     expect(testApi.calls).toEqual(['create', 'metadata']);
+  });
+
+  for (const harness of ['opencode', 'claude', 'codex'] as const) test(`creates ${harness} with its own backend and selection`, async () => {
+    const testApi = fixture();
+    const result = await createMultiRunSession({ title: 'lane', directory: '/repo', identity: { ...identity, harness, mode: harness === 'opencode' ? undefined : 'full-access' }, selection: { model: { providerID: 'codex', id: 'same-name', variant: 'high' }, agent: 'build' } }, testApi.assertCurrent);
+    expect(getMultiRunIdentity(result)?.harness).toBe(harness);
+    if (harness === 'opencode') {
+      expect(createdSelection.agent).toBe('build');
+      expect(createdSelection.metadata?.backend).toBeUndefined();
+      expect(createdSelection.model?.providerID).toBe('codex');
+    } else {
+      expect(createdSelection.agent).toBeUndefined();
+      expect(createdSelection.model?.providerID).toBe(harness);
+      expect(createdSelection.metadata?.backend).toBe(harness);
+      expect(createdSelection.metadata?.[harness]).toEqual({ model: 'same-name', effort: 'high', mode: 'full-access' });
+    }
+  });
+
+  test('a mixed native run keeps engines distinct even when provider and model names collide', async () => {
+    const testApi = fixture();
+    const backends = [];
+    for (const harness of ['opencode', 'claude', 'codex'] as const) {
+      await createMultiRunSession({ title: harness, directory: '/repo', identity: { ...identity, harness, providerID: 'codex', modelID: 'same' } }, testApi.assertCurrent);
+      backends.push(createdSelection.metadata?.backend ?? 'opencode');
+    }
+    expect(backends).toEqual(['opencode', 'claude', 'codex']);
   });
 
   for (const failure of [{ rejectUpdate: true }, { omitSavedMarker: true }]) test(`rejects an unbound session: ${JSON.stringify(failure)}`, async () => {

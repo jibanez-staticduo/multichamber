@@ -48,7 +48,7 @@ describe('Linear auth storage', () => {
 
   it('returns disconnected when no auth file exists', () => {
     expect(getLinearAuth()).toBeNull();
-    expect(toLinearPublicStatus(null)).toEqual({ connected: false });
+    expect(toLinearPublicStatus(null)).toEqual({ connected: false, configured: false });
   });
 
   it('persists tokens without exposing them on the public status', () => {
@@ -58,7 +58,7 @@ describe('Linear auth storage', () => {
       expiresAt: Date.now() + 60_000,
       scope: 'read,write',
       user: { id: 'user-1', name: 'Ada', displayName: 'Ada Lovelace', email: 'ada@example.com', avatarUrl: 'https://example.com/a.png' },
-      organization: { id: 'org-1', name: 'OpenChamber', urlKey: 'openchamber' },
+      organization: { id: 'org-1', name: 'Multichamber', urlKey: 'openchamber' },
     });
 
     const stored = getLinearAuth();
@@ -75,11 +75,11 @@ describe('Linear auth storage', () => {
         email: 'ada@example.com',
         avatarUrl: 'https://example.com/a.png',
       },
-      organization: { id: 'org-1', name: 'OpenChamber', urlKey: 'openchamber' },
+      organization: { id: 'org-1', name: 'Multichamber', urlKey: 'openchamber' },
       scope: 'read,write',
       workspaces: [{
         id: 'org-1',
-        name: 'OpenChamber',
+        name: 'Multichamber',
         urlKey: 'openchamber',
         current: true,
         user: {
@@ -135,15 +135,15 @@ describe('Linear auth storage', () => {
     expect(isLinearAccessTokenStale(Date.now() + 10 * 60_000)).toBe(false);
   });
 
-  it('uses the baked-in client id unless env or settings override it', () => {
+  it('requires a client id unless env or settings configure one', () => {
     expect(getLinearClientId()).toBe(DEFAULT_LINEAR_CLIENT_ID_VALUE);
     process.env.OPENCHAMBER_LINEAR_CLIENT_ID = 'env-client';
     expect(getLinearClientId()).toBe('env-client');
   });
 
-  it('uses the stable public broker callback by default', () => {
+  it('requires an explicitly configured redirect or broker', () => {
     process.env.OPENCHAMBER_PORT = '3001';
-    expect(getLinearRedirectUri()).toBe('https://api.openchamber.dev/v1/oauth/linear/callback');
+    expect(getLinearRedirectUri()).toBe('');
     process.env.OPENCHAMBER_LINEAR_REDIRECT_URI = 'http://localhost:3000/linear/oauth/callback';
     expect(getLinearRedirectUri()).toBe('http://localhost:3000/linear/oauth/callback');
   });
@@ -161,7 +161,7 @@ describe('Linear auth storage', () => {
       accessToken: 'legacy-access',
       refreshToken: 'legacy-refresh',
       user: { id: 'user-1', name: 'Ada' },
-      organization: { id: 'org-1', name: 'OpenChamber', urlKey: 'openchamber' },
+      organization: { id: 'org-1', name: 'Multichamber', urlKey: 'openchamber' },
     }), 'utf8');
 
     const stored = getLinearAuth();
@@ -216,7 +216,7 @@ describe('Linear auth storage', () => {
     setLinearAuth({
       accessToken: 'access-1',
       user: { id: 'user-1', name: 'Ada' },
-      organization: { id: 'org-1', name: 'OpenChamber', urlKey: 'openchamber' },
+      organization: { id: 'org-1', name: 'Multichamber', urlKey: 'openchamber' },
     });
     const file = JSON.parse(fs.readFileSync(getLinearAuthFilePath(), 'utf8'));
     file.workspaces[0].authorizedAt = 111;
@@ -225,7 +225,7 @@ describe('Linear auth storage', () => {
     setLinearAuth({
       accessToken: 'access-1',
       user: { id: 'user-1', name: 'Ada' },
-      organization: { id: 'org-1', name: 'OpenChamber', urlKey: 'openchamber' },
+      organization: { id: 'org-1', name: 'Multichamber', urlKey: 'openchamber' },
       workspaceId: 'org-1',
     }, { activate: false });
     expect(getLinearAuth().authorizedAt).toBe(111);

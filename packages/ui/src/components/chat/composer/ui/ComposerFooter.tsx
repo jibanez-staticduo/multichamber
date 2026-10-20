@@ -1,3 +1,11 @@
+import { NativeDraftModelControls } from '../../NativeDraftModelControls';
+import { useSessionUIStore } from '@/sync/session-ui-store';
+import { SESSION_ENGINE_INFO } from '@/lib/sessionEngine';
+import { ClaudeAgentMap } from '../../ClaudeAgentMap';
+import { ClaudeTodoPill } from '../../ClaudeTodos';
+import { useSessionEngine } from '@/hooks/useSessionEngine';
+import { ClaudeModelControls } from '../../ClaudeModelControls';
+import { CodexModelControls } from '../../CodexModelControls';
 /**
  * The composer's footer row.
  *
@@ -96,6 +104,7 @@ interface ComposerFooterProps {
 /** Quiet note beside the send button while a sent message waits for OpenCode to start. */
 function OpenCodeStartupNote({ className }: { className?: string }) {
     const { t } = useI18n();
+
     return (
         <span
             role="status"
@@ -109,6 +118,7 @@ function OpenCodeStartupNote({ className }: { className?: string }) {
 
 function ComposerFooterView(props: ComposerFooterProps) {
     const { t } = useI18n();
+
     const {
         isMobile,
         isVSCode,
@@ -159,6 +169,9 @@ function ComposerFooterView(props: ComposerFooterProps) {
         waitingForOpenCode,
     } = props;
 
+    const liveEngine = useSessionEngine(currentSessionId, directory);
+    const draftHarness = useSessionUIStore((state) => !currentSessionId && state.newSessionDraft.open ? state.newSessionDraft.harness : undefined);
+    const sessionEngine = draftHarness ? SESSION_ENGINE_INFO[draftHarness] : liveEngine;
     const dictationEnabled = useConfigStore((state) => state.dictationEnabled);
     const [dictationSupported] = React.useState(() => !isVSCodeRuntime() && isDictationCaptureSupported());
     const showDictation = dictationEnabled && dictationSupported;
@@ -205,7 +218,7 @@ function ComposerFooterView(props: ComposerFooterProps) {
                                 permissionMode={permissionMode}
                                 handlePermissionModeCycle={onCyclePermissionMode}
                             />
-                            {!isBtw ? <SessionGoalButton
+                            {!isBtw && sessionEngine.capabilities.goals ? <SessionGoalButton
                                 sessionId={currentSessionId}
                                 directory={directory}
                                 draftOpen={newSessionDraftOpen}
@@ -285,7 +298,7 @@ function ComposerFooterView(props: ComposerFooterProps) {
                             handlePermissionModeCycle={onCyclePermissionMode}
                             withTooltip
                         />
-                        {!isBtw ? <SessionGoalButton
+                        {!isBtw && sessionEngine.capabilities.goals ? <SessionGoalButton
                             sessionId={currentSessionId}
                             directory={directory}
                             draftOpen={newSessionDraftOpen}
@@ -297,7 +310,8 @@ function ComposerFooterView(props: ComposerFooterProps) {
                     </div>
                     <div className={cn('flex items-center flex-1 justify-end', footerGapClass, 'md:gap-x-3')} data-dictation-chain="true">
                         {waitingForOpenCode ? <OpenCodeStartupNote className="flex-shrink-0" /> : null}
-                        {parallelRun ? <div className="flex-1" /> : isBtw ? <ModelControls className="flex-1 min-w-0 justify-end" sessionId={modelSessionId ?? null} selection={btwSelection} /> : pinnedSelection ? <ModelControls className="flex-1 min-w-0 justify-end" sessionId={currentSessionId} selection={pinnedSelection} agentSelectable /> : <MemoModelControls className={cn('flex-1 min-w-0 justify-end')} onRunInParallel={onRunInParallel} />}
+                        {currentSessionId && sessionEngine.id === 'claude' ? <><ClaudeTodoPill sessionId={currentSessionId} directory={directory} /><ClaudeAgentMap sessionId={currentSessionId} directory={directory} /></> : null}
+                        {parallelRun ? <div className="flex-1" /> : isBtw ? <ModelControls className="flex-1 min-w-0 justify-end" sessionId={modelSessionId ?? null} selection={btwSelection} /> : !currentSessionId && sessionEngine.id !== 'opencode' ? <NativeDraftModelControls harness={sessionEngine.id} /> : currentSessionId && sessionEngine.id === 'claude' ? <ClaudeModelControls sessionId={currentSessionId} directory={directory} /> : currentSessionId && sessionEngine.id === 'codex' ? <CodexModelControls sessionId={currentSessionId} directory={directory} /> : pinnedSelection ? <ModelControls className="flex-1 min-w-0 justify-end" sessionId={currentSessionId} selection={pinnedSelection} agentSelectable /> : <MemoModelControls className={cn('flex-1 min-w-0 justify-end')} onRunInParallel={onRunInParallel} />}
                         {!isBtw ? <MemoComposerDictation
                             radius={chatInputRadius}
                             isMobile={isMobile}

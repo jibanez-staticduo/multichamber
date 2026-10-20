@@ -1,5 +1,5 @@
 import type { Session } from '@/lib/opencode/model';
-import { isJsonValue, type JsonValue } from '@openchamber/sdk';
+import { isJsonValue, type JsonValue } from '@multichamber/sdk';
 import { getSessionMetadata } from './sessionReviewMetadata';
 
 /**

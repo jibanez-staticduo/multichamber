@@ -116,3 +116,12 @@ describe('computeContextUsage', () => {
     expect(measured(usage).totalTokens).toBe(12_100);
   });
 });
+
+
+test('native current request wins over cumulative cost and compaction clears the old percentage', () => {
+  const messages = [{ id: 'native', role: 'assistant', providerID: 'codex', tokens: { input: 1_500_000 }, metadata: { codex: { context: { state: 'measured', tokens: 353093, window: 997500 } } } }];
+  expect(computeContextUsage(messages, 200_000)).toMatchObject({ state: 'measured', totalTokens: 353093, limit: 997500 });
+  expect(computeContextUsage(messages, 200_000, { state: 'compacted', window: 997500 })).toEqual({ state: 'compacted', limit: 997500 });
+  expect(computeContextUsage(messages, 200_000, { state: 'measured', tokens: 100, window: null })).toBeNull();
+  expect(computeContextUsage([{ ...messages[0], metadata: {} }], 200_000)).toBeNull();
+});

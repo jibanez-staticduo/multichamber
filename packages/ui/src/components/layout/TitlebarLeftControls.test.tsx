@@ -6,6 +6,10 @@ import { I18nProvider } from '@/lib/i18n';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useUIStore } from '@/stores/useUIStore';
 import { TitlebarLeftControls } from './TitlebarLeftControls';
+import { SyncProvider } from '@/sync/sync-context';
+import { OpenCode } from '@opencode/client';
+
+const sdk = OpenCode.make({ baseUrl: 'http://titlebar.test', fetch: () => new Promise<Response>(() => {}) });
 
 let browser: Window;
 let root: Root;
@@ -44,11 +48,11 @@ afterEach(async () => {
 
 async function renderControls() {
   await act(async () => root.render(
-    <I18nProvider>
+    <SyncProvider sdk={sdk} directory="/repo"><I18nProvider>
       <TooltipProvider>
         <TitlebarLeftControls />
       </TooltipProvider>
-    </I18nProvider>,
+    </I18nProvider></SyncProvider>,
   ));
 }
 

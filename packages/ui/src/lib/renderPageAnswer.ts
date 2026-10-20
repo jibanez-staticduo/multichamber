@@ -17,7 +17,7 @@ export async function answerRenderedPage(input: {
     summary: string;
     data: JsonValue;
 }): Promise<void> {
-    const response = await runtimeFetch('/api/openchamber/render/answer', {
+    const response = await runtimeFetch('/api/multichamber/render/answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),

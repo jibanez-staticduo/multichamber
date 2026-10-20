@@ -1,26 +1,21 @@
 ---
-title: Snel aan de slag
-description: Start OpenChamber en kies de juiste app voor uw werk.
+title: Snelstart
+description: Start een Multichamber-server en kies een native sessie-engine.
 ---
 
-# Snel aan de slag
+# Snelstart
 
-## De snelste manier
+Installeer OpenCode en Node.js 24.14 of nieuwer op de server. Installeer en authenticeer daar Claude Code of Codex als je die wilt gebruiken. Installeer daarna Multichamber met de volgende opdracht.
 
-1. Installeer [OpenCode](https://opencode.ai).
-2. Installeer de OpenChamber CLI. De opdracht hiervoor staat bij [Installeren](/nl/install/).
-3. Voer `openchamber --ui-password be-creative-here` uit.
-4. Open de URL die de CLI toont, meestal `http://localhost:3000`.
-5. Wilt u uw telefoon gebruiken? Start dan een [tunnel](/nl/tunnels/) en scan de QR-code.
+```bash
+curl -fsSL https://raw.githubusercontent.com/jibanez-staticduo/multichamber/main/scripts/install.sh | bash
+multichamber --ui-password be-creative-here
+```
 
-U hoort nu de sessielijst van OpenChamber in uw browser te zien. Als die laadt, kunt u beginnen.
+Open de getoonde URL, meestal `http://localhost:3000`. Kies een beschikbare engine voor een nieuwe sessie. Instellingen bewaren aparte modellen en machtigingen per engine.
 
-Gebruik een sterk wachtwoord voor de interface, zeker als u de instantie via internet bereikbaar wilt maken.
+Gebruik een sterk UI-wachtwoord voordat je externe toegang toestaat.
 
-Laadt de pagina niet? Kijk dan bij [Problemen oplossen](/nl/troubleshooting/).
+Gebruik de desktopapp op macOS, Windows of Linux, of start de web/PWA-server. iOS- en Android-builds verbinden met een bestaande server. Deze fork bevat geen VS Code-extensie.
 
-## Welke app past bij mijn werk?
-
-- gebruik **desktop** voor dagelijks werk op macOS, Windows of Linux
-- gebruik **web** voor toegang op afstand en voor het beoordelen van werk op uw telefoon
-- gebruik **VS Code** voor sessies direct naast uw code
+[Installeren](/install/)

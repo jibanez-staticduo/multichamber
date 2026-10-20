@@ -4,7 +4,7 @@ import http from 'node:http';
 import os from 'os';
 import path from 'path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
-import { GUEST_GENERATE_PROMPT_MAX, GUEST_GENERATE_SYSTEM_MAX, GUEST_GENERATE_TIMEOUT_MS } from '@openchamber/sdk';
+import { GUEST_GENERATE_PROMPT_MAX, GUEST_GENERATE_SYSTEM_MAX, GUEST_GENERATE_TIMEOUT_MS } from '@multichamber/sdk';
 
 // The settings override is read straight from disk, so without this the suite
 // would resolve whatever small model the developer running it has configured.

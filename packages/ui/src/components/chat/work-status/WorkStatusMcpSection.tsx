@@ -1,4 +1,6 @@
 import React from 'react';
+import { useSessionEngine } from '@/hooks/useSessionEngine';
+import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useI18n } from '@/lib/i18n';
 import { Switch } from '@/components/ui/switch';
 import { useMcpStore } from '@/stores/useMcpStore';
@@ -21,7 +23,19 @@ const MCP_STATUS_MAX_AGE_MS = 60_000;
  * MCP servers with their connection switches, reusing the dropdown's own
  * connect/disconnect actions.
  */
-export const WorkStatusMcpSection: React.FC<Props> = ({ sessionId, directory: selectedDirectory }) => {
+export const WorkStatusMcpSection: React.FC<Props> = (props) => {
+  const engine = useSessionEngine(props.sessionId, props.directory ?? undefined);
+  const draftHarness = useSessionUIStore((state) => state.newSessionDraft.harness);
+  const isOpenCode = props.sessionId ? engine.id === 'opencode' : !draftHarness || draftHarness === 'opencode';
+  return isOpenCode ? <OpenCodeMcpSection {...props} /> : <UnavailableMcpSection />;
+};
+
+function UnavailableMcpSection() {
+  useReportWorkStatusPresence('mcp', false);
+  return null;
+}
+
+const OpenCodeMcpSection: React.FC<Props> = ({ sessionId, directory: selectedDirectory }) => {
   const { t } = useI18n();
   const directory = useMcpDirectory(true, { sessionId, directory: selectedDirectory });
 

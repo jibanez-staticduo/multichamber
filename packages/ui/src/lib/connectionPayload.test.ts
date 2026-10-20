@@ -25,7 +25,8 @@ describe('connection payload helpers', () => {
 
     const encoded = encodePairingConnectionPayload(payload);
 
-    expect(encoded.startsWith('openchamber://connect?v=2&p=')).toBe(true);
+    expect(encoded.startsWith('multichamber://connect?v=2&p=')).toBe(true);
+    expect(parsePairingConnectionPayload(encoded.replace('multichamber:', 'openchamber:'))).toEqual(parsePairingConnectionPayload(encoded));
     expect(parsePairingConnectionPayload(encoded)).toEqual({
       ...payload,
       candidates: [
@@ -124,13 +125,13 @@ describe('parsePairingConnectionPayloadString (Android WebView fallback)', () =>
   });
 
   test('recovers a link whose scheme/host case the URL parser would reject', () => {
-    const mixedCase = encoded.replace('openchamber://connect', 'OpenChamber://CONNECT');
+    const mixedCase = encoded.replace('multichamber://connect', 'Multichamber://CONNECT');
     expect(parsePairingConnectionPayload(mixedCase)).toBeNull();
     expect(parsePairingConnectionPayloadString(mixedCase)).toEqual(parsePairingConnectionPayload(encoded));
   });
 
   test('tolerates a trailing slash and reordered query params', () => {
-    const trailingSlash = encoded.replace('openchamber://connect?', 'openchamber://connect/?');
+    const trailingSlash = encoded.replace('multichamber://connect?', 'multichamber://connect/?');
     expect(parsePairingConnectionPayloadString(trailingSlash)).toEqual(parsePairingConnectionPayload(encoded));
 
     const p = encoded.slice(encoded.indexOf('p=') + 2);

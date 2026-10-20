@@ -1,3 +1,4 @@
+import { useSessionEngine } from '@/hooks/useSessionEngine';
 import React from 'react';
 import { Icon } from '@/components/icon/Icon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -34,6 +35,7 @@ export const SessionGoalButton: React.FC<SessionGoalButtonProps> = React.memo(({
   withTooltip = false,
 }) => {
   const { t } = useI18n();
+  const engine = useSessionEngine(sessionId, directory);
   const { goal, enabled } = useSessionGoal(sessionId ?? '', directory);
   const armed = useSessionGoalArmStore((state) => state.armed);
   const setArmed = useSessionGoalArmStore((state) => state.setArmed);
@@ -41,13 +43,13 @@ export const SessionGoalButton: React.FC<SessionGoalButtonProps> = React.memo(({
   // The goal loop checks every turn with Jev or the small model; with neither
   // a goal would stop after two failed checks, so arming is disabled with the
   // reason. A goal that already exists stays manageable.
-  const canCheck = useGoalCheckAvailable(directory, !isVSCodeRuntime() && enabled);
+  const canCheck = useGoalCheckAvailable(directory, !isVSCodeRuntime() && enabled && engine.capabilities.goals);
   const cannotCheck = !canCheck && !goal;
 
   // The goal loop runs in the web server; the VS Code extension only renders
   // goal state. Arming a goal there would create one nothing drives, so the
   // entry point is hidden entirely.
-  if (isVSCodeRuntime() || !enabled || (!sessionId && !draftOpen)) {
+  if (!engine.capabilities.goals || isVSCodeRuntime() || !enabled || (!sessionId && !draftOpen)) {
     return null;
   }
 

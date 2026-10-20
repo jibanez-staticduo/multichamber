@@ -15,7 +15,7 @@ itself; it can only ask and wait.
 - `routes.js` is the result callback (`POST /api/browser-control/result`). It
   validates the envelope and hands the outcome to the broker.
 - `../../index.js` supplies `emitRequest`, which writes the request to the
-  OpenChamber SSE clients and returns how many were reached. The event carries
+  Multichamber SSE clients and returns how many were reached. The event carries
   the same `context` (`directory`, `sessionId`, each `null` when unknown) the
   extension provider receives, so the in-app browser knows which session asked.
 - `provider.js` sits between the control service and the broker. It reads
@@ -23,7 +23,7 @@ itself; it can only ask and wait.
   an extension id goes to that extension's service (`contributes.service.provides`
   includes `browser`) as `POST /browser-control` on its loopback through
   `../guests/service.js`, with the open/action timeouts, the response cap, and
-  the idle stop from `@openchamber/sdk`. The body also carries `context`
+  the idle stop from `@multichamber/sdk`. The body also carries `context`
   (`directory`, `sessionId`, each `null` when unknown): the project and chat the
   tool call came from, threaded from the plugin (`contextDirectory`,
   `contextSessionId`) through the control service; the model never types it.
@@ -114,7 +114,7 @@ itself; it can only ask and wait.
   mousedown or focus and ignore the click event alone.
   `tabId` is validated and passed through by
   `../openchamber-control/service.js` for every action, so an extension
-  provider receives it untouched (`BrowserTabTarget` in `@openchamber/sdk`).
+  provider receives it untouched (`BrowserTabTarget` in `@multichamber/sdk`).
 
 ## Invariants
 

@@ -1,6 +1,6 @@
 // One-time copy of the user-authored folders into a custom data directory.
 //
-// `OPENCHAMBER_DATA_DIR` is documented as "the OpenChamber data directory",
+// `OPENCHAMBER_DATA_DIR` is documented as "the Multichamber data directory",
 // but for a long time only the flat files (settings, auth, push tokens)
 // followed it while `projects/`, `themes/`, and `speech-models/` stayed under
 // `~/.config/openchamber`. Now every folder hangs off the data directory, so an

@@ -1,11 +1,22 @@
 import { describe, expect, test } from 'bun:test';
 import { compactTheme, requireTheme, themeSchema, themeListSchema } from './definition';
-import { themes } from './themes';
+import { themes, getThemeById, getDefaultTheme, DEFAULT_DARK_THEME_ID, DEFAULT_LIGHT_THEME_ID } from './themes';
 import { CSSVariableGenerator } from './cssGenerator';
 import { contrastRatio, withOpacity, mixColor } from './color';
 import { getMarkdownSyntaxVars } from '../../components/chat/markdown/markdownSyntaxVars';
 import { buildSyntaxTokenRules } from '../shiki/textMateThemeFromAppTheme';
 import { buildVSCodeThemeFromPalette } from './vscode/adapter';
+
+test('canonical Multichamber defaults preserve the legacy saved theme palettes', () => {
+  expect(DEFAULT_LIGHT_THEME_ID).toBe('multichamber-light');
+  expect(DEFAULT_DARK_THEME_ID).toBe('multichamber-dark');
+  for (const variant of ['light', 'dark']) {
+    const canonical = getThemeById(`multichamber-${variant}`);
+    expect(getThemeById(`openchamber-${variant}`)).toBe(canonical);
+    expect(getDefaultTheme(variant === 'dark')).toBe(canonical);
+    expect(themes.some((theme) => theme.metadata.id === `openchamber-${variant}`)).toBe(false);
+  }
+});
 
 const minimal = {
   metadata: { id: 'minimal', name: 'Minimal', variant: 'dark' as const },
@@ -243,7 +254,7 @@ describe('rendered theme color pairs', () => {
   test('keeps high-contrast VS Code fallbacks dark and its focus indicator opaque', () => {
     const theme = buildVSCodeThemeFromPalette({ kind: 'high-contrast', colors: { focusBorder: '#ffffff', 'statusBar.background': '#ff0000' } });
     expect(theme.metadata.variant).toBe('dark');
-    expect(theme.colors.surface.background).toBe(themes.find((item) => item.metadata.id === 'openchamber-dark')?.colors.surface.background);
+    expect(theme.colors.surface.background).toBe(themes.find((item) => item.metadata.id === 'multichamber-dark')?.colors.surface.background);
     expect(theme.colors.interactive.focusRing).toBe('#ffffff');
     expect(theme.colors.surface.overlay).not.toBe('#ff0000');
     expect(theme.colors.syntax.tokens).toEqual({});

@@ -26,7 +26,7 @@ const cliPath = join(repoRoot, "packages/web/bin/cli.js")
 const HELP = `Usage: node scripts/perf/seed-long-session.mjs --port <port> --dir <path> [options]
 
 Options:
-  --port <port>     OpenChamber server port (required)
+  --port <port>     Multichamber server port (required)
   --dir <path>      Project directory the session belongs to (required)
   --turns <n>       Number of prompt/response turns (default: 120)
   --title <text>    Session title (default: "perf: long <turns>")

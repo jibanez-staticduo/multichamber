@@ -27,7 +27,7 @@ const fakeRequest = ({ headers = {}, chunks = [] } = {}) => {
 
 const guestZip = (id) => buildStoreZip([
   { name: 'package.json', data: JSON.stringify({
-    name: `@openchamber/${id}`,
+    name: `@multichamber/${id}`,
     version: '1.0.0',
     openchamber: {
       apiVersion: 1,

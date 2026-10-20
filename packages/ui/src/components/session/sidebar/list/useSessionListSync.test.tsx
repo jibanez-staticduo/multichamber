@@ -50,7 +50,7 @@ mock.module('@/stores/useGlobalSessionsStore', () => ({
   refreshGlobalSessions: () => { state.globalRefreshes += 1; },
   refreshGlobalSessionsForDirectories: (directories: string[]) => { state.directoryRefreshes.push(directories); },
 }));
-mock.module('@/lib/openchamberEvents', () => ({
+mock.module('@/lib/multichamberEvents', () => ({
   subscribeOpenchamberEvents: (listener: (event: Event) => void) => {
     state.subscriptions += 1;
     state.listener = listener;

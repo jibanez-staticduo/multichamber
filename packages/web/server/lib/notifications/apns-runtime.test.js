@@ -91,6 +91,17 @@ afterEach(() => {
 });
 
 describe('apns runtime relay mode (default)', () => {
+  it('reports unconfigured push without registering or sending to an upstream relay', async () => {
+    const fetchImpl = vi.fn();
+    vi.stubGlobal('fetch', fetchImpl);
+    const deps = makeDeps();
+    const runtime = createApnsRuntime(deps);
+    expect(await runtime.getConfigurationStatus()).toEqual({ configured: false, mode: 'unconfigured' });
+    await runtime.addOrUpdateApnsToken('session', 'token', 'fixture');
+    await runtime.sendApnsToAllUiSessions({ title: 'fixture', body: '' });
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(deps.http2.connect).not.toHaveBeenCalled();
+  });
   it('registers tokens (signed) and posts signed generic text, dropping dead tokens', async () => {
     const fetchMock = vi.fn(async (url) =>
       isRegister([url])
@@ -262,6 +273,12 @@ describe('apns runtime relay mode (default)', () => {
 });
 
 describe('apns runtime direct fallback (relay disabled)', () => {
+  it('uses the Multichamber APNs topic when direct credentials omit a bundle override', async () => {
+    const { bundleId: _bundle, ...config } = APNS_CONFIG;
+    const runtime = createApnsRuntime(makeDeps({ readSettingsFromDiskMigrated: async () => ({ apnsConfig: config }) }));
+    expect((await runtime.resolveApnsConfig()).bundleId).toBe('com.staticduo.multichamber');
+    expect(await runtime.getConfigurationStatus()).toEqual({ configured: true, mode: 'direct' });
+  });
   it('leaves direct APNs environment unset without an explicit override (per-token routing)', async () => {
     const { environment: _environment, ...configWithoutEnvironment } = APNS_CONFIG;
     const runtime = createApnsRuntime(

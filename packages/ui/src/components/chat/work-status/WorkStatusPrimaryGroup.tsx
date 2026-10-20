@@ -7,7 +7,7 @@ import { useWorktreeBootstrapPending } from '@/hooks/useWorktreeBootstrapPending
 import { runBackgroundNetworkTask } from '@/lib/background-network';
 import { useFreshestSourceControlVisualSummaryForBranch } from '@/stores/useGitHubPrStatusStore';
 import { useSessionMessages } from '@/sync/sync-context';
-import { useContextWindowLimits } from '@/hooks/useContextWindowLimits';
+import { useNativeContextFill, useContextWindowLimits } from '@/hooks/useContextWindowLimits';
 import { useUIStore } from '@/stores/useUIStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { resolveProjectForSessionDirectory } from '@/lib/projectResolution';
@@ -171,12 +171,13 @@ export const WorkStatusPrimaryGroup: React.FC<Props> = ({ sessionId, directory, 
   const sessionMessages = useSessionMessages(sessionId ?? '', directory ?? undefined);
   const { context: contextLimit } = useContextWindowLimits(sessionId, directory ?? undefined);
 
+  const nativeContext = useNativeContextFill(sessionId, directory ?? undefined);
   // Computed from this session's own messages rather than the header's
   // reading, which reads the *current* directory's store and so loses the
   // readout for any session held elsewhere. See `contextUsage.ts`.
   const contextUsage = React.useMemo(
-    () => computeContextUsage(sessionMessages, contextLimit),
-    [sessionMessages, contextLimit],
+    () => computeContextUsage(sessionMessages, contextLimit, nativeContext),
+    [sessionMessages, contextLimit, nativeContext],
   );
 
   const openContextSurface = useUIStore((state) => state.openContextSurface);

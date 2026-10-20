@@ -8,7 +8,7 @@ import React from 'react';
 
 import { toast } from '@/components/ui';
 import { useI18n } from '@/lib/i18n';
-import { subscribeOpenchamberEvents } from '@/lib/openchamberEvents';
+import { subscribeOpenchamberEvents } from '@/lib/multichamberEvents';
 import { subscribeRuntimeEndpointChanged } from '@/lib/runtime-switch';
 import { useRoutingStore } from '@/stores/useRoutingStore';
 import { useUIStore } from '@/stores/useUIStore';

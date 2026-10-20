@@ -63,6 +63,7 @@ describe('local diagnostic runtime', () => {
       recordSessionError({ sessionId: 'ses_privateR', directory: '/private/path-R', name: 'provider.auth', message: 'Bearer secret-456' });
 
       const output = await buildDiagnosticLog();
+      expect(output.startsWith('Multichamber diagnostic timeline')).toBe(true);
       expect(output).toContain('OpenCode: 2.0.31, binary source=path, wrapper=bun-shebang');
       expect(output).toContain('Last OpenCode start error: binary not found');
       expect(output).toContain('Current health: HTTP 200, OpenCode running=false, ready=false');

@@ -1,3 +1,4 @@
+import { withSessionHarnesses } from '../harnesses/session-client.js';
 /**
  * "In work": a session goes into work when the user sends a message in it,
  * and Jev says when a turn looks like the end of that work, or handed over
@@ -130,7 +131,7 @@ export function createSessionWorkRuntime({
     const headers = { ...getOpenCodeAuthHeaders() };
     // v2 scopes by header and rejects non-ASCII header values.
     if (directory) headers['x-opencode-directory'] = encodeURIComponent(directory);
-    return OpenCode.make({ baseUrl: buildOpenCodeUrl('/', '').replace(/\/$/, ''), headers });
+    return withSessionHarnesses(OpenCode.make({ baseUrl: buildOpenCodeUrl('/', '').replace(/\/$/, ''), headers }));
   };
 
   const readPages = (client, sessionId, signal) => ({ limit, cursor }) => client.message.list(

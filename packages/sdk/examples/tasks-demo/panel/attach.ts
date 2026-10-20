@@ -12,8 +12,8 @@ import {
   type GuestMessageItem,
   type GuestSessionItem,
   type JsonValue,
-} from '@openchamber/sdk';
-import { applyHostReady, mountBadge, mountButton, mountList, mountSearchField, mountSeparator, mountText } from '@openchamber/sdk/ui';
+} from '@multichamber/sdk';
+import { applyHostReady, mountBadge, mountButton, mountList, mountSearchField, mountSeparator, mountText } from '@multichamber/sdk/ui';
 import { z } from 'zod';
 
 import { TASKS, attachPayload, findTask, loadTasks, saveTask, type TaskData, type Task } from './tasks.ts';

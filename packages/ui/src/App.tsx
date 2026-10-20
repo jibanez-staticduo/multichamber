@@ -1,4 +1,5 @@
 import { OpenCodeCompatibilityGate } from '@/components/update/OpenCodeCompatibilityGate';
+import { useNativeHarnessBootstrap } from '@/hooks/useNativeHarnessBootstrap';
 import React from 'react';
 import { startDiagnosticCapture } from '@/lib/diagnostics/capture';
 import { AppStartupOverlay } from '@/components/ui/AppStartupOverlay';
@@ -215,6 +216,9 @@ function App({ apis }: AppProps) {
   const initializeApp = useConfigStore((s) => s.initializeApp);
   const isInitialized = useConfigStore((s) => s.isInitialized);
   const isConnected = useConfigStore((s) => s.isConnected);
+  const nativeReadyRuntimeKey = useConfigStore((s) => s.nativeReadyRuntimeKey);
+  const nativeReady = nativeReadyRuntimeKey === getRuntimeKey();
+  useNativeHarnessBootstrap(!isConnected && nativeReady);
   // Loaded flags, not list lengths: a catalog shown from the persisted cache is
   // not a live load, and recovery must keep trying until one succeeds.
   const providersLoaded = useConfigStore((state) => state.providersLoaded);
@@ -818,7 +822,7 @@ function App({ apis }: AppProps) {
   // Desktop boot view routing.
   // When the boot outcome resolves to a non-main screen (chooser, recovery),
   // render OnboardingScreen with appropriate mode/variant.
-  if (isDesktopRuntime && bootView && bootView.screen !== 'main') {
+  if (isDesktopRuntime && bootView && bootView.screen !== 'main' && !nativeReady) {
     // First-launch chooser
     if (bootView.screen === 'chooser') {
       return (
@@ -863,7 +867,7 @@ function App({ apis }: AppProps) {
     );
   }
 
-  if (initRetryExhausted && !isInitialized && !isVSCodeRuntime) {
+  if (initRetryExhausted && !isInitialized && !isVSCodeRuntime && !nativeReady) {
     return (
       <ErrorBoundary>
         <StartupInitializationRecovery
@@ -891,7 +895,7 @@ function App({ apis }: AppProps) {
                   <OpenCodeUpdateToast />
                   <ProjectConfigErrorToast />
                   <MainLayout />
-                  {isDesktopRuntime ? <AppStartupOverlay ready={bootOutcomeKnown && bootViewIsMain} /> : null}
+                  {isDesktopRuntime ? <AppStartupOverlay ready={nativeReady || (bootOutcomeKnown && bootViewIsMain)} /> : null}
                   <Toaster />
                   <AppLinkConfirmDialog />
                   <SharedTrustConfirmDialog />

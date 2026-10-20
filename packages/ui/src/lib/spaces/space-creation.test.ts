@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 
 import { startSpaceCreation, type SpaceModelAccess } from './space-creation';
 import { draftSpaceTarget, isSpaceCreationRequest } from './space-creation-requests';
@@ -6,6 +6,10 @@ import { spaceModelRefusal } from './space-model-access';
 import type { SpaceEntry } from './spaces-api';
 import { useSpacesStore } from './spaces-store';
 import { isDraftSendWaiting, waitForPendingDraftWorktreeRequest } from '@/lib/worktrees/pendingDraftWorktree';
+import * as persistence from '@/lib/persistence';
+import { useEngineStore } from '@/stores/useEngineStore';
+import { getRuntimeKey } from '@/lib/runtime-switch';
+import { SESSION_ENGINE_INFO } from '@/lib/sessionEngine';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 
 const ID = 'a1b2c3d4e5f6';
@@ -55,13 +59,13 @@ const host = (grantAnswer: { status: number; body: { grant?: unknown; code?: str
   return { created };
 };
 
-const start = (access: readonly SpaceModelAccess[] = [], setup = { commands: [] as string[], waitBeforeSending: false }) => startSpaceCreation({
+const start = async (access: readonly SpaceModelAccess[] = [], setup = { commands: [] as string[], waitBeforeSending: false }) => startSpaceCreation({
   projectId: 'project-1',
   request: { projectDirectory: PROJECT, placeId: 'docker', name: 'Fix login', start: 'clean', network: { mode: 'allowlist', domains: [] } },
   setup,
   access,
   refusalMessage: 'refused',
-});
+}).then(async (created) => { await new Promise((resolve) => setTimeout(resolve, 0)); return created; });
 
 // The draft's waiting message, as `materializeOpenDraftSession` waits for it.
 const waitingMessage = () => {
@@ -71,11 +75,15 @@ const waitingMessage = () => {
 };
 
 describe('startSpaceCreation', () => {
+  let settingsRead: ReturnType<typeof spyOn>;
   beforeEach(() => {
+    settingsRead = spyOn(persistence, 'loadDesktopSettings').mockResolvedValue({ defaultHarness: 'opencode' });
+    const runtime = getRuntimeKey();
+    useEngineStore.setState({ requested: { [runtime]: true }, byRuntime: { [runtime]: SESSION_ENGINE_INFO } });
     useSpacesStore.getState().resetForRuntimeSwitch();
     useSessionUIStore.getState().closeNewSessionDraft();
   });
-  afterEach(() => { globalThis.fetch = originalFetch; });
+  afterEach(() => { settingsRead.mockRestore(); globalThis.fetch = originalFetch; });
 
   test('the group appears at once and the draft waits for the space, not a worktree', async () => {
     host({ status: 200, body: {} });

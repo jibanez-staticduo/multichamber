@@ -2,8 +2,8 @@ import { afterEach, describe, expect, spyOn, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
 import { Window } from 'happy-dom';
-import { guestMessageSchema } from '@openchamber/sdk/schemas';
-import type { GuestMessage, HostMessage, HostReadyContext, HostResultPayload, GuestWorkspaceSnapshot } from '@openchamber/sdk';
+import { guestMessageSchema } from '@multichamber/sdk/schemas';
+import type { GuestMessage, HostMessage, HostReadyContext, HostResultPayload, GuestWorkspaceSnapshot } from '@multichamber/sdk';
 
 const examples = new URL('../../../../sdk/examples/', import.meta.url);
 const windows: Window[] = [];

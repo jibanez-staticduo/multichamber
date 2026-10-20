@@ -80,7 +80,7 @@ dropped and worst frames, style/layout work, forced layouts with their JS
 stacks, and the transition the browser ran.
 
 Scenario:
-  --url <url>              OpenChamber URL (default: http://localhost:3000)
+  --url <url>              Multichamber URL (default: http://localhost:3000)
   --title <text>           Open the sidebar row containing this text
                            (default: "perf: long 120", from seed-long-session.mjs)
   --session <id>           Open this session's sidebar row instead of --title
@@ -144,7 +144,7 @@ Output:
                            from a software compositor; confirm frame claims headed
   --help                   Show this help
 
-Needs a running OpenChamber server; see scripts/perf/DOCUMENTATION.md.
+Needs a running Multichamber server; see scripts/perf/DOCUMENTATION.md.
 Writes toggle-summary.json and trace.json (and cpu-profile.cpuprofile,
 render-probe.json when asked).`
 

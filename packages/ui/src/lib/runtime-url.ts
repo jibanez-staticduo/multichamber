@@ -130,7 +130,7 @@ const toRealtimeProxyUrl = (kind: 'sse' | 'ws', targetUrl: string, config: Runti
   const localOrigin = readInjectedLocalOrigin();
   if (!localOrigin) return null;
   try {
-    const proxy = new URL(`/api/openchamber/realtime-proxy/${kind === 'sse' ? 'sse' : 'ws'}`, `${localOrigin}/`);
+    const proxy = new URL(`/api/multichamber/realtime-proxy/${kind === 'sse' ? 'sse' : 'ws'}`, `${localOrigin}/`);
     proxy.searchParams.set('url', targetUrl);
     const localToken = getLocalRuntimeUrlAuthTokenSync(localOrigin);
     if (localToken) proxy.searchParams.set('oc_url_token', localToken);

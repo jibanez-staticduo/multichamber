@@ -1,26 +1,21 @@
 ---
 title: Démarrage rapide
-description: Lancez OpenChamber rapidement et choisissez la bonne application pour la tâche.
+description: Lancez un serveur Multichamber et choisissez un moteur de session natif.
 ---
 
 # Démarrage rapide
 
-## Chemin le plus rapide
+Installez OpenCode et Node.js 24.14 ou ultérieur sur le serveur. Installez et authentifiez Claude Code ou Codex si vous souhaitez les utiliser. Installez ensuite Multichamber avec la commande suivante.
 
-1. Installez [OpenCode](https://opencode.ai).
-2. Installez la CLI OpenChamber (voir [Installation](/install/) pour la commande en une ligne).
-3. Lancez `openchamber --ui-password be-creative-here`.
-4. Ouvrez l’URL affichée par la CLI (souvent `http://localhost:3000`).
-5. Pour l’utiliser depuis votre téléphone, démarrez un [tunnel](/tunnels/) et scannez le QR code.
+```bash
+curl -fsSL https://raw.githubusercontent.com/jibanez-staticduo/multichamber/main/scripts/install.sh | bash
+multichamber --ui-password be-creative-here
+```
 
-Vous devriez voir la liste des sessions OpenChamber dans votre navigateur. Si elle se charge, tout est prêt.
+Ouvrez l’URL affichée, généralement `http://localhost:3000`. Choisissez un moteur disponible pour une nouvelle session. Les réglages conservent des modèles et permissions distincts par moteur.
 
-Utilisez un mot de passe UI robuste, surtout si vous prévoyez d’ouvrir l’instance à internet.
+Utilisez un mot de passe d’interface fort avant d’autoriser l’accès distant.
 
-Si la page ne se charge pas, consultez le [dépannage](/troubleshooting/).
+Utilisez l’application de bureau sur macOS, Windows ou Linux, ou lancez le serveur web/PWA. Les versions iOS et Android se connectent à un serveur existant. Ce fork ne fournit pas d’extension VS Code.
 
-## Quelle application utiliser ?
-
-- utilisez **desktop** pour le travail quotidien sur macOS, Windows ou Linux
-- utilisez **web** pour l’accès distant et la revue depuis votre téléphone
-- utilisez **VS Code** pour garder les sessions juste à côté de votre code
+[Installation](/install/)

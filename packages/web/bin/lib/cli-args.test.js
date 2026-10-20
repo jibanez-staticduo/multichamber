@@ -23,7 +23,7 @@ describe('parseArgs ui password default', () => {
     expect(parseArgs(['serve']).options.uiPassword).toBe('theirs');
   });
 
-  it('ignores a password OpenChamber put into the shell', () => {
+  it('ignores a password Multichamber put into the shell', () => {
     delete process.env[INJECTED_ENV_KEY];
     delete process.env.OPENCHAMBER_UI_PASSWORD;
     assignInjectedEnv(process.env, { OPENCHAMBER_UI_PASSWORD: 'the-desktop-apps' });

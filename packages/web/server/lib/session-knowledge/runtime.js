@@ -5,7 +5,7 @@
  * (`/api/experimental/session/:id/instructions/entries/:key`). OpenCode keeps
  * them with the session: the first values go into the system prompt, a value
  * that changes or goes away is announced to the agent at its next step, and
- * compaction, revert and fork keep them. So OpenChamber holds no record of what
+ * compaction, revert and fork keep them. So Multichamber holds no record of what
  * a session was told; every sender writes what the session should carry now,
  * right before its message, and OpenCode tells the agent only what changed.
  *
@@ -96,7 +96,7 @@ export const RENDER_PAGE_GUIDANCE = "The openchamber_render tool draws a chart, 
   + " or how something looks: a proposed interface change, before and after, layout options."
   + " Skip it for a few numbers, a short list, code, or when the user asked for plain text."
   + " At most one page per answer."
-  + " A mockup of the user's own project takes its look from that project's code (theme tokens, CSS variables, styles), not from OpenChamber's theme."
+  + " A mockup of the user's own project takes its look from that project's code (theme tokens, CSS variables, styles), not from Multichamber's theme."
   + " Draw a page that only shows right before your final reply, and keep the reply to what the page does not show."
   + " For a choice a page shows better than text, such as layouts or designs, ask on a page with awaitAnswer and continue from the answer.";
 
@@ -189,7 +189,7 @@ export const createSessionKnowledgeRuntime = (dependencies) => {
     readCheckoutBranch = null,
     // Whether this session's agent has the `openchamber_render` tool.
     isPageRenderingAvailable = async () => false,
-    // Pins live in OpenChamber's own session metadata store.
+    // Pins live in Multichamber's own session metadata store.
     readSessionMetadata = null,
     persistSessionMetadata = null,
     // The session's instruction entries in OpenCode: `put(sessionId,

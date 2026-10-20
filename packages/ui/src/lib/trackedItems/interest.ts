@@ -1,6 +1,6 @@
 import React from 'react';
 import { z } from 'zod';
-import { subscribeOpenchamberEvents } from '@/lib/openchamberEvents';
+import { subscribeOpenchamberEvents } from '@/lib/multichamberEvents';
 import { runtimeFetch } from '@/lib/runtime-fetch';
 import { getRuntimeKey } from '@/lib/runtime-switch';
 import { useTrackedItemsStore } from '@/stores/useTrackedItemsStore';

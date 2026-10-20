@@ -614,7 +614,7 @@ export const CommandPalette: React.FC = () => {
   nestedWorktreePrefixesRef.current = nestedWorktreePrefixes;
 
   // ---------------------------------------------------------------------------
-  // Message search (server index, opt-in; VS Code has no OpenChamber server)
+  // Message search (server index, opt-in; VS Code has no Multichamber server)
   // ---------------------------------------------------------------------------
   const messageSearchEnabled = useUIStore((state) => state.messageSearchEnabled);
   const messageSearchSupported = messageSearchEnabled && !isVSCodeRuntime();

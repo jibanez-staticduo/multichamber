@@ -1,8 +1,11 @@
 {
-  "name": "@openchamber/example-tasks-demo",
+  "name": "@multichamber/example-tasks-demo",
   "version": "1.1.0",
   "private": true,
-  "openchamber": {
+  "dependencies": {
+    "@multichamber/sdk": "workspace:*"
+  },
+  "multichamber": {
     "apiVersion": 1,
     "contributes": {
       "panel": {
@@ -15,7 +18,10 @@
         "mode": "dialog",
         "entry": "panel/attach.html"
       },
-      "page": { "entry": "panel/page.html", "title": "Tasks board" },
+      "page": {
+        "entry": "panel/page.html",
+        "title": "Tasks board"
+      },
       "capabilities": [
         "prompt",
         "sessions",
@@ -62,8 +68,5 @@
         }
       ]
     }
-  },
-  "dependencies": {
-    "@openchamber/sdk": "workspace:*"
   }
 }

@@ -1,3 +1,6 @@
+import { SessionSourcePicker } from '@/components/session/SessionSourcePicker';
+import { filterSessionsBySource } from '@/lib/sessionSourceFilter';
+import { useSessionSourceFilterStore } from '@/stores/useSessionSourceFilterStore';
 import { rankByQuery } from '@/lib/search/fuzzySearch';
 import React from 'react';
 import type { Session } from '@/lib/opencode/model';
@@ -140,16 +143,18 @@ export function ArchiveSessionsView({ layout, onLeave, initialQuery = '' }: {
 
   // Search spans every archived session; the directory filter applies only
   // while not searching.
+  const sourceFilter = useSessionSourceFilterStore((state) => state.filter);
+  const sourceSessions = React.useMemo(() => filterSessionsBySource(sortedSessions, sourceFilter), [sortedSessions, sourceFilter]);
   const filteredSessions = React.useMemo(() => {
     if (normalizedQuery) {
       if (normalizedQuery.startsWith('ses_')) {
-        return sortedSessions.filter((session) => session.id.toLowerCase() === normalizedQuery);
+        return sourceSessions.filter((session) => session.id.toLowerCase() === normalizedQuery);
       }
-      return groupByParent(rankByQuery(sortedSessions, normalizedQuery, (session) => [session.title]));
+      return groupByParent(rankByQuery(sourceSessions, normalizedQuery, (session) => [session.title]));
     }
-    if (selectedDirectory === null) return groupByParent(sortedSessions);
+    if (selectedDirectory === null) return groupByParent(sourceSessions);
     return groupByParent(buckets.find((bucket) => bucket.directory === selectedDirectory)?.sessions ?? []);
-  }, [buckets, normalizedQuery, selectedDirectory, sortedSessions]);
+  }, [buckets, normalizedQuery, selectedDirectory, sourceSessions]);
 
   const visibleSessions = filteredSessions.slice(0, visibleCount);
   const remainingCount = filteredSessions.length - visibleSessions.length;
@@ -340,6 +345,7 @@ export function ArchiveSessionsView({ layout, onLeave, initialQuery = '' }: {
   return (
     <div className="absolute inset-0 z-10 flex flex-col bg-background">
       <div className="flex min-h-0 flex-1">
+        <SessionSourcePicker />
         {/* Directory filter panel */}
         <div className="flex w-64 flex-shrink-0 flex-col border-e border-border/50">
           <div className="flex-1 space-y-0.5 overflow-y-auto p-2">

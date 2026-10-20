@@ -47,7 +47,7 @@ describe('built-in extension build', () => {
       } },
     }));
     await fs.writeFile(path.join(panel, 'index.html'), '<!doctype html><main id="root"></main><script src="./main.js"></script>');
-    await fs.writeFile(path.join(panel, 'main.ts'), 'import { connectHost } from "@openchamber/sdk"; connectHost().onReady(() => {});');
+    await fs.writeFile(path.join(panel, 'main.ts'), 'import { connectHost } from "@multichamber/sdk"; connectHost().onReady(() => {});');
     const outDir = path.join(root, 'bundle');
     const result = await buildBuiltInExtensions({ sourceRoot, outDir });
     const registry = await readBuiltInRegistry(outDir);

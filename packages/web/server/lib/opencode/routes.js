@@ -147,10 +147,10 @@ export const registerOpenCodeRoutes = (app, dependencies) => {
         success: false,
         code: bundled ? 'OPENCODE_UPGRADE_MANAGED_BY_OPENCHAMBER' : 'OPENCODE_UPGRADE_UNSUPPORTED',
         error: bundled
-          ? 'OpenCode is bundled with OpenChamber Desktop and updates with the app.'
+          ? 'OpenCode is bundled with Multichamber Desktop and updates with the app.'
           : pinned
             ? 'Your administrator manages this OpenCode installation.'
-            : 'This OpenCode runtime cannot be upgraded by OpenChamber.',
+            : 'This OpenCode runtime cannot be upgraded by Multichamber.',
       });
     }
     try {
@@ -168,7 +168,7 @@ export const registerOpenCodeRoutes = (app, dependencies) => {
 
   app.get('/api/opencode/upgrade-status', async (_req, res) => {
     try {
-      // Whether a newer OpenCode exists and whether OpenChamber can install it
+      // Whether a newer OpenCode exists and whether Multichamber can install it
       // are two answers: the UI announces the version either way and offers
       // the Update action only when `upgrade.supported` is true.
       const capability = getOpenCodeUpgradeCapability();
@@ -212,7 +212,7 @@ export const registerOpenCodeRoutes = (app, dependencies) => {
 
   // OpenCode 2.0.8 removed `GET /api/health`; `GET /api/info` replaces it and a
   // 200 from it is the readiness signal (there is no `healthy` field any more).
-  // OpenChamber's own `{ healthy }` response shape stays as its clients know it.
+  // Multichamber's own `{ healthy }` response shape stays as its clients know it.
   const probeOpenCodeHealth = async () => {
     try {
       const healthResponse = await fetch(buildOpenCodeUrl('/api/info', ''), {
@@ -289,7 +289,7 @@ export const registerOpenCodeRoutes = (app, dependencies) => {
     } catch (error) {
       console.error('[API:PUT /api/config/settings] Failed to save settings:', error);
       console.error('[API:PUT /api/config/settings] Error stack:', error.stack);
-      res.status(500).json({ error: 'Failed to save settings' });
+      res.status(error.status === 400 || /^Invalid (default harness|codexDefault)/.test(error.message || '') ? 400 : 500).json({ error: error.message || 'Failed to save settings' });
     }
   });
 
@@ -553,7 +553,7 @@ export const registerOpenCodeRoutes = (app, dependencies) => {
       }
 
       // OpenCode 2.x owns credentials: it imported `auth.json` once and now
-      // keeps them in its own store behind `/api/credential`. OpenChamber can
+      // keeps them in its own store behind `/api/credential`. Multichamber can
       // still remove a provider's CONFIG (those files are ours), but a
       // credential has to be removed where it lives.
       let removed = false;

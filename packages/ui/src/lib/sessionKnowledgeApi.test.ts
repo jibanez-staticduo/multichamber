@@ -43,3 +43,9 @@ describe('session knowledge writes for a session in an isolated space', () => {
     expect(paths).toEqual(['/api/session-knowledge/sync -', '/api/session-knowledge/pin -']);
   });
 });
+
+
+test('a failed context synchronization is explicit instead of silently dropping pinned context', async () => {
+  request = spyOn(globalThis, 'fetch').mockImplementation(async () => Response.json({ synced: false }));
+  await expect(syncSessionKnowledge('/repo', 'ses_cdxnative')).rejects.toThrow('Could not synchronize session context');
+});

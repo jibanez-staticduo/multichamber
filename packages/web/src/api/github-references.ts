@@ -14,8 +14,8 @@ import type {
   GitHubReferencesResult,
   GitHubReferencesAcrossResult,
   SourceControlReadContext,
-} from '@openchamber/ui/lib/api/types';
-import type { RuntimeFetchOptions } from '@openchamber/ui/lib/runtime-fetch';
+} from '@multichamber/ui/lib/api/types';
+import type { RuntimeFetchOptions } from '@multichamber/ui/lib/runtime-fetch';
 import { z } from 'zod';
 
 type GitHubFetch = (input: string, init?: RuntimeFetchOptions) => Promise<Response>;

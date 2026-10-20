@@ -10,7 +10,7 @@ export const registerScheduledTaskRoutes = (app, dependencies) => {
     sanitizeProjects,
     projectConfigRuntime,
     scheduledTasksRuntime,
-    getOpenChamberEventClients,
+    getMultichamberEventClients,
     writeSseEvent,
     scheduledTaskService = createScheduledTaskService(dependencies),
   } = dependencies;
@@ -181,7 +181,7 @@ export const registerScheduledTaskRoutes = (app, dependencies) => {
     // long as the connection that receives its changes.
     res.openchamberConnectionId = randomUUID();
 
-    const clients = getOpenChamberEventClients();
+    const clients = getMultichamberEventClients();
     clients.add(res);
 
     try {

@@ -1,4 +1,5 @@
 import React from 'react';
+import type { MultiRunAutoFusion } from '@/types/multirun';
 import { toast } from '@/components/ui';
 import { useConfigStore } from '@/stores/useConfigStore';
 import { useGlobalSessionStatusStore } from '@/sync/global-session-status';
@@ -9,7 +10,8 @@ import { useMultiRunSessions } from './useMultiRuns';
 import { RUN_LAUNCHER_ID } from './launcher';
 
 /** Resolves the judge's display name and context window from the provider catalog. */
-export const resolveFusionJudge = (selection: { providerID: string; modelID: string; variant?: string; agent?: string }): FusionJudge => {
+export const resolveFusionJudge = (selection: MultiRunAutoFusion): FusionJudge => {
+  if (selection.harness && selection.harness !== 'opencode') return { ...selection, agent: undefined, modelName: selection.modelID };
   const provider = useConfigStore.getState().providers.find((entry) => entry.id === selection.providerID);
   const model = provider?.models.find((entry) => entry.id === selection.modelID);
   return {

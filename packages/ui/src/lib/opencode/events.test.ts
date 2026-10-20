@@ -167,6 +167,19 @@ describe("translateWireEvent", () => {
     ])
   })
 
+  test('native usage scope survives step start and completion translation', () => {
+    const started = {
+      ...base, type: 'session.step.started' as const, durable,
+      data: { sessionID: 'ses_cdxnative', assistantMessageID: 'msg_native', agent: 'codex', model: { id: 'native', providerID: 'codex' }, started: 1000, metadata: { codex: { usageScope: 'turn' }, source: 'native' } },
+    }
+    const ended = {
+      ...base, type: 'session.step.ended' as const, durable,
+      data: { sessionID: 'ses_cdxnative', assistantMessageID: 'msg_native', finish: 'stop' as const, cost: 0, tokens: { input: 0, output: 200, reasoning: 0, cache: { read: 0, write: 0 } }, metadata: { codex: { usageScope: 'turn', usageAvailable: true } } },
+    }
+    expect(translateWireEvent(started)[0]).toMatchObject({ properties: { info: { metadata: started.data.metadata } } })
+    expect(translateWireEvent(ended)[0]).toMatchObject({ properties: { patch: { metadata: ended.data.metadata } } })
+  })
+
   test("text streams as a part, deltas, then a final snapshot", () => {
     const started = translateWireEvent({
       ...base,

@@ -1,4 +1,4 @@
-# OpenChamber Mobile Handoff
+# Multichamber Mobile Handoff
 
 Status and process reference for the native iOS/Android apps. Written so work can continue after
 merge — either by finishing CI/release automation, or by adding features as follow-up fixes. The
@@ -11,7 +11,7 @@ renderer), not the desktop shell. The native app is a WKWebView (iOS) / Android 
 bundled copy of the web build; native capabilities are added via Capacitor plugins and two iOS app
 extensions.
 
-- App id / package: `com.openchamber.app`; app name `OpenChamber`.
+- App id / package: `com.staticduo.multichamber`; app name `Multichamber`.
 - Capacitor config: `capacitor.config.json`. It is JSON because the Capacitor CLI reads a
   `capacitor.config.ts` through the TypeScript JS API (`transpileModule`), which TypeScript 7 no
   longer ships. Why its values are what they are:
@@ -104,8 +104,8 @@ iOS Simulator helpers: `mobile:sim:{boot,install,launch,run,serve,list,kill}` (s
 - **Push notifications** — iOS APNs + Android FCM (see below). Presence-aware routing suppresses a
   device's push when an interactive (desktop/web) client is visible.
 - **iOS widgets + Control Center + Notification Service Extension** — WidgetKit extension
-  (`OpenChamberWidget`), a Control Center control, and an NSE (`OpenChamberNotificationService`)
-  that refreshes widgets from push. All share the App Group `group.com.openchamber.app`.
+  (`MultichamberWidget`), a Control Center control, and an NSE (`MultichamberNotificationService`)
+  that refreshes widgets from push. All share the App Group `group.com.staticduo.multichamber`.
 - **Native chrome** — status bar (iOS overlay + safe-area; Android inset + themed background),
   keyboard handling (iOS CSS inset; Android native `adjustResize`), edge-swipe session switch,
   back-button handling, app-icon badge.
@@ -128,9 +128,9 @@ iOS Simulator helpers: `mobile:sim:{boot,install,launch,run,serve,list,kill}` (s
 
 ### iOS (`ios/App`)
 
-- Extensions: `OpenChamberWidget` (WidgetKit, deployment 17.0) and `OpenChamberNotificationService`
+- Extensions: `MultichamberWidget` (WidgetKit, deployment 17.0) and `MultichamberNotificationService`
   (NSE, 15.5), both hand-wired into `App.xcodeproj/project.pbxproj` and embedded via a copy phase.
-- App Group `group.com.openchamber.app` in all three targets' entitlements (app + widget + NSE).
+- App Group `group.com.staticduo.multichamber` in all three targets' entitlements (app + widget + NSE).
 - `Info.plist`: `CFBundleURLTypes` scheme `openchamber`, `NSCameraUsageDescription`.
 - Push entitlement (aps-environment) required.
 - APNs `mutable-content: 1` (set server/relay side) wakes the NSE to refresh widgets.
@@ -175,7 +175,7 @@ iOS Simulator helpers: `mobile:sim:{boot,install,launch,run,serve,list,kill}` (s
 - **`embedded.mobileprovision` decodes as `.isoLatin1`.** It is a binary CMS envelope around a plist;
   `.ascii`/`.utf8` return nil and the APNs environment silently falls back. APNs delivery is grouped
   per token by the environment it registered with (Xcode build → sandbox, TestFlight/App Store →
-  production); `OPENCHAMBER_APNS_ENVIRONMENT` is only a global override. For "no push on the phone",
+  production); `MULTICHAMBER_APNS_ENVIRONMENT` is only a global override. For "no push on the phone",
   check `~/.config/openchamber/apns-tokens.json` and remember the phone talks to the installed
   desktop app's server, which runs its own (possibly older) code.
 - **Native HTTP always sends the WebView's cookies**, whatever `credentials` says, so a leftover
@@ -211,7 +211,7 @@ TestFlight / Play internal testing:
 ### iOS
 
 - Apple Developer account; App IDs for the app **and** both extensions
-  (`com.openchamber.app`, `.OpenChamberWidget`, `.OpenChamberNotificationService`), each enabled for
+  (`com.staticduo.multichamber`, `.MultichamberWidget`, `.MultichamberNotificationService`), each enabled for
   the **App Group** and (app) **Push**.
 - Signing certificate + provisioning profiles for all three targets (extensions need their own).
 - App Store Connect API key for non-interactive TestFlight upload (`xcodebuild archive` +

@@ -3,7 +3,7 @@
 // match a catalog item by source instead of by name alone. Name-only matching
 // badged every same-named entry from every curated source (#4756).
 //
-// Lives in the OpenChamber data dir as one small JSON file. Entries only add
+// Lives in the Multichamber data dir as one small JSON file. Entries only add
 // a constraint: a name the registry has never heard of keeps the old name
 // match, so skills installed before this file existed, or placed on disk by
 // hand, look exactly as they did before.

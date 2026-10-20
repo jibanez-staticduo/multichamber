@@ -1,3 +1,12 @@
+import { NativeDraftModelControls } from './NativeDraftModelControls';
+import { ClaudeLiveSessionBanner } from './ClaudeLiveSessionBanner';
+import { getClaudeLiveState } from '@/lib/claudeSessionMetadata';
+import { SESSION_ENGINE_INFO } from '@/lib/sessionEngine';
+import { useSessionEngineById } from '@/hooks/useSessionEngine';
+import { getAllSyncSessions } from '@/sync/sync-refs';
+import { resolveEngineComposerModel, canSendWithEngineModel } from '@/lib/sessionEngine';
+import { ClaudeModelControls } from './ClaudeModelControls';
+import { CodexModelControls } from './CodexModelControls';
 import React from 'react';
 import { formatChangeRequestReference } from '@/lib/source-control/identity';
 import { ComposerDictation } from '@/components/dictation/ComposerDictation';
@@ -29,7 +38,7 @@ import * as sessionActions from '@/sync/session-actions';
 // Guest surfaces load on demand: VS Code and mobile never mount them, and the
 // composer must not pay for the guest bridge before an extension is installed.
 const GuestAttachDialog = React.lazy(() => import('@/components/layout/GuestAttachDialog').then((module) => ({ default: module.GuestAttachDialog })));
-import type { AttachIssueRequest } from '@openchamber/sdk';
+import type { AttachIssueRequest } from '@multichamber/sdk';
 import { getInlineCommentDraftKey, useInlineCommentDraftStore, type InlineCommentDraft, type InlineCommentDraftTarget } from '@/stores/useInlineCommentDraftStore';
 import { useSnippetsStore } from '@/stores/useSnippetsStore';
 import { renderMagicPrompt } from '@/lib/magicPrompts';
@@ -251,7 +260,7 @@ import {
     mapInputHistoryEntriesToValues,
     mergeSessionInputHistory,
 } from './inputHistory';
-import { useScopedBlockingForms, useScopedBlockingPermissions, useUserMessageHistory } from '@/sync/sync-context';
+import { useSessionSelector, useScopedBlockingForms, useScopedBlockingPermissions, useUserMessageHistory } from '@/sync/sync-context';
 import { changeRequestCopy } from '@/lib/source-control/changeRequestCopy';
 
 // Lazy like in ChatMessage: a static import would pull the @pierre/diffs and
@@ -573,7 +582,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
     const setPendingInputText = useInputStore((s) => s.setPendingInputText);
     const pendingGuestIssue = useInputStore((s) => s.pendingGuestIssue);
     const consumePendingGuestIssue = useInputStore((s) => s.consumePendingGuestIssue);
-    const pendingComposerReferenceCount = usePendingComposerReferences((s) => s.references.length);
+    const pendingComposerReferenceCount = usePendingComposerReferences((s) => s.references.length + (currentSessionId ? s.bySession.get(currentSessionId)?.length ?? 0 : 0));
 
     React.useEffect(() => {
         if (!newSessionDraftOpen || newSessionDraft.target !== 'chat' || message.trim().length === 0) return;
@@ -607,8 +616,13 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
     const configProviderId = useConfigStore((state) => state.currentProviderId);
     const configModelId = useConfigStore((state) => state.currentModelId);
     const configCatalogLoaded = useConfigStore((state) => state.providersLoaded && state.agentsLoaded);
-    const currentProviderId = pinnedComposerSelection?.model?.providerId ?? configProviderId;
-    const currentModelId = pinnedComposerSelection?.model?.modelId ?? configModelId;
+    const liveSessionEngine = useSessionEngineById(currentSessionId);
+    const sessionEngine = !currentSessionId && newSessionDraftOpen && newSessionDraft.harness ? SESSION_ENGINE_INFO[newSessionDraft.harness] : liveSessionEngine;
+    const nativeModel = useSessionSelector(currentSessionId, currentDirectory ?? undefined, (session) => session?.model);
+    const { providerId: currentProviderId, modelId: currentModelId } = resolveEngineComposerModel(sessionEngine, nativeModel, {
+        providerId: pinnedComposerSelection?.model?.providerId ?? configProviderId,
+        modelId: pinnedComposerSelection?.model?.modelId ?? configModelId,
+    });
     const getModelMetadata = useConfigStore((state) => state.getModelMetadata);
     // Subscribe to both sources read by getModelMetadata so async metadata and provider updates are observed.
     useConfigStore((state) => state.modelsMetadata);
@@ -1335,7 +1349,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
 
         // A local or extension command is run, not queued: the queue delivers
         // text to the model, and `/compact`, `/btw`, or `/task` mean nothing there.
-        if (planLocalSlashCommand(inputSnapshot.message, inputMode, hasDrafts, true)
+        if (planLocalSlashCommand(inputSnapshot.message, inputMode, hasDrafts, true, sessionEngine.capabilities)
             || routeGuestSlashCommand(inputSnapshot.message, inputMode, guestCommands)) {
             void handleSubmitRef.current();
             return;
@@ -1468,7 +1482,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
         }
         void resumeAfterQueue().catch(console.warn);
         recordLinkedReferences(queueSessionId, queueTarget.directory, linked);
-    }, [getCurrentInputSnapshot, currentSessionId, messageQueueTarget, inputMode, hasDrafts, guestCommands, attachedFiles, sanitizeAttachmentsForSend, prepareReadOnSendMentions, extractInlineFileMentions, agents, currentDirectory, consumePendingSyntheticParts, mailboxTarget, inlineDraftTarget, consumeDrafts, linkedReferences, scrollToLatest, clearAttachedFiles, chatDraftIdentity, isMobile, isMobileCommentOpen, addToQueue, currentProviderId, currentModelId, currentAgentName, currentVariant, t]);
+    }, [getCurrentInputSnapshot, currentSessionId, messageQueueTarget, inputMode, hasDrafts, sessionEngine.capabilities, guestCommands, attachedFiles, sanitizeAttachmentsForSend, prepareReadOnSendMentions, extractInlineFileMentions, agents, currentDirectory, consumePendingSyntheticParts, mailboxTarget, inlineDraftTarget, consumeDrafts, linkedReferences, scrollToLatest, clearAttachedFiles, chatDraftIdentity, isMobile, isMobileCommentOpen, addToQueue, currentProviderId, currentModelId, currentAgentName, currentVariant, t]);
 
     /** Put the context a queued message was captured with back on the composer chips. */
     const restoreQueuedContext = React.useCallback((context: readonly QueuedContextPart[]) => {
@@ -1605,6 +1619,13 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                 hasContent: options.presetText.trim().length > 0 || attachedFiles.length > 0 || hasDrafts || (!isBtwActive && hasLinkedReferences),
             }
             : getCurrentInputSnapshot();
+        if (!queuedOnly && sessionEngine.id === 'claude' && inputSnapshot.message.trim() === '/login') { window.dispatchEvent(new Event('openchamber:claude-account')); return; }
+        if (!queuedOnly && sessionEngine.id === 'claude') {
+            const session = getAllSyncSessions().find((candidate) => candidate.id === currentSessionId);
+            const owner = getClaudeLiveState(session).liveElsewhere;
+            if (owner && !owner.attachable) { toast.error(t('chat.claudeLive.toast.sendNeedsTakeOver')); return; }
+        }
+
         if (queuedOnly && autoReviewRunning) {
             return;
         }
@@ -1621,7 +1642,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
         // the prompt it produces. A command the composer cannot run here is not
         // a local command at all and goes out as typed.
         let commandPlan = !queuedOnly && inputSnapshot.hasContent
-            ? planLocalSlashCommand(inputSnapshot.message, inputMode, hasDrafts, Boolean(currentSessionId))
+            ? planLocalSlashCommand(inputSnapshot.message, inputMode, hasDrafts, Boolean(currentSessionId), sessionEngine.capabilities)
             : null;
         if (commandPlan?.kind === 'prompt') {
             const magicCommand = findMagicPromptCommand(commandPlan.command.name);
@@ -1709,8 +1730,8 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
             ? composerQueuedMessages.filter((message) => message.id === queuedMessageId)
             : composerQueuedMessages;
         const capturedSendConfig = queuedOnly ? queuedProjection[0]?.sendConfig : undefined;
-        const providerIdToSend = capturedSendConfig?.providerID ?? (isBtwActive ? effectiveBtwSelection.model?.providerId : currentProviderId);
-        const modelIdToSend = capturedSendConfig?.modelID ?? (isBtwActive ? effectiveBtwSelection.model?.modelId : currentModelId);
+        const providerIdToSend = capturedSendConfig?.providerID ?? (isBtwActive ? effectiveBtwSelection.model?.providerId : currentProviderId) ?? '';
+        const modelIdToSend = capturedSendConfig?.modelID ?? (isBtwActive ? effectiveBtwSelection.model?.modelId : currentModelId) ?? '';
         const agentNameToSend = capturedSendConfig?.agent ?? (isBtwActive ? effectiveBtwSelection.agent : currentAgentName);
         const variantToSend = capturedSendConfig?.variant ?? (isBtwActive ? effectiveBtwSelection.variant : currentVariant);
 
@@ -1735,7 +1756,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
             return;
         }
 
-        if (!providerIdToSend || !modelIdToSend) {
+        if (!canSendWithEngineModel(sessionEngine, providerIdToSend ?? '', modelIdToSend ?? '')) {
             console.warn('Cannot send message: provider or model not selected');
             toast.error(t('chat.chatInput.toast.noModelSelected'));
             return;
@@ -2423,7 +2444,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
         // Enter shell mode before CodeMirror inserts the trigger. Keeping the
         // document unchanged also keeps the caret at the start for the first
         // command character.
-        if (!isBtwActive && inputMode === 'normal' && e.key === '!') {
+        if (!isBtwActive && sessionEngine.capabilities.shell && inputMode === 'normal' && e.key === '!') {
             const selection = composerRef.current?.getSelection();
             if (selection?.start === 0 && selection.end === 0) {
                 e.preventDefault();
@@ -2758,7 +2779,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
         // Mobile keyboards and paste may update the document without a usable
         // keydown, so consume the trigger in the same editor transaction rather
         // than moving the caret in a later frame against stale text.
-        if (!isBtwActive && inputMode === 'normal' && value.startsWith('!')) {
+        if (!isBtwActive && sessionEngine.capabilities.shell && inputMode === 'normal' && value.startsWith('!')) {
             const shellCommand = value.slice(1);
             const nextCursor = Math.max(0, selection.start - 1);
             setInputMode('shell');
@@ -3753,11 +3774,11 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
     }, [columnPinned, consumePendingGuestIssue, handleGuestAttach, pendingGuestIssue]);
     React.useEffect(() => {
         if (pendingComposerReferenceCount === 0 || columnPinned) return;
-        const references = usePendingComposerReferences.getState().consume();
+        const references = usePendingComposerReferences.getState().consume(currentSessionId ?? undefined);
         if (references.length > 0) {
             setLinkedReferences((current) => withComposerReferences(current, references));
         }
-    }, [columnPinned, pendingComposerReferenceCount]);
+    }, [columnPinned, pendingComposerReferenceCount, currentSessionId]);
     const showLinearPicker = Boolean(runtimeLinear) && !isVSCode;
     const showDraftTargetSelectors = newSessionDraftOpen && !isVSCode;
 
@@ -4051,13 +4072,13 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
         : null;
     const autoReviewRow = !isBtwActive && !newSessionDraftOpen ? <AutoReviewStrip /> : null;
     // The session's goal, then what is still running, then what waits for it.
-    const goalRow = !isBtwActive ? (
+    const goalRow = !isBtwActive && sessionEngine.capabilities.goals ? (
         <SessionGoalRow
             sessionId={currentSessionId}
             directory={currentSessionDirectoryForSync ?? currentDirectory}
         />
     ) : null;
-    const revertRow = !isBtwActive && !newSessionDraftOpen ? (
+    const revertRow = !isBtwActive && !newSessionDraftOpen && sessionEngine.capabilities.revert ? (
         <RevertedMessagesStrip
             sessionId={currentSessionId}
             directory={currentSessionDirectoryForSync ?? currentDirectory}
@@ -4072,8 +4093,9 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
     ) : null;
     // Null exactly when the suggestion row alone would have been: the mobile
     // pill picks its shape from whether a top row exists.
-    const composerTopRows = worktreeSetupRow || spaceWaitRow || goalRow || autoReviewRow || backgroundShellsRow || revertRow || queueRow || doneHintRow || reviewHintRow || suggestionRow ? (
+    const composerTopRows = (currentSessionId && sessionEngine.id === 'claude') || worktreeSetupRow || spaceWaitRow || goalRow || autoReviewRow || backgroundShellsRow || revertRow || queueRow || doneHintRow || reviewHintRow || suggestionRow ? (
         <>
+            {currentSessionId && sessionEngine.id === 'claude' ? <ClaudeLiveSessionBanner sessionId={currentSessionId} directory={currentDirectory ?? undefined} /> : null}
             {worktreeSetupRow}
             {spaceWaitRow}
             {goalRow}
@@ -4090,14 +4112,14 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
         // px-3.5 lines the model logo and the agent label up with the attach
         // and mic icons above them; the buttons drop their own padding so the
         // row alone owns the inset.
-        <div className="flex items-center justify-between gap-x-2 px-3.5 pb-2 pt-0.5">
+        <div className="flex items-center justify-between gap-x-2 px-3.5 pb-2 pt-0.5">{!currentSessionId && sessionEngine.id !== 'opencode' ? <NativeDraftModelControls harness={sessionEngine.id} /> : currentSessionId && sessionEngine.ownModelCatalog ? (sessionEngine.id === 'codex' ? <CodexModelControls sessionId={currentSessionId} directory={currentDirectory ?? undefined} /> : <ClaudeModelControls sessionId={currentSessionId} directory={currentDirectory ?? undefined} />) : <>
             <MemoMobileModelButton onOpenModel={() => handleOpenMobilePanel('model')} className="min-w-0 px-0" />
             <MemoMobileAgentButton
                 onOpenAgentPanel={handleOpenAgentPanel}
                 onCycleAgent={handleCycleAgent}
                 className="flex-shrink-0 px-0"
             />
-        </div>
+        </>}</div>
     ) : null;
 
     /** The dictation engine listens for this globally; the composer only asks. */

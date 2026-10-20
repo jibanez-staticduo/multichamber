@@ -1,18 +1,18 @@
 apply plugin: 'com.android.application'
 
-def ciVersionCode = System.getenv('OPENCHAMBER_ANDROID_VERSION_CODE')
-def ciVersionName = System.getenv('OPENCHAMBER_ANDROID_VERSION_NAME')
-def ciKeystorePath = System.getenv('OPENCHAMBER_ANDROID_KEYSTORE_PATH')
-def ciKeystorePassword = System.getenv('OPENCHAMBER_ANDROID_KEYSTORE_PASSWORD')
-def ciKeyAlias = System.getenv('OPENCHAMBER_ANDROID_KEY_ALIAS')
-def ciKeyPassword = System.getenv('OPENCHAMBER_ANDROID_KEY_PASSWORD')
+def ciVersionCode = (System.getenv('MULTICHAMBER_ANDROID_VERSION_CODE') ?: System.getenv('OPENCHAMBER_ANDROID_VERSION_CODE'))
+def ciVersionName = (System.getenv('MULTICHAMBER_ANDROID_VERSION_NAME') ?: System.getenv('OPENCHAMBER_ANDROID_VERSION_NAME'))
+def ciKeystorePath = (System.getenv('MULTICHAMBER_ANDROID_KEYSTORE_PATH') ?: System.getenv('OPENCHAMBER_ANDROID_KEYSTORE_PATH'))
+def ciKeystorePassword = (System.getenv('MULTICHAMBER_ANDROID_KEYSTORE_PASSWORD') ?: System.getenv('OPENCHAMBER_ANDROID_KEYSTORE_PASSWORD'))
+def ciKeyAlias = (System.getenv('MULTICHAMBER_ANDROID_KEY_ALIAS') ?: System.getenv('OPENCHAMBER_ANDROID_KEY_ALIAS'))
+def ciKeyPassword = (System.getenv('MULTICHAMBER_ANDROID_KEY_PASSWORD') ?: System.getenv('OPENCHAMBER_ANDROID_KEY_PASSWORD'))
 def hasCiSigning = ciKeystorePath && ciKeystorePassword && ciKeyAlias && ciKeyPassword
 
 android {
-    namespace "com.openchamber.app"
+    namespace "com.staticduo.multichamber"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.openchamber.app"
+        applicationId "com.staticduo.multichamber"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode ciVersionCode ? ciVersionCode.toInteger() : 1

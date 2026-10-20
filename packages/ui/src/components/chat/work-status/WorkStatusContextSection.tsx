@@ -1,4 +1,5 @@
 import React from 'react';
+import { resolveSessionEngine } from '@/lib/sessionEngine';
 import { toast } from 'sonner';
 import { useI18n } from '@/lib/i18n';
 import { Icon } from '@/components/icon/Icon';
@@ -31,6 +32,8 @@ import { refTintStyle } from '@/lib/source-control/prVisualState';
 import { cn } from '@/lib/utils';
 
 
+const EMPTY_SKILLS: ReturnType<typeof useSkillsStore.getState>['skills'] = [];
+
 type Props = {
   sessionId: string | null;
   directory: string | null;
@@ -54,9 +57,12 @@ export const WorkStatusContextSection: React.FC<Props> = ({ sessionId, directory
   const availableWorktreesByProject = useSessionUIStore((state) => state.availableWorktreesByProject);
   const projects = useProjectsStore((state) => state.projects);
   const isDraft = sessionId === null && newSessionDraft.open;
-  const skills = useSkillsStore((state) => state.skills);
+  const isOpenCode = sessionId
+    ? resolveSessionEngine(session ?? { id: sessionId }) === 'opencode'
+    : !newSessionDraft.harness || newSessionDraft.harness === 'opencode';
+  const skills = useSkillsStore((state) => isOpenCode ? state.skills : EMPTY_SKILLS);
   const mcpStatus = useMcpStore(
-    React.useCallback((state) => state.getStatusForDirectory(directory), [directory]),
+    React.useCallback((state) => isOpenCode ? state.getStatusForDirectory(directory) : null, [directory, isOpenCode]),
   );
 
   // Skills were previously fetched only when the composer's slash autocomplete
@@ -74,8 +80,8 @@ export const WorkStatusContextSection: React.FC<Props> = ({ sessionId, directory
   // unchanged across a switch.
   const isConnected = useConfigStore((state) => state.isConnected);
   React.useEffect(() => {
-    void loadSkills();
-  }, [directory, isConnected, loadSkills]);
+    if (isOpenCode) void loadSkills();
+  }, [directory, isConnected, isOpenCode, loadSkills]);
 
   /**
    * What this session carries. Read from the server
@@ -488,7 +494,7 @@ export const WorkStatusContextSection: React.FC<Props> = ({ sessionId, directory
         />
       ) : null}
 
-      <WorkStatusRow
+      {isOpenCode ? <><WorkStatusRow
         muted
         label={t('chat.workStatus.breakdown.skills')}
         value={<WorkStatusValue>{skills.length}</WorkStatusValue>}
@@ -497,7 +503,7 @@ export const WorkStatusContextSection: React.FC<Props> = ({ sessionId, directory
         muted
         label={t('chat.workStatus.breakdown.mcp')}
         value={<WorkStatusValue>{mcpCount}</WorkStatusValue>}
-      />
+      /></> : null}
     </WorkStatusCollapsibleSection>
   );
 };

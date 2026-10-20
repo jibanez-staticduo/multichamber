@@ -1,173 +1,74 @@
-# <picture><source media="(prefers-color-scheme: dark)" srcset="docs/references/badges/openchamber-logo-dark.svg"><img src="docs/references/badges/openchamber-logo-light.svg" width="32" height="32" align="absmiddle" /></picture> OpenChamber
+# <img src="packages/ui/src/assets/multichamber-brand.svg" width="36" height="36" alt="Multichamber" align="absmiddle" /> Multichamber
 
-[![GitHub stars](https://img.shields.io/github/stars/openchamber/openchamber?style=flat&labelColor=100F0F&color=66800B)](https://github.com/openchamber/openchamber/stargazers)
-[![GitHub release](https://img.shields.io/github/v/release/openchamber/openchamber?style=flat&labelColor=100F0F&color=205EA6)](https://github.com/openchamber/openchamber/releases/latest)
-[![Discord](https://img.shields.io/badge/Discord-join.svg?style=flat&labelColor=100F0F&color=8B7EC8&logo=discord&logoColor=FFFCF0)](https://discord.gg/ZYRSdnwwKA)
-[![Support the project](https://img.shields.io/badge/Support-Project-black?style=flat&labelColor=100F0F&color=EC8B49&logo=patreon&logoColor=FFFCF0)](https://www.patreon.com/openchamber)
+[![GitHub stars](https://img.shields.io/github/stars/jibanez-staticduo/multichamber?style=flat)](https://github.com/jibanez-staticduo/multichamber/stargazers)
+[![GitHub release](https://img.shields.io/github/v/release/jibanez-staticduo/multichamber?style=flat)](https://github.com/jibanez-staticduo/multichamber/releases)
 
-<a href="https://www.blacksmith.sh/"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/references/badges/blacksmith-dark.svg"><img src="docs/references/badges/blacksmith-light.svg" height="28" alt="CI powered by Blacksmith" /></picture></a>
+**One workspace for OpenCode, Claude Code and Codex, using each engine's native sessions.** Browse history, follow live work, answer approvals and open subagent conversations from the same web, desktop or mobile interface.
 
-## Run agent work. Keep control. Ship from anywhere.
+## Built on OpenChamber
 
-**OpenChamber is an open-source workspace for running and reviewing AI coding work on desktop, web, VS Code, and mobile.**
+Multichamber is an independent fork of [OpenChamber](https://github.com/openchamber/openchamber). The original project and its contributors built the shared interface, server, desktop and mobile foundations, and most of the workflow features in this repository. That work is the foundation of Multichamber.
 
-Start agent work, see what changed, and take it through review and release. Your projects and sessions remain available when you switch devices or step away.
+The fork also draws on the native Claude Code integration developed in [pocharlies-org/openchamber](https://github.com/pocharlies-org/openchamber). Multichamber brings that work forward alongside native Codex support and keeps the three engines behind one session interface. Credit for the original and derived work remains with their respective contributors.
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/references/desktop_dark.png"><img src="docs/references/desktop_light.png" alt="OpenChamber desktop app"></picture>
+Multichamber has its own identity and release feed. It is not the official OpenChamber distribution and does not represent the OpenCode, Anthropic or OpenAI teams.
 
-<details>
-<summary>More screenshots</summary>
+## Why this fork?
 
-![VS Code Extension](packages/vscode/extension.jpg)
+A model provider and a session engine are different things. An OpenCode session using an OpenAI model is still an OpenCode session. A Codex thread belongs to Codex; a Claude Code conversation belongs to Claude Code.
 
-<p>
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/references/mobile/new_session_dark.png"><img src="docs/references/mobile/new_session_light.png" width="30%" alt="OpenChamber mobile new session"></picture>
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/references/mobile/chat_dark.png"><img src="docs/references/mobile/chat_light.png" width="30%" alt="OpenChamber mobile chat"></picture>
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/references/mobile/context_usage_dark.png"><img src="docs/references/mobile/context_usage_light.png" width="30%" alt="OpenChamber mobile context and usage"></picture>
-</p>
+Multichamber keeps those owners intact. It reads native histories and routes prompts, permissions and lifecycle actions to the engine that owns the conversation. It does not copy native conversations into OpenCode or send unsupported actions to another engine.
 
-</details>
+- **OpenCode:** provider and agent configuration, native sessions and the existing OpenChamber workflow.
+- **Claude Code:** native history, model and permission controls, streaming tools, approvals, questions and linked subagent transcripts. Existing CLI ownership and remote-control limits remain visible.
+- **Codex:** native app-server threads, model and reasoning controls, permissions, live tools, approvals, child threads and inter-agent messages. The default transport connects to an existing Codex authority.
 
-## What you can do with OpenChamber
+Settings offer a default engine and separate native model, effort and permission preferences. OpenCode provider, agent and tool settings apply to OpenCode. Display preferences and shared project context remain app-level settings. MCP and skill counts are shown only where their source belongs to that engine.
 
-### Goals that continue on their own
+## Capabilities and limits
 
-Give a session a finish line with **Session Goals**. OpenChamber checks the result after every turn and keeps the agent working until it completes the goal, gets blocked, or reaches the limit you set. It can continue after you close the app.
+All three engines support conversation history, prompts, interruption, archive/restore, whole-conversation forks, permissions and questions. Session Goals use the owning engine and require a configured progress checker.
 
-### Compare and combine runs
+Some workflows remain engine-specific. OpenCode owns session moves, arbitrary shell messages, revert, turn diffs and side generation. Codex does not fork at arbitrary message boundaries or expose its native command system through this integration. Claude subagent transcripts are read-only. The UI hides unsupported actions and the server refuses them.
 
-Use **Multi-run** to give the same task to up to five models, each in its own session and optionally its own worktree. See what each one actually built, choose the best result, or use **Fusion** to combine the strongest parts into a new session.
+See the [project identity and compatibility notes](docs/PROJECT_IDENTITY.md), [capability matrix](docs/agent-parity.md), [Codex adapter](packages/web/server/lib/codex/DOCUMENTATION.md) and [Claude adapter](packages/web/server/lib/claude/DOCUMENTATION.md) for the current contracts. Native credentials stay with the corresponding CLI; Multichamber does not add a shared credential store.
 
-### Guided changes walkthroughs
-
-**Changes Walkthrough** turns a large diff into an AI-guided tour of the change. It groups related edits into steps, puts them in the order the change makes sense, and explains how the pieces fit together.
-
-### Inspect a running app
-
-Open your app beside the conversation with **Preview**. Point at an element to send the agent its screenshot, styles, position, and browser errors. No more trying to explain "this thing here." The desktop app can do the same with any web page in its built-in browser.
-
-### GitHub context from issue to pull request
-
-Start a session from a GitHub issue or pull request with its context attached. Send failed checks or review comments back to the agent, then update or merge the pull request from OpenChamber.
-
-### Continue on another device
-
-Open the same projects and sessions from Desktop, Web/PWA, VS Code, iOS, or Android. Check progress, answer questions, review changes, and reattach to a running terminal.
-
-### Private remote access
-
-Pair a device with a one-time QR code and connect through **Private Relay** without opening ports or exposing a public server. The connection is end-to-end encrypted and can be revoked at any time. Direct connections, LAN/VPN access, Cloudflare/Ngrok tunnels, and SSH are also supported.
-
-### Track work across projects
-
-See which sessions are working, waiting, finished, or failed, along with approvals, scheduled tasks, provider limits, token use, and costs. Organize sessions into folders and keep notes, todos, and reusable project actions nearby.
-
-### Schedule recurring work
-
-Run a prompt once, daily, weekly, or on a cron schedule. Scheduled tasks can use Session Goals, so they continue toward an outcome instead of stopping after one response.
-
-## Use it where you work
+## Work across devices
 
 | Surface | Role |
 | --- | --- |
-| **Desktop** | The complete workspace for macOS, Windows, and Linux, with multiple windows, Mini Chat, remote machines, SSH, and native notifications |
-| **Web / PWA** | Open your workspace in a browser, install it as an app, and stay up to date through background notifications |
-| **VS Code** | Keep sessions beside your code, send selections to the agent, open results in the editor, and compare parallel runs |
-| **iOS / Android** | Review and steer work away from your desk, receive completion alerts, and use the terminal with touch controls |
-| **CLI / Server** | Run OpenChamber on a workstation or server, schedule work, manage remote access, and keep it available after login |
+| Web / PWA | Connect to the server from a browser or installed web app |
+| Electron desktop | macOS, Windows and Linux shell, local or remote server connections, native windows and notifications |
+| iOS / Android | Capacitor app connected to an existing server; native mobile packaging and signing are separate |
+| CLI / server | Host sessions and shared workflows on a workstation or server |
 
-## Quick start
+The workspace retains upstream features such as Git review, changes walkthroughs, preview, project context, scheduling and remote access. Availability depends on the selected engine and runtime. This fork does not ship a VS Code extension.
 
-### Desktop for macOS, Windows, and Linux
+## Run from source
 
-Download the latest release from [GitHub Releases](https://github.com/openchamber/openchamber/releases/latest). Desktop bundles the matching OpenCode CLI, so no separate OpenCode installation is required.
-
-Linux releases come for x86_64 and ARM64 as a `.deb` (Debian, Ubuntu), an `.rpm` (Fedora, openSUSE) and an AppImage. The packages install OpenChamber into the app menu, and in-app updates ask for your password to install the new package:
+Use the Node.js and Bun versions declared in [package.json](package.json). Install each native engine you want to use on the machine running the server and complete its own sign-in first.
 
 ```bash
-sudo apt install ./OpenChamber-*-linux-amd64.deb    # Debian, Ubuntu
-sudo dnf install ./OpenChamber-*-linux-x86_64.rpm   # Fedora
+bun install
+bun run dev
 ```
 
-The AppImage needs no install. Make it executable and keep it in a writable location for in-app updates; on its first start it adds itself to the app menu:
+For desktop development, use `bun run electron:dev`. See [CONTRIBUTING.md](CONTRIBUTING.md) for builds and focused validation. The package READMEs cover [web/server](packages/web/README.md), [desktop](packages/electron/README.md), [mobile](packages/mobile/README.md) and the [extension SDK](packages/sdk/README.md).
 
-```bash
-chmod +x OpenChamber-*.AppImage
-./OpenChamber-*.AppImage
-```
+For packaged installation, use the instructions and assets attached to a release in [this fork's Releases](https://github.com/jibanez-staticduo/multichamber/releases). Each release lists its files and platform notes.
 
-Linux AppImages require FUSE (`libfuse.so.2`). Without FUSE, run with `APPIMAGE_EXTRACT_AND_RUN=1`.
+## Updates
 
-### VS Code
+Multichamber app/server updates use `jibanez-staticduo/multichamber` release assets. They do not install the upstream OpenChamber package. Desktop uses its platform installer; mobile distribution has its own signing and store requirements.
 
-Install [OpenChamber from the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=fedaykindev.openchamber), or search for "OpenChamber" in Extensions.
+Hosted relay, push relay and Linear OAuth require endpoints or credentials configured for this fork. There is no implicit dependency on upstream hosted services.
 
-### CLI for Web and PWA
+Engine updates are separate. Settings show installation and version information for OpenCode, Claude Code and Codex and let you check their official package metadata. A known supported native installer requires confirmation. Shared or externally owned installations show a manual action; existing shared services are not restarted automatically. Updating an installed CLI does not establish that an already-running daemon uses the new executable.
 
-Requires Node.js 24.14+. CLI/Web and VS Code use your installed [OpenCode CLI](https://opencode.ai).
+## Contribute
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/openchamber/openchamber/main/scripts/install.sh | bash
-openchamber --ui-password be-creative-here
-```
+Use [this repository's issues](https://github.com/jibanez-staticduo/multichamber/issues) for fork-specific bugs and agree on user-visible behavior with the maintainer before implementing it. Upstream OpenChamber issues and community channels belong to that project. Read [CONTRIBUTING.md](CONTRIBUTING.md) before preparing a change.
 
-Common operations:
+## License and credits
 
-```bash
-openchamber status
-openchamber connect-url --qr
-openchamber tunnel start --provider cloudflare --mode quick --qr
-openchamber startup enable
-openchamber logs
-openchamber stop
-openchamber update
-```
-
-OpenChamber binds to localhost by default. Use `--lan` only on a trusted network and protect browser access with `--ui-password`.
-
-## Guides
-
-Go deeper with the OpenChamber guides:
-
-- [Quick start](packages/docs/content/docs/quickstart.mdx)
-- [Installation](packages/docs/content/docs/install.mdx)
-- [Connect devices](packages/docs/content/docs/connect-devices.mdx)
-- [Private Relay](packages/docs/content/docs/private-relay.mdx)
-- [Multi-run](packages/docs/content/docs/multi-run.mdx)
-- [Session Goals](packages/docs/content/docs/session-goals.mdx)
-- [Changes Walkthrough](packages/docs/content/docs/walkthrough.mdx)
-- [Preview and dev servers](packages/docs/content/docs/preview.mdx)
-- [GitHub workflows](packages/docs/content/docs/github.mdx)
-- [Mobile](packages/docs/content/docs/mobile.mdx)
-- [Security](packages/docs/content/docs/security.mdx)
-- [Troubleshooting](packages/docs/content/docs/troubleshooting.mdx)
-
-For self-hosting details, see the [reverse proxy guide](docs/REVERSE_PROXY.md). For custom theme authoring, see the [custom themes guide](docs/CUSTOM_THEMES.md).
-
-## Why OpenCode?
-
-OpenChamber uses [OpenCode](https://opencode.ai) to run coding agents. We chose it because it is open source, has a solid API, and is easy to extend.
-
-OpenChamber handles the rest of the workflow. You can decide what to try, keep the agent on track, review the result, connect from another device, and ship the change.
-
-OpenChamber is an independent project and is not affiliated with the OpenCode team.
-
-## Contributing
-
-Bug fixes and small improvements are welcome as PRs. Features and behavior changes start in an [Ideas discussion](https://github.com/openchamber/openchamber/discussions/categories/ideas) so we agree on the product side before anyone writes code. Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a PR; it has the setup, the review contract, and what happens to large unplanned PRs. Documentation authoring guidance lives in [`packages/docs`](packages/docs/README.md).
-
-Bugs go to [issues](https://github.com/openchamber/openchamber/issues/new/choose). Questions go to [Q&A discussions](https://github.com/openchamber/openchamber/discussions/categories/q-a).
-
-## Acknowledgments
-
-Special thanks to:
-
-- [OpenCode](https://opencode.ai) for the API and open-source architecture OpenChamber builds on
-- [Pierre](https://pierrejs-docs.vercel.app/) for the diff viewer and syntax highlighting
-- The [T3 Code](https://github.com/pingdotgg/t3code) team for their browser adapter for [libghostty-vt](https://github.com/ghostty-org/ghostty), which our terminal is built on
-- [Yulia Ivashko](https://github.com/yulia-ivashko), who built the firework celebration that plays on every successful push
-- Everyone who contributed code, reported bugs, or shared ideas
-
-## License
-
-MIT
+[MIT](LICENSE). Preserve existing copyright and license notices. In addition to OpenChamber and pocharlies-org/openchamber, this project builds on OpenCode and the open-source libraries credited in their source and package metadata.

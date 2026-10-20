@@ -62,17 +62,6 @@
         "scripts/**/*.{js,cjs,mjs}"
       ]
     },
-    "packages/vscode": {
-      "entry": [
-        "webview/main.tsx",
-        "src/**/*.{test,spec}.{js,cjs,mjs,ts,tsx}",
-        "webview/**/*.{test,spec}.{js,cjs,mjs,ts,tsx}"
-      ],
-      "project": [
-        "src/**/*.{ts,tsx}",
-        "webview/**/*.{ts,tsx}"
-      ]
-    },
     "packages/sdk": {
       "entry": [
         "src/index.ts",

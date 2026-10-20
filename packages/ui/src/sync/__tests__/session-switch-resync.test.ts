@@ -464,10 +464,10 @@ describe("resyncBlockingRequestsForDirectory", () => {
   })
 })
 
-// OpenChamber's server publishes these two frames on the same stream as
+// Multichamber's server publishes these two frames on the same stream as
 // OpenCode's events. They address the app, not a directory, so they must be
 // consumed before any directory routing happens.
-describe("OpenChamber-native frames", () => {
+describe("Multichamber-native frames", () => {
   beforeEach(() => {
     infoToasts.length = 0
     agentCompletions.length = 0

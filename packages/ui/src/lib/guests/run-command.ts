@@ -1,4 +1,4 @@
-import { GUEST_REQUEST_TIMEOUT_MS } from '@openchamber/sdk';
+import { GUEST_REQUEST_TIMEOUT_MS } from '@multichamber/sdk';
 import { create } from 'zustand';
 
 import type { GuestCommandRoute } from './commands.ts';

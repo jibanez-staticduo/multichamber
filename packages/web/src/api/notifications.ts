@@ -1,4 +1,4 @@
-import type { NotificationPayload, NotificationsAPI } from '@openchamber/ui/lib/api/types';
+import type { NotificationPayload, NotificationsAPI } from '@multichamber/ui/lib/api/types';
 
 const SW_READY_TIMEOUT_MS = 1500;
 const NOTIFICATION_DEDUPE_TTL_MS = 5000;
@@ -158,7 +158,7 @@ const notifyWithServiceWorker = async (payload?: NotificationPayload): Promise<b
   try {
     const target = getNotificationTarget(payload);
     await registration.showNotification(
-      payload?.title ?? 'OpenChamber',
+      payload?.title ?? 'Multichamber',
       withNotificationTarget(payload, target),
     );
     return true;
@@ -224,7 +224,7 @@ const notifyWithWebAPI = async (payload?: NotificationPayload): Promise<boolean>
 
     const target = getNotificationTarget(payload);
     const notification = new Notification(
-      payload?.title ?? 'OpenChamber',
+      payload?.title ?? 'Multichamber',
       withNotificationTarget(payload, target),
     );
     notification.onclick = (event) => {

@@ -202,7 +202,7 @@ describe('tunnel-host response compression', () => {
     return { head, body, acceptEncoding: loopback.acceptEncodings[0] };
   };
 
-  const accepting = { 'X-OpenChamber-Tunnel-Accept-Encoding': 'gzip' };
+  const accepting = { 'X-Multichamber-Tunnel-Accept-Encoding': 'gzip' };
 
   test('gzips a JSON body for a client that accepts it', async () => {
     const { head, body, acceptEncoding } = await fetchThroughHost('/api/session/s/message', accepting);

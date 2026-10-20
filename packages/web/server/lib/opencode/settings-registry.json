@@ -557,6 +557,30 @@
     "defaultModel": {
       "scope": "profile"
     },
+    "defaultHarness": {
+      "scope": "profile"
+    },
+    "codexDefaultModel": {
+      "scope": "profile"
+    },
+    "codexDefaultEffort": {
+      "scope": "profile"
+    },
+    "codexDefaultMode": {
+      "scope": "profile"
+    },
+    "claudeDefaultModel": {
+      "scope": "profile"
+    },
+    "claudeDefaultEffort": {
+      "scope": "profile"
+    },
+    "claudeDefaultMode": {
+      "scope": "profile"
+    },
+    "claudeAskSessionDefaults": {
+      "scope": "profile"
+    },
     "defaultVariant": {
       "scope": "profile"
     },

@@ -1,3 +1,4 @@
+import { z } from 'zod';
 /**
  * Project knowledge for a session, as decided by the server.
  *
@@ -6,13 +7,11 @@
  * OpenCode instruction entries; OpenCode tells the agent what changed and keeps
  * it through compaction, revert and fork.
  *
- * Nothing here throws. A message must go out even when its background cannot
- * be written: sending without it costs the agent some context, failing the
- * send costs the user their message.
+ * Context writes fail explicitly so a required pinned context is never silently
+ * omitted from a message. The composer keeps its draft for retry.
  */
 
 import { runtimeFetch } from './runtime-fetch';
-import { z } from 'zod';
 
 /**
  * Awaited before the prompt request, so the agent reads the knowledge with the
@@ -25,16 +24,15 @@ export const syncSessionKnowledge = async (
 ): Promise<void> => {
   if (!directory || !sessionId) return;
   invalidateSummary(directory, sessionId);
-  try {
-    await runtimeFetch('/api/session-knowledge/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ directory, sessionId }),
-      directory,
-    });
-  } catch {
-    // Only means this message goes without its background.
-  }
+  const response = await runtimeFetch('/api/session-knowledge/sync', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ directory, sessionId }),
+    directory,
+  });
+  if (!response.ok) throw new Error('Could not synchronize session context');
+  const result = z.object({ synced: z.boolean().optional() }).parse(await response.json());
+  if (result.synced === false) throw new Error('Could not synchronize session context');
 };
 
 export interface SessionKnowledgeSummary {

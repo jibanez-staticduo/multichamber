@@ -1,5 +1,5 @@
 import express from 'express';
-import { guestStorageRequestSchema } from '@openchamber/sdk/schemas';
+import { guestStorageRequestSchema } from '@multichamber/sdk/schemas';
 import { runGuestStorage } from './storage.js';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -17,7 +17,7 @@ import {
   isGuestRequestPath,
   requestedGuestCapabilities,
   resolveIntegrationAuth,
-} from '@openchamber/sdk';
+} from '@multichamber/sdk';
 
 import {
   findInstalledGuest,
@@ -163,7 +163,7 @@ const renderOauthCallbackPage = ({ title, message }) => `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(title)} — OpenChamber</title>
+<title>${escapeHtml(title)} — Multichamber</title>
 <style>
   :root { color-scheme: light dark; }
   body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
@@ -491,7 +491,7 @@ export const registerGuestRoutes = (app, {
         error: queryValue(req, 'error'),
         errorDescription: queryValue(req, 'error_description'),
       });
-      finish(200, 'Connected', 'You can close this tab and return to OpenChamber.');
+      finish(200, 'Connected', 'You can close this tab and return to Multichamber.');
     } catch (error) {
       if (error instanceof GuestOAuthError) {
         return finish(400, 'Could not connect', error.message);
@@ -863,7 +863,7 @@ export const registerGuestRoutes = (app, {
       res.setHeader('Content-Type', contentType);
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.setHeader('Cache-Control', 'no-store');
-      // Guest files are third-party code served from the OpenChamber origin.
+      // Guest files are third-party code served from the Multichamber origin.
       // The rail embeds them in a sandboxed iframe; `sandbox` makes the
       // document sandboxed even when opened directly, so a guest page can
       // never run with the user's session on the app origin. The rest keeps

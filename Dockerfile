@@ -9,7 +9,6 @@ COPY bun-patches ./bun-patches
 COPY packages/ui/package.json ./packages/ui/
 COPY packages/web/package.json ./packages/web/
 COPY packages/electron/package.json ./packages/electron/
-COPY packages/vscode/package.json ./packages/vscode/
 COPY packages/mobile/package.json ./packages/mobile/
 COPY packages/sdk/package.json ./packages/sdk/
 RUN bun install --frozen-lockfile --ignore-scripts
@@ -17,7 +16,7 @@ RUN bun install --frozen-lockfile --ignore-scripts
 FROM deps AS builder
 WORKDIR /app
 COPY . .
-# The server imports @openchamber/sdk at runtime, and deps installed with
+# The server imports @multichamber/sdk at runtime, and deps installed with
 # --ignore-scripts, so the root postinstall never built it. Build it here
 # so the runtime stage can copy the output.
 RUN bun run --cwd packages/sdk build

@@ -18,15 +18,20 @@ describe('Linear OAuth PKCE', () => {
   let previousDataDir;
   let previousPort;
   let previousRedirect;
+  let previousClient;
+  let previousBroker;
 
   beforeEach(() => {
     previousDataDir = process.env.OPENCHAMBER_DATA_DIR;
     previousPort = process.env.OPENCHAMBER_PORT;
     previousRedirect = process.env.OPENCHAMBER_LINEAR_REDIRECT_URI;
+    previousClient = process.env.OPENCHAMBER_LINEAR_CLIENT_ID;
+    previousBroker = process.env.OPENCHAMBER_LINEAR_BROKER_URL;
     dataDir = makeTempDir();
     process.env.OPENCHAMBER_DATA_DIR = dataDir;
     process.env.OPENCHAMBER_PORT = '3001';
-    delete process.env.OPENCHAMBER_LINEAR_CLIENT_ID;
+    process.env.OPENCHAMBER_LINEAR_CLIENT_ID = 'own-client';
+    delete process.env.OPENCHAMBER_LINEAR_BROKER_URL;
     process.env.OPENCHAMBER_LINEAR_REDIRECT_URI = 'http://127.0.0.1:3001/linear/oauth/callback';
     clearPendingAuthorizationsForTests();
   });
@@ -37,6 +42,8 @@ describe('Linear OAuth PKCE', () => {
     restoreEnv('OPENCHAMBER_DATA_DIR', previousDataDir);
     restoreEnv('OPENCHAMBER_PORT', previousPort);
     restoreEnv('OPENCHAMBER_LINEAR_REDIRECT_URI', previousRedirect);
+    restoreEnv('OPENCHAMBER_LINEAR_CLIENT_ID', previousClient);
+    restoreEnv('OPENCHAMBER_LINEAR_BROKER_URL', previousBroker);
     fs.rmSync(dataDir, { recursive: true, force: true });
   });
 
@@ -44,7 +51,7 @@ describe('Linear OAuth PKCE', () => {
     const started = await startAuthorization({ origin: 'desktop' });
     const url = new URL(started.authorizationUrl);
     expect(url.origin + url.pathname).toBe('https://linear.app/oauth/authorize');
-    expect(url.searchParams.get('client_id')).toBe('91bbe26a69a2c8568d3683f1e01e776c');
+    expect(url.searchParams.get('client_id')).toBe('own-client');
     expect(url.searchParams.get('redirect_uri')).toBe('http://127.0.0.1:3001/linear/oauth/callback');
     expect(url.searchParams.get('code_challenge_method')).toBe('S256');
     expect(url.searchParams.get('code_challenge')).toMatch(/^[A-Za-z0-9_-]{43}$/);
@@ -52,6 +59,16 @@ describe('Linear OAuth PKCE', () => {
     expect(url.searchParams.get('prompt')).toBe('consent');
     expect(started.scope).toBe('read,write,comments:create');
     expect(started.expiresIn).toBe(600);
+  });
+  it('does not contact a hosted broker when OAuth is not configured', async () => {
+    const fetchImpl = vi.fn();
+    vi.stubGlobal('fetch', fetchImpl);
+    delete process.env.OPENCHAMBER_LINEAR_CLIENT_ID;
+    await expect(startAuthorization()).rejects.toMatchObject({ code: 'LINEAR_CLIENT_ID_MISSING' });
+    process.env.OPENCHAMBER_LINEAR_CLIENT_ID = 'own-client';
+    delete process.env.OPENCHAMBER_LINEAR_REDIRECT_URI;
+    await expect(startAuthorization()).rejects.toMatchObject({ code: 'LINEAR_REDIRECT_URI_MISSING' });
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it('refuses a callback whose state was never started', async () => {
@@ -114,6 +131,7 @@ describe('Linear OAuth PKCE', () => {
 
   it('claims a broker callback and exchanges it locally with PKCE', async () => {
     delete process.env.OPENCHAMBER_LINEAR_REDIRECT_URI;
+    process.env.OPENCHAMBER_LINEAR_BROKER_URL = 'https://own-broker.example/v1/oauth/linear';
     const brokerAndTokenFetch = vi.fn(async (url, init) => {
       const target = String(url);
       if (target.endsWith('/start')) {
@@ -121,7 +139,7 @@ describe('Linear OAuth PKCE', () => {
         expect(body.state).toMatch(/^[A-Za-z0-9_-]{43}$/);
         expect(body.claimSecret).toMatch(/^[A-Za-z0-9_-]{43}$/);
         return new Response(JSON.stringify({
-          redirectUri: 'https://api.openchamber.dev/v1/oauth/linear/callback',
+          redirectUri: 'https://own-broker.example/v1/oauth/linear/callback',
           expiresIn: 600,
         }), { status: 200 });
       }
@@ -134,7 +152,7 @@ describe('Linear OAuth PKCE', () => {
       if (target === 'https://api.linear.app/oauth/token') {
         const body = new URLSearchParams(init.body);
         expect(body.get('code')).toBe('broker-code');
-        expect(body.get('redirect_uri')).toBe('https://api.openchamber.dev/v1/oauth/linear/callback');
+        expect(body.get('redirect_uri')).toBe('https://own-broker.example/v1/oauth/linear/callback');
         expect(body.get('code_verifier')).toMatch(/^[A-Za-z0-9_-]{43}$/);
         return new Response(JSON.stringify({
           access_token: 'broker-access',
@@ -148,7 +166,7 @@ describe('Linear OAuth PKCE', () => {
 
     const started = await startAuthorization({ origin: 'desktop' });
     const authorizationUrl = new URL(started.authorizationUrl);
-    expect(authorizationUrl.searchParams.get('redirect_uri')).toBe('https://api.openchamber.dev/v1/oauth/linear/callback');
+    expect(authorizationUrl.searchParams.get('redirect_uri')).toBe('https://own-broker.example/v1/oauth/linear/callback');
 
     const result = await pollAuthorizationBroker();
     expect(result).toMatchObject({ accessToken: 'broker-access', origin: 'desktop' });

@@ -1,4 +1,4 @@
-// The host's routes of the isolated-spaces journey, `/api/openchamber/spaces`, as the screens call
+// The host's routes of the isolated-spaces journey, `/api/multichamber/spaces`, as the screens call
 // them. Every answer is parsed here, once, into the types the screens use; a failure is a thrown
 // `SpacesRequestError` with the server's stable code, never an empty answer that would read as
 // "no spaces". The contract is `packages/web/server/lib/spaces/DOCUMENTATION.md`, "The journey".
@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 import { runtimeFetch } from '@/lib/runtime-fetch';
 
-const SPACES_ROUTE = '/api/openchamber/spaces';
+const SPACES_ROUTE = '/api/multichamber/spaces';
 
 const spaceIdSchema = z.string().regex(/^[0-9a-f]{12}$/);
 
@@ -334,7 +334,7 @@ export type SpaceCleanUp = z.infer<typeof spaceCleanUpSchema>;
 export const readSpaceDisk = (placeId: string, signal?: AbortSignal): Promise<SpaceDisk> =>
   request(`${SPACES_ROUTE}/places/${encodeURIComponent(placeId)}/disk`, spaceDiskSchema, { signal });
 
-/** Removes what OpenChamber can make again on the place; Docker keeps whatever is in use. */
+/** Removes what Multichamber can make again on the place; Docker keeps whatever is in use. */
 export const cleanUpSpaceDisk = (placeId: string): Promise<SpaceCleanUp> =>
   request(`${SPACES_ROUTE}/places/${encodeURIComponent(placeId)}/clean-up`, spaceCleanUpSchema, { method: 'POST' });
 

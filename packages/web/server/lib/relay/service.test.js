@@ -48,6 +48,26 @@ const makeService = (options = {}) => {
 };
 
 describe('relay service identity reset', () => {
+  it('keeps an unconfigured relay disabled without claiming a host or advertising a candidate', async () => {
+    const { service, hostLock } = makeService({ settings: { privateRelay: { enabled: true } } });
+    try {
+      await service.startIfEnabled();
+      expect(await service.getStatus()).toMatchObject({ state: 'disabled', configured: false, relayUrl: '' });
+      expect(await service.getPairingCandidate()).toBeNull();
+      await expect(service.ensureEnabledForPairing()).rejects.toMatchObject({ statusCode: 409, code: 'relay_unconfigured' });
+      expect(hostLock.tryClaim).not.toHaveBeenCalled();
+      expect(hostLock.forceClaim).not.toHaveBeenCalled();
+    } finally { service.stop(); }
+  });
+  it('does not persist an enabled relay when demand exists without an endpoint', async () => {
+    const { service, hostLock, getSettings } = makeService({ settings: { privateRelay: { enabled: false } } });
+    try {
+      await service.reconcile();
+      expect(getSettings().privateRelay.enabled).toBe(false);
+      expect(await service.getStatus()).toMatchObject({ state: 'disabled', configured: false });
+      expect(hostLock.tryClaim).not.toHaveBeenCalled();
+    } finally { service.stop(); }
+  });
   it('gives this copy a new server id', async () => {
     const { service } = makeService();
     try {

@@ -22,6 +22,11 @@ session-knowledge runtime; routes registered in
 JSON bodies enabled in `opencode/core-routes.js`; stopped by
 `opencode/shutdown-runtime.js`.
 
+An idle event can arrive before the preceding prompt's HTTP acknowledgement.
+The queue retains that signal while a send is in flight and re-arms dispatch
+after acceptance. A newer busy event cancels it. This prevents a queued goal
+from being stranded when its turn finishes before its send response settles.
+
 ## Auto routing
 
 `resolveAutoSelection` (the routing runtime) runs right before the send when
@@ -104,7 +109,7 @@ persistence, retries, directory query and delivery gates remain unchanged.
 
 ## Queue file
 
-`<data-dir>/message-queue.json` (`OPENCHAMBER_DATA_DIR` or
+`<data-dir>/message-queue.json` (`MULTICHAMBER_DATA_DIR` or
 `~/.config/openchamber`): `{ version, revision, sessions: { [sessionId]:
 { directory, items } } }`, written atomically (temp file + rename) through a
 serialized write chain. A missing file is an empty queue. A malformed file is
@@ -192,7 +197,7 @@ minutes while the run continues. Releasing arms a dispatch.
 
 ## Routes (`/api/message-queue`)
 
-Normal authenticated OpenChamber runtime routes; never on browser URL-token
+Normal authenticated Multichamber runtime routes; never on browser URL-token
 allowlists.
 
 | Route | Purpose |
@@ -209,7 +214,7 @@ allowlists.
 Every mutation broadcasts `openchamber:message-queue.updated` with
 `{ revision, session }` to all connected clients (SSE and WS), so several
 devices on one server see one queue. SSE uses the shared control stream at
-`/api/openchamber/events`; `/api/global/event` carries no OpenChamber events.
+`/api/openchamber/events`; `/api/global/event` carries no Multichamber events.
 The UI subscribes independently of its OpenCode transport and re-reads the
 snapshot whenever either stream reconnects. The session in that payload always names
 its `directory`, including the broadcast that removes the last item: the UI
@@ -230,5 +235,5 @@ runtime sees the host's events only and never delivers into a space. The host
 forwards the space's `openchamber:message-queue.updated` changes to the
 browsers, see "Sessions and events" in
 `packages/web/server/lib/spaces/DOCUMENTATION.md`. VS Code intentionally
-does not use this module; with all OpenChamber webviews closed, queued
+does not use this module; with all Multichamber webviews closed, queued
 messages there are not delivered.

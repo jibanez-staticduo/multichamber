@@ -16,10 +16,10 @@ import { resolveProjectContextId } from '@/lib/projectContextApi';
 import { cn } from '@/lib/utils';
 import { registerBrowserCloser, registerBrowserOpener, registerSleepingBrowserTab, setShownBrowserTab } from '@/lib/browser/controlClient';
 import { pickLiveBrowserTabs, touchRecentBrowserTab } from '@/lib/browser/liveTabs';
-import { subscribeOpenchamberEvents } from '@/lib/openchamberEvents';
+import { subscribeOpenchamberEvents } from '@/lib/multichamberEvents';
 import { useGuestsStore } from '@/lib/guests/store';
 import { guestHasSharedSurface, guestSurfaceDocking, type GuestSurfaceDocking } from '@/lib/guests/surfaces';
-import { GUEST_SURFACE_DOCK_SIZE_MIN } from '@openchamber/sdk';
+import { GUEST_SURFACE_DOCK_SIZE_MIN } from '@multichamber/sdk';
 import { isPluginContextPanelMode, pluginIdFromMode, type PluginContextPanelMode } from '@/lib/surfaces/modes';
 import {
   getZoneView,

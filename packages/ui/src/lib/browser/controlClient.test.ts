@@ -26,7 +26,7 @@ mock.module('@/lib/runtime-fetch', () => ({
     return { ok: true, status: 200 };
   }),
 }));
-mock.module('@/lib/openchamberEvents', () => ({
+mock.module('@/lib/multichamberEvents', () => ({
   subscribeOpenchamberEvents: (handler: Listener) => {
     listener = handler;
     return () => { listener = null; };

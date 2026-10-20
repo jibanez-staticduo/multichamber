@@ -56,7 +56,7 @@ which of the two a write goes to. The UI side is `packages/ui/src/stores/useSess
 
 ## Decisions
 
-### Why OpenChamber pings and not OpenCode
+### Why Multichamber pings and not OpenCode
 
 OpenCode's warming is one config key for every session, and its plugin has no
 per-session switch. The generate route is the same request the plugin sends,

@@ -59,6 +59,29 @@ export const resetGlobalBlockingRequests = (): void => {
   useGlobalBlockingRequestsStore.setState({ bySession: new Map() });
 };
 
+/** A complete native snapshot replaces only that engine's requests, leaving other engines and pages intact. */
+export const applyNativeBlockingSnapshot = (
+  owns: (id: string) => boolean,
+  resolveDirectory: (id: string) => string,
+  permissions: readonly BlockingPermissionRequest[],
+  forms: readonly BlockingFormRequest[],
+  unchanged: (id: string) => boolean = () => true,
+): void => {
+  const state = useGlobalBlockingRequestsStore.getState();
+  const bySession = new Map(state.bySession);
+  const ids = new Set([...bySession.keys(), ...permissions.map((entry) => entry.sessionID), ...forms.map((entry) => entry.sessionID)]);
+  for (const id of ids) {
+    if (!owns(id) || !unchanged(id)) continue;
+    const previous = bySession.get(id);
+    const directory = resolveDirectory(id) || previous?.directory;
+    if (!directory) continue;
+    const entry = { directory, permissions: permissions.filter((item) => item.sessionID === id), forms: forms.filter((item) => item.sessionID === id), pages: previous?.pages ?? EMPTY };
+    if (entry.permissions.length || entry.forms.length || entry.pages.length) bySession.set(id, entry);
+    else bySession.delete(id);
+  }
+  useGlobalBlockingRequestsStore.setState({ bySession });
+};
+
 const normalizeDirectory = (directory: string): string => normalizeProjectPath(directory) ?? directory;
 
 // The live events carry the whole request; only the rendered fields are kept,

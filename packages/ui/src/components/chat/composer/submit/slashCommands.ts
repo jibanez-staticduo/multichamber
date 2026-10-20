@@ -1,3 +1,4 @@
+import type { EngineCapabilities } from '@/lib/sessionEngine';
 /**
  * The composer's local slash commands.
  *
@@ -179,10 +180,12 @@ export function planLocalSlashCommand(
     inputMode: 'normal' | 'shell' | undefined,
     hasAttachedContext: boolean,
     hasSession: boolean,
+    capabilities?: EngineCapabilities,
 ): LocalSlashCommandPlan | null {
     if (inputMode !== 'normal') return null;
     const command = parseSlashCommand(text);
     if (!command) return null;
+    if (capabilities && ((['undo', 'redo'].includes(command.name) && !capabilities.revert) || (command.name === 'fork' && !capabilities.fork) || (command.name === 'compact' && !capabilities.compact))) return null;
 
     if (LOCAL_ACTION_COMMANDS.has(command.name)) {
         if (!hasSession) return null;

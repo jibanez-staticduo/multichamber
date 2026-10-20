@@ -25,7 +25,7 @@ function isUnsafeBrowserPort(port) {
 }
 
 function resolveConfiguredBindHost(hostOverride) {
-  // A host OpenChamber itself put into this shell (the desktop app's, a
+  // A host Multichamber itself put into this shell (the desktop app's, a
   // running server's) is not a default for a new one.
   const configuredHost = injectedEnvKeys(process.env).has('OPENCHAMBER_HOST')
     ? undefined
@@ -114,7 +114,7 @@ async function detectLanIPv4Address() {
 
 
 function formatUnsafePortWarning(port) {
-  return `Port ${port} is browser-unsafe (ERR_UNSAFE_PORT) and is not supported for OpenChamber UI at ${buildLocalUrl(port, '/')}.`;
+  return `Port ${port} is browser-unsafe (ERR_UNSAFE_PORT) and is not supported for Multichamber UI at ${buildLocalUrl(port, '/')}.`;
 }
 
 function assertSafeBrowserPort(port, { context = 'This action' } = {}) {

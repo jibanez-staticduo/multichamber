@@ -110,7 +110,7 @@ export const installOpenCodeV2 = async ({
   const directory = path.join(homeDirectory, '.opencode', 'bin');
   await fs.mkdir(directory, { recursive: true });
   const lock = path.join(directory, '.openchamber-install');
-  // Also serializes separate OpenChamber/VS Code processes sharing this home.
+  // Also serializes separate Multichamber/VS Code processes sharing this home.
   await fs.mkdir(lock).catch(() => { throw new Error('Another OpenCode installation is already in progress.'); });
   const snapshots = [];
   let started = false;

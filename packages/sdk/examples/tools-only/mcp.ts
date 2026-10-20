@@ -1,7 +1,7 @@
 // Optional, read-only MCP fixture. The extension itself remains manifest-only.
 import { createInterface } from 'node:readline';
 import { z } from 'zod';
-import type { JsonValue } from '@openchamber/sdk';
+import type { JsonValue } from '@multichamber/sdk';
 
 const requestSchema = z.object({
   jsonrpc: z.literal('2.0'), id: z.union([z.string(), z.number()]).optional(), method: z.string(),

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Fully automated streaming capture for OpenChamber.
+ * Fully automated streaming capture for Multichamber.
  *
  * Where `profile:idle` measures what the app does when nothing happens, this
  * command measures the opposite: what it costs to receive and render a live
@@ -46,11 +46,11 @@ const DEFAULT_PROMPT = "Write a technical explanation of how a bytecode virtual 
 
 const HELP = `Usage: bun run profile:session -- [options]
 
-Records what OpenChamber costs while an assistant response streams in.
+Records what Multichamber costs while an assistant response streams in.
 
 Options:
-  --url <url>              OpenChamber URL (default: http://localhost:3000)
-  --port <port>            OpenChamber CLI port (default: from --url)
+  --url <url>              Multichamber URL (default: http://localhost:3000)
+  --port <port>            Multichamber CLI port (default: from --url)
   --dir <path>             Session directory (default: repository root)
   --session <id>           Reuse this session instead of creating one
   --quiet <seconds>        Send no prompt: record this long with the session
@@ -91,7 +91,7 @@ Options:
                            exposes CDP on this port, such as the desktop shell
                            started with --remote-debugging-port, instead of
                            launching Chrome. The session opens in its window.
-                           --url still names the OpenChamber server the CLI
+                           --url still names the Multichamber server the CLI
                            talks to; --headed, --chrome and --profile-dir do
                            not apply.
   --sampling-interval <us> CPU sampler interval (default: 200)
@@ -409,7 +409,7 @@ const snapshotAnimations = async (client) => {
  * Reads a session status out of one realtime WebSocket frame, or null.
  *
  * The frame wraps an event (`{ type: "event", payload: { type, properties } }`).
- * OpenChamber's `openchamber:session-status` (status "busy"/"idle"), and
+ * Multichamber's `openchamber:session-status` (status "busy"/"idle"), and
  * OpenCode's `session.status` and `session.idle`, all mark the end of the
  * reply; the frame's CDP timestamp is the moment the page received it,
  * which is when the app starts finalising the turn.
@@ -424,7 +424,7 @@ const readSessionStatus = (payload, sessionId) => {
   const event = parsed?.payload ?? parsed
   const data = event?.properties ?? event?.data ?? {}
   if ((data.sessionID ?? data.sessionId) !== sessionId) return null
-  // OpenChamber's server bridges status as its own event, which is what the
+  // Multichamber's server bridges status as its own event, which is what the
   // UI's sync pipeline turns into `session.status`.
   if (event?.type === "openchamber:session-status") return typeof data.status === "string" ? data.status : null
   if (event?.type === "session.idle") return "idle"
@@ -538,7 +538,7 @@ const printReport = (summary, baseline) => {
     }
     console.log(`  ${String(processCpu.totalAveragePercent).padStart(6)}% ${String(processCpu.totalP90Percent).padStart(6)}% ${String(processCpu.totalMaxPercent).padStart(6)}%  all of the above`)
     if (processCpu.serverProcessesResolved === 0) {
-      console.log("  The OpenChamber server process was not resolved, so server and OpenCode CPU is missing, not zero.")
+      console.log("  The Multichamber server process was not resolved, so server and OpenCode CPU is missing, not zero.")
     }
   }
 

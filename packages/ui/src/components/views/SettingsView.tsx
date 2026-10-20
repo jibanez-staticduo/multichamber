@@ -13,7 +13,7 @@ import { useCommandsStore } from '@/stores/useCommandsStore';
 import { useMcpConfigStore } from '@/stores/useMcpConfigStore';
 import { useSnippetsStore } from '@/stores/useSnippetsStore';
 import { projectSettingsTabForSearchTarget, useProjectSettingsTabStore } from '@/components/sections/projects/projectSettingsTabs';
-import { chatSettingsTabForSearchTarget, useChatSettingsTabStore } from '@/components/sections/openchamber/chatSettingsTabs';
+import { chatSettingsTabForSearchTarget, useChatSettingsTabStore } from '@/components/sections/multichamber/chatSettingsTabs';
 import { useSkillsStore } from '@/stores/useSkillsStore';
 import { useSkillsCatalogStore } from '@/stores/useSkillsCatalogStore';
 import { Tooltip, TooltipTrigger } from '@/components/ui/tooltip';
@@ -44,9 +44,9 @@ import { GitPage } from '@/components/sections/git-identities/GitPage';
 import { IntegrationsPage } from '@/components/sections/integrations/IntegrationsPage';
 import { RoutingPage } from '@/components/sections/routing/RoutingPage';
 import { ExtensionsPage } from '@/components/sections/extensions/ExtensionsPage';
-import type { OpenChamberSection } from '@/components/sections/openchamber/types';
-import { OpenChamberPage } from '@/components/sections/openchamber/OpenChamberPage';
-import { AboutSettings } from '@/components/sections/openchamber/AboutSettings';
+import type { MultichamberSection } from '@/components/sections/multichamber/types';
+import { MultichamberPage } from '@/components/sections/multichamber/MultichamberPage';
+import { AboutSettings } from '@/components/sections/multichamber/AboutSettings';
 import { SettingsPageLayout } from '@/components/sections/shared/SettingsPageLayout';
 import { SettingsScrollbarTopClearanceContext } from '@/components/sections/shared/settingsScrollbarClearance';
 import {
@@ -112,7 +112,7 @@ interface SettingsViewProps {
 }
 
 const pageOrder: SettingsPageSlug[] = [
-  // 'general' group — OpenChamber
+  // 'general' group — Multichamber
   'general',
   'appearance',
   'chat',
@@ -322,7 +322,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
 
   // Nav is always open (collapsed state removed)
 
-  const openChamberSectionBySlug: Partial<Record<SettingsPageSlug, OpenChamberSection>> = React.useMemo(() => ({
+  const multichamberSectionBySlug: Partial<Record<SettingsPageSlug, MultichamberSection>> = React.useMemo(() => ({
     general: 'general',
     appearance: 'visual',
     chat: 'chat',
@@ -389,7 +389,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
       case 'tunnel':
         return t('settings.page.tunnel.title');
       case 'isolated-spaces':
-        return t('settings.openchamber.spaces.title');
+        return t('settings.multichamber.spaces.title');
       case 'about':
         return t('settings.page.about.title');
       case 'home':
@@ -731,14 +731,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
       case 'voice':
       case 'tunnel':
       case 'isolated-spaces': {
-        const section = openChamberSectionBySlug[slug] ?? 'visual';
-        return <OpenChamberPage section={section} />;
+        const section = multichamberSectionBySlug[slug] ?? 'visual';
+        return <MultichamberPage section={section} />;
       }
       case 'home':
       default:
         return null;
     }
-  }, [openChamberSectionBySlug, renderUnavailable, runtimeCtx, t]);
+  }, [multichamberSectionBySlug, renderUnavailable, runtimeCtx, t]);
 
   // Mobile: if opened via deep-link / palette to a non-home page, jump into it once.
   React.useEffect(() => {

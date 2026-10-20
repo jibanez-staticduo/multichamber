@@ -38,14 +38,14 @@ jobs:
         id: archive
         run: |
           mkdir -p artifacts
-          ARCHIVE_NAME="openchamber-docs-source-${GITHUB_SHA::8}.tar.gz"
+          ARCHIVE_NAME="multichamber-docs-source-${GITHUB_SHA::8}.tar.gz"
           tar -czf "artifacts/${ARCHIVE_NAME}" -C packages/docs .
           echo "archive_name=${ARCHIVE_NAME}" >> "$GITHUB_OUTPUT"
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: docs-source
+          name: multichamber-docs-source
           path: artifacts/${{ steps.archive.outputs.archive_name }}
           retention-days: 14
 
@@ -58,22 +58,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Trigger openchamber-website docs sync (optional)
+      - name: Trigger configured docs website sync (optional)
         if: ${{ github.event_name == 'push' || github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
         env:
-          WEBSITE_REPO: openchamber/openchamber-website
-          WEBSITE_TOKEN: ${{ secrets.OPENCHAMBER_WEBSITE_REPO_TOKEN }}
+          WEBSITE_REPO: ${{ vars.MULTICHAMBER_DOCS_WEBSITE_REPO }}
+          WEBSITE_TOKEN: ${{ secrets.MULTICHAMBER_DOCS_WEBSITE_REPO_TOKEN }}
           SOURCE_REF: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
         run: |
-          if [ -z "$WEBSITE_TOKEN" ]; then
-            echo "OPENCHAMBER_WEBSITE_REPO_TOKEN not set; skip dispatch."
+          if [ -z "$WEBSITE_REPO" ] || [ -z "$WEBSITE_TOKEN" ]; then
+            echo "Docs website repository or token not configured; skip dispatch."
             exit 0
           fi
 
-          curl -sS -X POST \
+          curl --fail-with-body -sS -X POST \
             -H "Authorization: Bearer $WEBSITE_TOKEN" \
             -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/$WEBSITE_REPO/dispatches \
+            "https://api.github.com/repos/$WEBSITE_REPO/dispatches" \
             -d @- <<JSON
           {
             "event_type": "docs_source_updated",

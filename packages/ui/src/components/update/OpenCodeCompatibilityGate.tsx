@@ -1,18 +1,19 @@
 import * as React from 'react';
-import { OpenChamberLogo } from '@/components/ui/OpenChamberLogo';
+import { MultichamberLogo } from '@/components/ui/MultichamberLogo';
 import { Icon } from '@/components/icon/Icon';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { DesktopHostSwitcherInline } from '@/components/desktop/DesktopHostSwitcher';
 import { useI18n } from '@/lib/i18n';
-import { subscribeRuntimeEndpointChanged } from '@/lib/runtime-switch';
+import { getRuntimeKey, subscribeRuntimeEndpointChanged } from '@/lib/runtime-switch';
 import { recoverOpenCode, type OpenCodeCompatibility } from '@/lib/opencode/compatibility';
 import { runCompatibilityCheck, takeCompatibilityCheck, type CompatibilityCheck } from './openCodeCompatibilityCheck';
+import { probeNativeHarnessAvailability } from '@/lib/nativeHarnessAvailability';
 
 /**
  * The app mounts at once and keeps starting while the check runs; only a
- * confirmed incompatible OpenCode replaces it with the recovery screen. A
- * failed check leaves the app's own connection recovery in charge.
+ * confirmed incompatible OpenCode replaces it with recovery when no native
+ * harness is available. A failed check leaves connection recovery in charge.
  *
  * `enabled={false}` skips the check while keeping the children mounted, so a
  * host without a server yet can turn the gate on without remounting the app.
@@ -24,17 +25,22 @@ export const OpenCodeCompatibilityGate: React.FC<React.PropsWithChildren<{ enabl
   const [operation, setOperation] = React.useState<'install-v2' | 'reconnect' | null>(null);
   const [failed, setFailed] = React.useState(false);
   const generation = React.useRef(0);
+  const [nativeRuntime, setNativeRuntime] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!enabled) return;
     let mounted = true;
     const check = async (request: CompatibilityCheck) => {
       const revision = ++generation.current;
+      const runtimeKey = getRuntimeKey();
       try {
-        const result = await request;
-        if (result && mounted && revision === generation.current) setCompatibility(result);
+        const [result, nativeAvailable] = await Promise.all([request, probeNativeHarnessAvailability().catch(() => false)]);
+        if (mounted && revision === generation.current && runtimeKey === getRuntimeKey()) {
+          setNativeRuntime(nativeAvailable ? runtimeKey : null);
+          if (result) setCompatibility(result);
+        }
       } catch {
-        // An unavailable host or an older OpenChamber host keeps its existing
+        // An unavailable host or an older Multichamber host keeps its existing
         // connection UI. Failed reads never dismiss a known incompatible CLI.
       }
     };
@@ -42,6 +48,7 @@ export const OpenCodeCompatibilityGate: React.FC<React.PropsWithChildren<{ enabl
     const unsubscribe = subscribeRuntimeEndpointChanged(() => {
       generation.current += 1;
       setCompatibility(null);
+      setNativeRuntime(null);
       setOperation(null);
       setFailed(false);
       void check(runCompatibilityCheck());
@@ -50,12 +57,12 @@ export const OpenCodeCompatibilityGate: React.FC<React.PropsWithChildren<{ enabl
   }, [enabled]);
 
   React.useEffect(() => {
-    if (compatibility?.state === 'incompatible') {
+    if (compatibility?.state === 'incompatible' && nativeRuntime !== getRuntimeKey()) {
       // The application cannot initialize against v1. Recovery replaces it,
       // including dismissal of the HTML loading overlay.
       document.getElementById('initial-loading')?.remove();
     }
-  }, [compatibility]);
+  }, [compatibility, nativeRuntime]);
 
   const recover = async (action: 'install-v2' | 'reconnect') => {
     if (operation) return;
@@ -74,7 +81,7 @@ export const OpenCodeCompatibilityGate: React.FC<React.PropsWithChildren<{ enabl
     }
   };
 
-  if (!enabled || compatibility?.state !== 'incompatible') return <>{children}</>;
+  if (!enabled || compatibility?.state !== 'incompatible' || nativeRuntime === getRuntimeKey()) return <>{children}</>;
   const external = compatibility.installation === 'external';
   const bundled = compatibility.installation === 'bundled';
   // A 2.x below the minimum needs an update, not the v1 → v2 move.
@@ -88,7 +95,7 @@ export const OpenCodeCompatibilityGate: React.FC<React.PropsWithChildren<{ enabl
   return (
     <section className="app-region-drag flex h-full min-h-0 items-center justify-center overflow-y-auto bg-background px-6 py-10 text-foreground select-none" aria-labelledby={titleId}>
       <div className="flex w-full max-w-sm flex-col items-center text-center">
-        <OpenChamberLogo width={48} height={48} />
+        <MultichamberLogo width={48} height={48} />
         <h1 id={titleId} className="mt-6 text-xl font-semibold tracking-tight">{t(outdated ? 'opencodeCompatibility.outdatedTitle' : 'opencodeCompatibility.title')}</h1>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-balance">
           {t(descriptionKey, { version: compatibility.version ?? '', minimum: minimum ?? '' })}
@@ -101,7 +108,7 @@ export const OpenCodeCompatibilityGate: React.FC<React.PropsWithChildren<{ enabl
             <span className="text-foreground">{outdated ? `${minimum}+` : '2.x'}</span>
           </div>
         )}
-        {/* With several installs, the path tells which one OpenChamber runs. */}
+        {/* With several installs, the path tells which one Multichamber runs. */}
         {compatibility.binary && (
           <p className="mt-2 max-w-full break-all font-mono text-xs text-muted-foreground select-text">{compatibility.binary}</p>
         )}
@@ -120,7 +127,7 @@ export const OpenCodeCompatibilityGate: React.FC<React.PropsWithChildren<{ enabl
         </div>
         <a
           className="app-region-no-drag mt-6 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-          href={bundled ? 'https://github.com/openchamber/openchamber/releases/latest' : 'https://opencode.ai/download'}
+          href={bundled ? 'https://github.com/jibanez-staticduo/multichamber/releases/latest' : 'https://opencode.ai/download'}
           target="_blank"
           rel="noopener noreferrer"
         >

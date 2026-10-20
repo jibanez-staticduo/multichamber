@@ -18,8 +18,8 @@ import {
   type HostMessage,
   type HostReadyContext,
   type ResolveResultPayload,
-} from '@openchamber/sdk';
-import { guestMessageSchema } from '@openchamber/sdk/schemas';
+} from '@multichamber/sdk';
+import { guestMessageSchema } from '@multichamber/sdk/schemas';
 
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { getReadableThemeColors } from '@/lib/theme/readableColors';

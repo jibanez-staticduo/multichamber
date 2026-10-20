@@ -12,7 +12,7 @@
  * the pending request on every surface.
  */
 
-import { getProjectSetup, updateProjectSetup, type ProjectRef, type ProjectSetup } from './openchamberConfig';
+import { getProjectSetup, updateProjectSetup, type ProjectRef, type ProjectSetup } from './multichamberConfig';
 
 export type SharedTrustChoice = 'trust' | 'skip' | 'cancel';
 

@@ -1,4 +1,7 @@
+import { runClaudeRewind } from './claudeRewindAction';
+import { useSessionEngineById } from '@/hooks/useSessionEngine';
 import React from 'react';
+import { Icon } from '@/components/icon/Icon';
 import { modelVariantNames } from '@/lib/modelVariants';
 import { findCatalogModel, type Message, type Part } from '@/lib/opencode/model';
 import { useShallow } from 'zustand/react/shallow';
@@ -125,6 +128,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     reviewTransferDirection = null,
 }) => {
     const { t } = useI18n();
+    const engine = useSessionEngineById(message.info.sessionID);
     const { isMobile, isTablet, hasTouchInput } = useDeviceInfo();
     const alwaysShowMessageActions = isMobile || isTablet;
     const canPinIntoContext = !isVSCodeRuntime();
@@ -529,10 +533,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     const messageRecordRef = React.useRef(message);
     messageRecordRef.current = message;
     const guestMessageActions = React.useMemo<MessageExtraAction[] | undefined>(() => {
-        if (guestActionEntries.length === 0 || !sessionId) return undefined;
+        if (!sessionId) return undefined;
+        const rewind: MessageExtraAction[] = isUser && engine.id === 'claude' ? [{ id: 'claude-rewind', icon: <Icon name="history" className="size-3.5" />, label: t('chat.claudeRewind.apply'), onSelect: () => { void runClaudeRewind(sessionId, message.info.id, t); } }] : [];
         const entries = guestMessageActionsFor(guestActionEntries, isUser ? 'user' : 'assistant');
-        if (entries.length === 0) return undefined;
-        return entries.map((entry) => ({
+        if (entries.length === 0) return rewind.length ? rewind : undefined;
+        return [...rewind, ...entries.map((entry) => ({
             id: `guest:${entry.guest.id}:${entry.action.id}`,
             label: entry.action.label,
             icon: <GuestIcon icon={entry.icon} iconSrc={entry.iconSrc} className="size-3.5" />,
@@ -542,8 +547,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                 const item = buildGuestMessageItem(entry.action.id, { sessionId, sessionTitle, directory }, messageRecordRef.current);
                 void runGuestAction(entry, item, t);
             },
-        }));
-    }, [guestActionEntries, isUser, sessionId, t]);
+        }))];
+    }, [guestActionEntries, isUser, sessionId, t, engine.id, message.info.id]);
 
     // NEW: Fork handler
     const handleFork = React.useCallback(() => {
@@ -659,8 +664,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                                                 copiedMessage={copiedMessage}
                                                 showReasoningTraces={showReasoningTraces}
                                                 agentMention={agentMention}
-                                                onRevert={handleRevert}
-                                                onFork={isUser ? handleFork : undefined}
+                                                onRevert={engine.capabilities.revert ? handleRevert : undefined}
+                                                onFork={isUser && engine.capabilities.forkAtMessage ? handleFork : undefined}
                                                 contextPinned={isPinnedIntoContext}
                                                 contextPinPending={pinPending}
                                                 onToggleContextPin={canPinIntoContext && messageCreatedAt ? handleToggleContextPin : undefined}
@@ -694,8 +699,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                                         copiedMessage={copiedMessage}
                                         showReasoningTraces={showReasoningTraces}
                                         agentMention={agentMention}
-                                        onRevert={handleRevert}
-                                        onFork={isUser ? handleFork : undefined}
+                                        onRevert={engine.capabilities.revert ? handleRevert : undefined}
+                                        onFork={isUser && engine.capabilities.forkAtMessage ? handleFork : undefined}
                                         contextPinned={isPinnedIntoContext}
                                         contextPinPending={pinPending}
                                         onToggleContextPin={canPinIntoContext && messageCreatedAt ? handleToggleContextPin : undefined}

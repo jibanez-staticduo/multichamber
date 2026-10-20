@@ -1,4 +1,5 @@
 import type { MessagePatch, SessionPatch, SyncEvent, ToolTransition } from "@/lib/opencode/events"
+import { z } from 'zod'
 import {
   compact,
   isFinalToolStatus,
@@ -203,6 +204,8 @@ function applySessionPatch(session: Session, patch: SessionPatch): Session {
   return next
 }
 
+const nativeMessageMetadataSchema = z.record(z.string(), z.json())
+
 function applyMessagePatch(message: Message, patch: MessagePatch): Message {
   if (message.role === "assistant") {
     const next = { ...message }
@@ -216,6 +219,12 @@ function applyMessagePatch(message: Message, patch: MessagePatch): Message {
     if (patch.error !== undefined || patch.time?.completed !== undefined) delete next.closedLocally
     if (patch.cost !== undefined) next.cost = patch.cost
     if (patch.tokens !== undefined) next.tokens = patch.tokens
+    if (patch.metadata !== undefined) {
+      next.metadata = { ...message.metadata, ...patch.metadata }
+      const incomingCodex = nativeMessageMetadataSchema.safeParse(patch.metadata.codex)
+      const previousCodex = nativeMessageMetadataSchema.safeParse(message.metadata?.codex)
+      if (incomingCodex.success && previousCodex.success) next.metadata.codex = { ...previousCodex.data, ...incomingCodex.data }
+    }
     if (patch.snapshot) next.snapshot = compact({ ...message.snapshot, ...patch.snapshot })
     if (patch.retry === null) delete next.retry
     else if (patch.retry !== undefined) next.retry = patch.retry

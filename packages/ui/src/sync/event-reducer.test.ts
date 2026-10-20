@@ -190,6 +190,17 @@ describe("compaction events", () => {
 })
 
 describe("message events", () => {
+  test('native usage completion metadata preserves context and unrelated message metadata', () => {
+    const draft = state({ message: { ses_1: [assistant({ metadata: { source: 'native', codex: { usageScope: 'turn', context: { usedTokens: 1500 } } } })] } })
+    apply(draft, {
+      type: 'message.patched',
+      properties: { sessionID: 'ses_1', messageID: 'msg_a', patch: { time: { completed: 20 }, metadata: { codex: { usageAvailable: true, usageScope: 'turn' } } } },
+    })
+    expect(draft.message.ses_1[0].metadata).toEqual({ source: 'native', codex: { context: { usedTokens: 1500 }, usageScope: 'turn', usageAvailable: true } })
+    apply(draft, { type: 'message.patched', properties: { sessionID: 'ses_1', messageID: 'msg_a', patch: { cost: 1 } } })
+    expect(draft.message.ses_1[0].metadata?.codex).toEqual({ context: { usedTokens: 1500 }, usageScope: 'turn', usageAvailable: true })
+  })
+
   test("a patch completes the assistant message without replacing unrelated fields", () => {
     const draft = state()
     const changed = apply(draft, {

@@ -1,26 +1,21 @@
 ---
 title: Quickstart
-description: Start OpenChamber quickly and pick the right app for the task.
+description: Start a Multichamber server and choose a native session engine.
 ---
 
 # Quickstart
 
-## Fastest path
+Install OpenCode and Node.js 24.14 or newer on the server. Install and authenticate Claude Code or Codex there if you want to use them. Then install Multichamber using the command below.
 
-1. Install [OpenCode](https://opencode.ai).
-2. Install the OpenChamber CLI (see [Install](/install/) for the one-line command).
-3. Run `openchamber --ui-password be-creative-here`.
-4. Open the URL the CLI prints (usually `http://localhost:3000`).
-5. To use it from your phone, start a [tunnel](/tunnels/) and scan the QR code.
+```bash
+curl -fsSL https://raw.githubusercontent.com/jibanez-staticduo/multichamber/main/scripts/install.sh | bash
+multichamber --ui-password be-creative-here
+```
 
-You should see the OpenChamber session list in your browser. If it loads, you're up and running.
+Open the printed URL, usually `http://localhost:3000`. Choose an available engine for a new session. Settings keep separate model and permission defaults for each engine.
 
-Use a strong UI password, especially if you plan to open the instance to the internet.
+Use a strong UI password before allowing remote access.
 
-If the page doesn't load, check [Troubleshooting](/troubleshooting/).
+Use the desktop app on macOS, Windows or Linux, or run the web/PWA server. iOS and Android builds connect to an existing server. This fork does not ship a VS Code extension.
 
-## Which app should I use?
-
-- use **desktop** for day-to-day work on macOS, Windows, or Linux
-- use **web** for remote access and reviewing from your phone
-- use **VS Code** for sessions right next to your code
+[Install](/install/)

@@ -1,5 +1,5 @@
 // The dispatcher: a thin layer in front of the host's routes that forwards a request addressed
-// to a space to the OpenChamber server inside that space, over the place's `connect` channel.
+// to a space to the Multichamber server inside that space, over the place's `connect` channel.
 //
 // The client addresses the space. A request goes to a space when it names a directory under
 // `/spaces/<id>` in its query or its directory header, or when its path starts with

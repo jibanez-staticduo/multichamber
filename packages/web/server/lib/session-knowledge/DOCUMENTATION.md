@@ -42,7 +42,7 @@ call it in process. An empty text removes the entry. A key left out of
 OpenCode does the rest. The first values go into the session's system prompt;
 a value that changed or went away is announced to the agent at its next step as
 a system message, and an unchanged write tells it nothing. Compaction keeps the
-current values, revert does not cut them, and a fork copies them. So OpenChamber
+current values, revert does not cut them, and a fork copies them. So Multichamber
 keeps no record of what a session was told, and the knowledge is never a
 message in the transcript.
 
@@ -80,7 +80,7 @@ Each of the pinned and memory entries is cut at 8,000 characters, and says so.
 ## When to link
 
 A session whose agent has the managed `openchamber` tool (the setting is on and
-OpenChamber launched OpenCode) is also told when to link an issue or change to
+Multichamber launched OpenCode) is also told when to link an issue or change to
 it with `session.link` (`SESSION_LINK_GUIDANCE`), and only here: the tool's
 description does not repeat it. Stated only in the action's description it went unread: an
 agent handed an issue to investigate saw no reason to open a session-control
@@ -110,7 +110,7 @@ depends on how the user works.
 ## When to draw a page
 
 A session whose agent has the managed `openchamber_render` tool (the setting is
-on and OpenChamber launched OpenCode, read through `isPageRenderingAvailable`)
+on and Multichamber launched OpenCode, read through `isPageRenderingAvailable`)
 is told when a chart, table, diagram or interface mockup beats prose
 (`RENDER_PAGE_GUIDANCE`).
 Stated only in the tool description, it went unread: asked for a breakdown of
@@ -139,7 +139,7 @@ cases only, which is the honest expectation.
 
 ## Shipping dark
 
-Agent memory is complete but unreleased. `OPENCHAMBER_MEMORY_ENABLE` decides
+Agent memory is complete but unreleased. `MULTICHAMBER_MEMORY_ENABLE` decides
 whether it exists in a given process at all: unset, there is no tool, no routes,
 no session index, no settings row and no panel tab — absent rather than switched
 off, which would invite turning on something never announced. The setting itself

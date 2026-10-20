@@ -108,3 +108,17 @@ describe('multi-run identity', () => {
     expect(metadata.openchamber).toMatchObject({ goal: { status: 'active' } });
   });
 });
+
+test('native harness and fusion judge round-trip independently from provider names', () => {
+  const session = {
+    metadata: {}, id: 'ses_native', projectID: 'p', directory: '/repo', title: 'native', cost: 0,
+    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+    time: { created: 1, updated: 1 },
+  };
+  const metadata = withMultiRunMembership(session, {
+    version: 1, sessionID: session.id, group: { kind: 'id', id: '9f512893-6e63-4e49-a534-5de733ca103e' },
+    groupSlug: 'mixed', harness: 'claude', providerID: 'codex', modelID: 'same', role: 'run',
+    autoFusion: { harness: 'codex', providerID: 'codex', modelID: 'same', mode: 'full-access', launcherId: 'page' },
+  });
+  expect(getMultiRunIdentity({ ...session, metadata })).toMatchObject({ harness: 'claude', providerID: 'codex', autoFusion: { harness: 'codex', mode: 'full-access' } });
+});

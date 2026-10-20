@@ -150,7 +150,7 @@ describe('the actions of a space', () => {
       expect(useSpacesStore.getState().actions.get(ID)).toEqual({ kind: 'running', action: 'restart' });
       await new Promise((resolve) => setTimeout(resolve, 30));
       // The list read brings the project's own providers with it, for the composer's rule.
-      expect(requests).toEqual([`POST /api/openchamber/spaces/${ID}/restart`, 'GET /api/openchamber/spaces', 'GET /api/openchamber/spaces/custom-providers']);
+      expect(requests).toEqual([`POST /api/multichamber/spaces/${ID}/restart`, 'GET /api/multichamber/spaces', 'GET /api/multichamber/spaces/custom-providers']);
       // The restart went through and the journey list came back; the line still says "restarting".
       expect(useSpacesStore.getState().journey?.get(ID)?.state).toBe('running');
       expect(useSpacesStore.getState().actions.get(ID)).toEqual({ kind: 'running', action: 'restart' });
@@ -188,7 +188,7 @@ describe('the actions of a space', () => {
       await runSpaceAction(ID, 'restart');
       release();
       await first;
-      expect(requests.filter((request) => request.startsWith('POST'))).toEqual([`POST /api/openchamber/spaces/${ID}/stop`]);
+      expect(requests.filter((request) => request.startsWith('POST'))).toEqual([`POST /api/multichamber/spaces/${ID}/stop`]);
     });
 
     test('a removal that left something behind is a failure; one that went through closes what was open on the space and reads the session list', async () => {
@@ -233,7 +233,7 @@ describe('the actions of a space', () => {
       }, originalFetch);
       useSpacesStore.getState().closeDeleteDialog();
       await runSpaceAction(ID, 'remove', { deleteUnsavedChats: true });
-      expect(asked[0]).toBe(`DELETE /api/openchamber/spaces/${ID}?unsavedChats=delete`);
+      expect(asked[0]).toBe(`DELETE /api/multichamber/spaces/${ID}?unsavedChats=delete`);
       expect(useSpacesStore.getState().archivedNotice).toBe('Fix login');
     });
 
@@ -258,7 +258,7 @@ describe('the actions of a space', () => {
         return originalFetchWithBodies(input, init);
       }, originalFetch);
       await runSpaceAction(ID, 'setup');
-      expect(requests.filter((request) => request.startsWith('POST'))).toEqual([`POST /api/openchamber/spaces/${ID}/setup`]);
+      expect(requests.filter((request) => request.startsWith('POST'))).toEqual([`POST /api/multichamber/spaces/${ID}/setup`]);
       expect(bodies).toEqual([{ commands: ['npm ci'] }]);
       expect(useSpacesStore.getState().actions.has(ID)).toBe(false);
     });

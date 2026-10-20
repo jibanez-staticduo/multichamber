@@ -16,7 +16,7 @@ Full-screen extension pages are separate from this rail registry. `contributes.p
   Built-in modes stay a closed list. Installed guests add `plugin:${id}`
   surfaces through `extras` on `sortContextSurfaces` /
   `getVisibleContextRailSurfaces`. Do not copy guest types out of
-  `@openchamber/sdk`.
+  `@multichamber/sdk`.
 - `availability: 'always'` surfaces are always present on the rail.
   `availability: 'has-content'` surfaces (chat) are hidden from the
   rail until a tab of their mode exists, and stay visible for as long as one
@@ -108,7 +108,7 @@ keep the full height). The chat is always the centre and cannot move.
    Render the mode in `ContextPanel.tsx`. Add label/hint i18n keys.
 2. Guest panel: ship a package with `openchamber.contributes.panel`. The host
   lists it from `GET /api/guests` and renders `PluginPane`. Settings →
-  Extensions installs a folder path on that OpenChamber instance. A runtime
+  Extensions installs a folder path on that Multichamber instance. A runtime
   switch clears the catalog so a previous instance cannot leave a rail slot
   from the last host. The rail paints `panel.icon` as a Remixicon glyph.
   `contributes.attach: true` or `"panel"` puts a row on

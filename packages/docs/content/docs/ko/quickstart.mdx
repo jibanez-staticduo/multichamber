@@ -1,26 +1,21 @@
 ---
 title: 빠른 시작
-description: OpenChamber를 빠르게 시작하고 작업에 맞는 앱을 선택하세요.
+description: Multichamber 서버를 시작하고 네이티브 세션 엔진을 선택합니다.
 ---
 
 # 빠른 시작
 
-## 가장 빠른 경로
+서버에 OpenCode와 Node.js 24.14 이상을 설치하세요. Claude Code나 Codex를 사용하려면 같은 서버에 설치하고 인증하세요. 다음 명령으로 Multichamber를 설치하세요.
 
-1. [OpenCode](https://opencode.ai)를 설치합니다.
-2. OpenChamber CLI를 설치합니다(한 줄 명령은 [설치](/ko/install/)를 참고하세요).
-3. `openchamber --ui-password be-creative-here`를 실행합니다.
-4. CLI가 출력한 URL을 엽니다(보통 `http://localhost:3000`).
-5. 휴대폰에서 사용하려면 [터널](/ko/tunnels/)을 시작하고 QR 코드를 스캔합니다.
+```bash
+curl -fsSL https://raw.githubusercontent.com/jibanez-staticduo/multichamber/main/scripts/install.sh | bash
+multichamber --ui-password be-creative-here
+```
 
-브라우저에 OpenChamber 세션 목록이 보일 것입니다. 화면이 뜨면 정상적으로 실행된 것입니다.
+표시된 URL(보통 `http://localhost:3000`)을 여세요. 새 세션에 사용할 엔진을 선택하세요. 설정에서 엔진별 모델과 권한 기본값을 저장합니다.
 
-특히 인스턴스를 인터넷에 공개할 계획이라면 강력한 UI 비밀번호를 사용하세요.
+원격 액세스를 허용하기 전에 강력한 UI 암호를 사용하세요.
 
-페이지가 열리지 않으면 [문제 해결](/ko/troubleshooting/)을 확인하세요.
+macOS, Windows, Linux 데스크톱 앱이나 웹/PWA 서버를 사용하세요. iOS와 Android 빌드는 기존 서버에 연결합니다. 이 포크는 VS Code 확장을 제공하지 않습니다.
 
-## 어떤 앱을 사용해야 하나요?
-
-- macOS, Windows, Linux에서의 일상 작업에는 **데스크톱**을 사용하세요
-- 원격 접근과 휴대폰 검토에는 **웹**을 사용하세요
-- 코드 바로 옆에서 작업하는 세션에는 **VS Code**를 사용하세요
+[설치](/install/)

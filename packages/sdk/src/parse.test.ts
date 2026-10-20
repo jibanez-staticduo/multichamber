@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import { OPENCHAMBER_SDK_API_VERSION } from './api-version.ts';
-import { clampStatusSectionHeight, hasGuestPage, requestedGuestCapabilities, resolveAttachEntry, resolveStatusSectionEntry, resolveAttachMode, resolveIntegrationApi, toPublicIntegration, type OpenChamberContributes } from './manifest.ts';
+import { clampStatusSectionHeight, hasGuestPage, requestedGuestCapabilities, resolveAttachEntry, resolveStatusSectionEntry, resolveAttachMode, resolveIntegrationApi, toPublicIntegration, type MultichamberContributes } from './manifest.ts';
 import { parseManifest, parseManifestJson } from './parse.ts';
 
 const validBlock = {
@@ -17,6 +17,19 @@ const validBlock = {
 };
 
 describe('parseManifest', () => {
+  test('reads canonical and legacy package fields into the same normalized manifest', () => {
+    const canonical = parseManifest({ version: '1.0.0', multichamber: { ...validBlock, engines: { multichamber: '>=1.22.0' } } });
+    const legacy = parseManifest({ version: '1.0.0', openchamber: { ...validBlock, engines: { openchamber: '>=1.22.0' } } });
+    expect(canonical).toEqual(legacy);
+    expect(parseManifestJson(JSON.stringify({ multichamber: validBlock }))).toMatchObject({ ok: true, manifest: { apiVersion: 1 } });
+  });
+  test('prefers canonical fields without falling back from malformed canonical declarations', () => {
+    const preferred = parseManifestJson(JSON.stringify({ multichamber: { ...validBlock, engines: { multichamber: '>=2.0.0', openchamber: '^invalid' } }, openchamber: { ...validBlock, apiVersion: 99 } }));
+    expect(preferred).toMatchObject({ ok: true, manifest: { engines: { multichamber: '>=2.0.0' } } });
+    expect(parseManifestJson(JSON.stringify({ multichamber: null, openchamber: validBlock }))).toMatchObject({ ok: false });
+    expect(parseManifestJson(JSON.stringify({ multichamber: { ...validBlock, apiVersion: 99 }, openchamber: validBlock }))).toMatchObject({ ok: false, code: 'unsupported-api-version' });
+    expect(parseManifestJson(JSON.stringify({ ...validBlock, engines: { multichamber: '^invalid', openchamber: '>=1.0.0' } }))).toMatchObject({ ok: false, code: 'invalid-engines' });
+  });
   test('preserves background action mode without changing legacy actions', () => {
     const actions = [
       { id: 'toast', label: 'Toast', where: 'message', mode: 'background' },
@@ -318,14 +331,14 @@ describe('parseManifest', () => {
     expect(result).toMatchObject({ ok: false, code: 'unsupported-api-version' });
   });
 
-  test('keeps engines.openchamber', () => {
+  test('normalizes legacy engines.openchamber to the canonical host requirement', () => {
     const result = parseManifest({
       ...validBlock,
       engines: { openchamber: '>=1.22.0' },
     });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.manifest.engines).toEqual({ openchamber: '>=1.22.0' });
+      expect(result.manifest.engines).toEqual({ multichamber: '>=1.22.0' });
     }
   });
 
@@ -693,7 +706,7 @@ describe('parseManifest', () => {
 
   test('reads a token integration', () => {
     const result = parseManifestJson(JSON.stringify({
-      name: '@openchamber/clickup',
+      name: '@multichamber/clickup',
       openchamber: {
         apiVersion: OPENCHAMBER_SDK_API_VERSION,
         contributes: {
@@ -720,7 +733,7 @@ describe('parseManifest', () => {
 
   test('reads a host Linear integration', () => {
     const result = parseManifestJson(JSON.stringify({
-      name: '@openchamber/linear',
+      name: '@multichamber/linear',
       openchamber: {
         apiVersion: OPENCHAMBER_SDK_API_VERSION,
         contributes: {
@@ -744,7 +757,7 @@ describe('parseManifest', () => {
 
   test('reads an OAuth integration', () => {
     const result = parseManifestJson(JSON.stringify({
-      name: '@openchamber/gitlab',
+      name: '@multichamber/gitlab',
       openchamber: {
         apiVersion: OPENCHAMBER_SDK_API_VERSION,
         contributes: {
@@ -909,7 +922,7 @@ describe('contributes.tools', () => {
 
 describe('page-less extensions', () => {
   const pageless = { id: 'tools-only', name: 'Tools Only', icon: 'tools' };
-  const withContributes = (extra: Partial<Omit<OpenChamberContributes, 'panel'>>) => parseManifest({
+  const withContributes = (extra: Partial<Omit<MultichamberContributes, 'panel'>>) => parseManifest({
     apiVersion: 1,
     contributes: { panel: pageless, ...extra },
   });
@@ -932,7 +945,7 @@ describe('page-less extensions', () => {
   });
 
   test('background-only packages reject visible surfaces and actions that would open a panel', () => {
-    const visible: Partial<Omit<OpenChamberContributes, 'panel'>>[] = [
+    const visible: Partial<Omit<MultichamberContributes, 'panel'>>[] = [
       { page: true }, { page: { entry: 'page.html' } }, { attach: true }, { attach: 'dialog' },
       { actions: [{ id: 'inspect', label: 'Inspect', where: 'message' }] },
       { actions: [{ id: 'inspect', label: 'Inspect', where: 'session', mode: 'open' }] },
@@ -970,7 +983,7 @@ describe('page-less extensions', () => {
   });
 
   test('refuses every page-only contribution without entry as invalid-panel', () => {
-    const cases: Partial<Omit<OpenChamberContributes, 'panel'>>[] = [
+    const cases: Partial<Omit<MultichamberContributes, 'panel'>>[] = [
       { attach: true },
       { attach: 'panel' },
       { attach: 'dialog' },

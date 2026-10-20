@@ -6,7 +6,7 @@
 //    globalThis.__ocStoreProbe when a page-side probe installed one
 //    (scripts/perf/render-probe.mjs); without the probe the store is unchanged.
 // Written to <repo>/tmp/web-dist-diag, outside the package: anything under
-// packages/web is copied into the desktop app's asar with @openchamber/web, and
+// packages/web is copied into the desktop app's asar with @multichamber/web, and
 // a diag build there once added ~146 MB to the packaged app. Measure timings
 // on the production build; use this one to name what the time was spent on.
 import path from 'node:path';

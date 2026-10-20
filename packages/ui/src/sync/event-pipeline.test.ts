@@ -33,7 +33,7 @@ function statusEvent(type: "busy" | "retry"): OpenCodeEvent {
   }
 }
 
-/** A raw stream payload: wire events, or OpenChamber's own bridge events. */
+/** A raw stream payload: wire events, or Multichamber's own bridge events. */
 type StreamPayload = OpenCodeEvent | { type: string; properties: Record<string, string | boolean | null> }
 
 /** `keepalives` counts SSE comments sent before the events. They are activity without an event. */
@@ -163,7 +163,7 @@ describe("createEventPipeline", () => {
     expect(events[0]).toEqual({ type: "session.patched", properties: { sessionID: "ses_1", patch: { metadata: { pinned: true } } } })
   })
 
-  test("passes OpenChamber notification and auto-accept frames through typed", async () => {
+  test("passes Multichamber notification and auto-accept frames through typed", async () => {
     const { events } = await collect(
       [
         { type: "openchamber:notification", properties: { kind: "agent-complete", sessionId: "ses_1", title: "Done" } },
@@ -329,7 +329,7 @@ describe("createEventPipeline", () => {
     expect(activity).toBe(0)
   })
 
-  describe("while the OpenChamber session is expired", () => {
+  describe("while the Multichamber session is expired", () => {
     afterEach(() => {
       useAuthSessionStore.getState().markAuthenticated()
     })
@@ -497,7 +497,7 @@ describe("classifyStreamPayload", () => {
     expect(classifyStreamPayload("text", undefined)).toEqual({ kind: "events", events: [] })
   })
 
-  // Each delta used to be tried against nine OpenChamber schemas before the
+  // Each delta used to be tried against nine Multichamber schemas before the
   // wire schema; failed zod parses build issue objects, so this cost ~37us per
   // delta (750ms for 20k on an M-series laptop). Dispatching on `type` brings
   // it under 1us. The bound is loose enough for slow CI and far below the old cost.

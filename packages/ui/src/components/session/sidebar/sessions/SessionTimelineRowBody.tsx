@@ -1,7 +1,8 @@
 import React from 'react';
 import { RowMarkTooltip } from './RowMarkTooltip';
 import { Icon } from '@/components/icon/Icon';
-import { ProviderLogo } from '@/components/ui/ProviderLogo';
+import { SessionEngineGlyph } from '../../SessionEngineGlyph';
+import { SESSION_ENGINE_INFO, type SessionEngine } from '@/lib/sessionEngine';
 import { cn } from '@/lib/utils';
 import { PROJECT_ICON_MAP, resolveProjectColor, ProjectIconImage } from '@/lib/projectMeta';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
@@ -51,8 +52,8 @@ type Props = {
   /** Jev's "looks done" check: it sits in the time cluster, where the hover
       Done action appears, left of the status dot so the dot stays by the time. */
   doneHint?: React.ReactNode;
-  /** Provider of the session's model; its logo closes the second line. */
-  providerId?: string | null;
+  /** Owning session engine, independent of its model provider. */
+  engine?: SessionEngine;
   /** Reserves room for permanently shown action buttons on the title line. */
   metaPaddingClass?: string;
   hideMetaOnHoverClass: string;
@@ -121,19 +122,19 @@ export const SessionTimelineRowBody: React.FC<Props> = ({
   goal = null,
   badges,
   doneHint = null,
-  providerId,
+  engine,
   metaPaddingClass,
   hideMetaOnHoverClass,
   actionsReserveClass,
   actionsMaskClass,
 }) => {
-  // Compact rows have no second line, so their badges ride in the meta
-  // cluster: the hover actions overlay that cluster, and anything placed
-  // after it would sit underneath them.
+  const hasDetailLine = Boolean(metaLineLead || branchLabel || (project && !projectLine));
+  // Live marks share the title line so only branch/project/run detail changes row height.
   const meta = <span className={cn('ms-auto flex flex-shrink-0 items-center gap-1 transition-opacity', metaPaddingClass, hideMetaOnHoverClass)}>
-    {compact ? goal : null}
-    {compact ? zombieIndicator ?? prBadge : null}
-    {compact ? badges : null}
+    {goal}
+    {zombieIndicator ?? prBadge}
+    {badges}
+    {engine ? <RowMarkTooltip label={SESSION_ENGINE_INFO[engine].label}><span role="img" aria-label={SESSION_ENGINE_INFO[engine].label} className="inline-flex size-3 shrink-0 items-center justify-center opacity-60"><SessionEngineGlyph engine={engine} className="size-3" /></span></RowMarkTooltip> : null}
     {directoryIndicator}
     {pinnedMarker}
     {doneHint}
@@ -169,11 +170,8 @@ export const SessionTimelineRowBody: React.FC<Props> = ({
         {meta}
       </div>
     )}
-    {/* Fixed 16px branch line, always rendered: a row without a branch,
-        a model or badges keeps the height of its neighbours, so the list
-        does not shift when a branch or a badge arrives and the virtualizer's
-        per-kind size estimate stays exact. */}
-    <div className="flex h-4 w-full min-w-0 items-center gap-1">
+    {/* The structural detail line is absent when there is no branch, project or run lead. */}
+    {hasDetailLine ?     <div className="flex h-4 w-full min-w-0 items-center gap-1">
       {project && !projectLine ? <TimelineProjectIcon project={project} label={projectLabel} /> : null}
       {metaLineLead ?? (branchLabel ? (
         <>
@@ -184,14 +182,6 @@ export const SessionTimelineRowBody: React.FC<Props> = ({
           <span className="min-w-0 truncate typography-micro text-muted-foreground/50">{branchLabel}</span>
         </>
       ) : null)}
-      <span className="ms-auto flex flex-shrink-0 items-center gap-1">
-        {goal}
-        {zombieIndicator ?? prBadge}
-        {badges}
-        {/* PR-icon size: a 16px box leaves the logo's own inner margin
-            wide enough to pull it visibly in from the time above. */}
-        {providerId ? <ProviderLogo providerId={providerId} className="h-3 w-3 flex-shrink-0 opacity-45" /> : null}
-      </span>
-    </div>
+    </div> : null}
   </div>;
 };

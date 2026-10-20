@@ -1039,7 +1039,7 @@ describe('OpenCode lifecycle', () => {
   it('strips AppImage ARGV0 from managed OpenCode launch env', async () => {
     delete process.env.OPENCODE_BINARY;
     const previousArgv0 = process.env.ARGV0;
-    process.env.ARGV0 = '/path/to/OpenChamber/OpenChamber-1.17.2-linux-x86_64.AppImage';
+    process.env.ARGV0 = '/path/to/Multichamber/Multichamber-1.17.2-linux-x86_64.AppImage';
     const child = createMockChild();
     spawnMock.mockImplementationOnce(() => {
       queueMicrotask(() => {
@@ -1070,7 +1070,7 @@ describe('OpenCode lifecycle', () => {
     }
   });
 
-  it('passes the user variables to OpenCode under the variables OpenChamber owns', async () => {
+  it('passes the user variables to OpenCode under the variables Multichamber owns', async () => {
     const child = createMockChild();
     spawnMock.mockImplementationOnce(() => {
       queueMicrotask(() => {
@@ -1095,7 +1095,7 @@ describe('OpenCode lifecycle', () => {
     expect(options.env.OPENCODE_PASSWORD).toBe('password');
     expect(options.env.OPENCHAMBER_AGENT_TOOL_TOKEN).toBe('ephemeral');
     expect(runtime.getManagedOpenCodeProcessEnv().DATABASE_URL).toBe('postgres://db');
-    // The replaced values are recorded as OpenChamber's; the user's are not.
+    // The replaced values are recorded as Multichamber's; the user's are not.
     const injected = injectedEnvKeys(options.env);
     for (const key of ['OPENCODE_PASSWORD', 'OPENCODE_SERVER_PASSWORD', 'OPENCHAMBER_AGENT_TOOL_TOKEN']) {
       expect(injected.has(key)).toBe(true);
@@ -1106,7 +1106,7 @@ describe('OpenCode lifecycle', () => {
     await server.close();
   });
 
-  it('adds managed OpenChamber tool environment without allowing it to replace launch invariants', async () => {
+  it('adds managed Multichamber tool environment without allowing it to replace launch invariants', async () => {
     const child = createMockChild();
     spawnMock.mockImplementationOnce(() => {
       queueMicrotask(() => {

@@ -21,7 +21,7 @@ import { getRuntimeKey } from '@/lib/runtime-switch';
 import type { GitHubPullRequestRef, SourceControlReadContext } from '@/lib/api/types';
 import { limitSourceControlDiscoveryCandidates } from '../sourceControlDiscovery';
 import { reconcileRegisteredContextDirectories, type RegisteredContextDirectories } from './registeredContextDirectories';
-import { subscribeOpenchamberEvents } from '@/lib/openchamberEvents';
+import { subscribeOpenchamberEvents } from '@/lib/multichamberEvents';
 import { getLinkedGitHubPullRequests, getLinkedGitLabThreads, getLinkedSidebarIssues, type GitLabThreadRef } from '@/lib/linkedIssues';
 import { useTrackedItems } from '@/lib/trackedItems/interest';
 import { githubThread, gitlabThread, linearIssue } from '@/lib/trackedItems/fromLinks';

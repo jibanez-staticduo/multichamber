@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# OpenChamber Install Script
-# Usage: curl -fsSL https://raw.githubusercontent.com/btriapitsyn/openchamber/main/scripts/install.sh | bash
+# Multichamber Install Script
+# Usage: curl -fsSL https://raw.githubusercontent.com/jibanez-staticduo/multichamber/main/scripts/install.sh | bash
 
 set -euo pipefail
 
-PACKAGE_NAME="@openchamber/web"
-BIN_NAME="openchamber"
+PACKAGE_ARCHIVE="https://github.com/jibanez-staticduo/multichamber/releases/latest/download/multichamber-web.tgz"
+BIN_NAME="multichamber"
+LEGACY_BIN_NAME="openchamber"
 MIN_NODE_MAJOR=24
 MIN_NODE_MINOR=14
 MIN_NODE_VERSION="$MIN_NODE_MAJOR.$MIN_NODE_MINOR"
@@ -118,12 +119,54 @@ get_pnpm_allow_build_flags() {
 get_install_command() {
   local pm=$1
   case "$pm" in
-    pnpm) echo "pnpm add -g$(get_pnpm_allow_build_flags) $PACKAGE_NAME" ;;
-    yarn) echo "yarn global add $PACKAGE_NAME" ;;
-    bun) echo "bun add -g $PACKAGE_NAME" ;;
-    npm) echo "npm install -g $PACKAGE_NAME" ;;
+    pnpm) echo "pnpm add -g$(get_pnpm_allow_build_flags) $PACKAGE_ARCHIVE" ;;
+    yarn) echo "yarn global add $PACKAGE_ARCHIVE" ;;
+    bun) echo "bun add -g $PACKAGE_ARCHIVE" ;;
+    npm) echo "npm install -g $PACKAGE_ARCHIVE" ;;
     *) echo "" ;;
   esac
+}
+
+# Resolve ownership from the actual executable, never from the shell's lockfile
+# or an old installation's updater, which may still download upstream packages.
+detect_installed_package_manager() {
+  node --input-type=module - "$(command -v "$BIN_NAME")" <<'NODE'
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+const real = (value) => { try { return fs.realpathSync(value); } catch { return null; } };
+const executable = real(process.argv[2]);
+if (!executable) process.exit(1);
+let directory = path.dirname(executable);
+let installed;
+while (directory !== path.dirname(directory)) {
+  try {
+    if (['@multichamber/web', '@openchamber/web'].includes(JSON.parse(fs.readFileSync(path.join(directory, 'package.json'), 'utf8')).name)) {
+      installed = directory;
+      break;
+    }
+  } catch {}
+  directory = path.dirname(directory);
+}
+if (!installed) process.exit(1);
+const commandOutput = (command, args) => {
+  const result = spawnSync(command, args, { encoding: 'utf8', timeout: 10000 });
+  return result.status === 0 ? result.stdout.trim() : '';
+};
+for (const manager of ['pnpm', 'bun', 'yarn', 'npm']) {
+  const roots = manager === 'bun'
+    ? [path.join(process.env.BUN_INSTALL || path.join(os.homedir(), '.bun'), 'install/global/node_modules')]
+    : manager === 'yarn'
+      ? [path.join(commandOutput('yarn', ['global', 'dir']), 'node_modules')]
+      : [commandOutput(manager, ['root', '-g'])];
+  if (roots.some((root) => root && ['@multichamber/web', '@openchamber/web'].some((name) => real(path.join(root, name)) === installed))) {
+    console.log(manager);
+    process.exit(0);
+  }
+}
+process.exit(1);
+NODE
 }
 
 # Install Node.js suggestion
@@ -180,7 +223,7 @@ main() {
   echo ""
   echo "  ╭───────────────────────────────────╮"
   echo "  │                                   │"
-  echo "  │   OpenChamber Installer           │"
+  echo "  │   Multichamber Installer           │"
   echo "  │   Web interface for OpenCode      │"
   echo "  │                                   │"
   echo "  ╰───────────────────────────────────╯"
@@ -200,30 +243,22 @@ main() {
   fi
   success "Node.js v$NODE_VERSION found"
 
-  # If OpenChamber is already installed, hand off to its own updater instead
-  # of guessing a package manager. `openchamber update` detects which manager
-  # actually owns the existing global install and reinstalls with that one —
-  # reinstalling with a different manager here would orphan files and break PATH.
-  if command_exists "$BIN_NAME"; then
-    info "OpenChamber is already installed — updating via 'openchamber update'..."
-    echo ""
-    if openchamber update; then
-      echo ""
-      success "OpenChamber is up to date!"
-      exit 0
-    fi
-    echo ""
-    error "Update failed."
-    echo ""
-    echo "  Try running it manually:"
-    echo "    openchamber update"
-    echo ""
-    exit 1
+  # Existing installations keep their owner, including the legacy CLI alias.
+  if ! command_exists "$BIN_NAME" && command_exists "$LEGACY_BIN_NAME"; then
+    BIN_NAME="$LEGACY_BIN_NAME"
   fi
 
-  # Detect package manager
-  info "Detecting package manager..."
-  PM=$(detect_package_manager)
+  # Preserve the manager that owns an existing installation, including upstream.
+  if command_exists "$BIN_NAME"; then
+    if ! PM=$(detect_installed_package_manager); then
+      error "Cannot identify the package manager owning the installed Multichamber. No changes made."
+      exit 1
+    fi
+    info "Replacing the installed package with the fork using $PM..."
+  else
+    info "Detecting package manager..."
+    PM=$(detect_package_manager)
+  fi
   
   if [ "$PM" = "none" ]; then
     suggest_pm_install
@@ -240,7 +275,7 @@ main() {
 
   # Install
   echo ""
-  info "Installing OpenChamber..."
+  info "Installing Multichamber..."
   echo "  Running: $INSTALL_CMD"
   echo ""
   
@@ -258,7 +293,7 @@ main() {
   ░▀▀▀░▀░▀░▀░▀░▀░▀░▀▀░░▀▀▀░▀░▀
 EOF
     printf '%b\n' "$NC"
-    success "OpenChamber installed successfully!"
+    success "Multichamber installed successfully!"
     echo ""
 
     # Verify the binary is actually reachable. Global installs frequently
@@ -266,8 +301,8 @@ EOF
     # letting the user hit a confusing "command not found".
     if command_exists "$BIN_NAME"; then
       echo "  Get started:"
-      echo "    openchamber              # Start server on port 3000"
-      echo "    openchamber --help       # Show all options"
+      echo "    multichamber              # Start server on port 3000"
+      echo "    multichamber --help       # Show all options"
     else
       warn "'$BIN_NAME' was installed but isn't on your PATH yet."
       echo ""
@@ -283,7 +318,7 @@ EOF
         echo "    export PATH=\"$bin_dir:\$PATH\""
       else
         echo "  Add your package manager's global bin directory to PATH,"
-        echo "  then restart your terminal and run: openchamber"
+        echo "  then restart your terminal and run: multichamber"
       fi
     fi
     echo ""
